@@ -17,5 +17,13 @@ void USimpleStaticMeshWheel::UpdateSuspension(float DeltaTime,UArcadeMovementCom
 	if(!ArcadeMovementComponent)
 		return;
 
-	ArcadeMovementComponent->WheelTrace(GetWorld(),WheelInfo,DeltaTime,this);
+	ArcadeMovementComponent->WheelTrace(WheelState,DeltaTime,this);
+}
+
+void USimpleStaticMeshWheel::UpdateForces(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent)
+{
+	if(!ArcadeMovementComponent)
+		return;
+	
+	ArcadeMovementComponent->ApplyWheelForces(WheelState,DeltaTime,this);
 }

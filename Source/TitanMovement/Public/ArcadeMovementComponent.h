@@ -10,24 +10,16 @@
 class AArcadePawn;
 
 
-/**
- * 
- */
-//Why separate struct for data and state? cause if we needed to replicate data does not need to be replicated but maybe state needs to
+
 
 struct FArcadeVehicleDebugParams
 {
 	bool ShowSuspensionDebug=false;
 };
+
+
 USTRUCT(BlueprintType)
-struct FWheelState{
-	GENERATED_BODY()
-	//Ranges from 0-1
-	float PreviousLen;
-	
-};
-USTRUCT(BlueprintType)
-struct FArcadeWheelInfo
+struct FArcadeWheelSetup
 {	GENERATED_BODY()
 	//How much can wheels drop
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
@@ -42,10 +34,43 @@ struct FArcadeWheelInfo
 	//Force to apply
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	float Stiffness;
-	FWheelState WheelState;
+	//amount of friction when moving forward
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	float LongitudinalFrictionMultiplier=1.0;
+	//amount of friction when moving Side ways
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	float LateralFrictionMultiplier=1.0;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	bool ABSEnabled;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	bool TractionControlEnabled;
+	
 
 	
 };
+USTRUCT(BlueprintType)
+struct FWheelState{
+	GENERATED_BODY()
+	//Ranges from 0-1
+	float PreviousLen;
+	float SteerAngle=0;
+	UPROPERTY()
+	FHitResult HitResult;
+	bool bIsSlipping;
+	//SuspensionForce That was applied;
+	FVector WheelLoad;
+	FVector PreviousWheelCollisionVelocity;
+	UPROPERTY(EditAnywhere)
+	FArcadeWheelSetup WheelSetup;
+	float DriveTorque;
+	float BrakeTorque;
+	float Spin;
+	bool Spinning;
+	float Omega;	// [radians/sec] Wheel Rotation Angular Velocity
+	float AngularPosition;			// [radians]
+	
+};
+
 
 USTRUCT(BlueprintType)
 struct FEngineData
@@ -90,8 +115,14 @@ class TITANMOVEMENT_API UArcadeMovementComponent : public UPawnMovementComponent
 	GENERATED_BODY()
 
 
+
+	
 	UArcadeMovementComponent();
 	public:
+
+	FVector InputVector;
+	UPROPERTY(BlueprintReadOnly)
+	TArray<UActorComponent*> Components;
 	UMeshComponent* GetMesh();
 	//Engine
 	UPROPERTY(EditAnywhere,BlueprintReadOnly,Category= Setup)
@@ -122,17 +153,19 @@ class TITANMOVEMENT_API UArcadeMovementComponent : public UPawnMovementComponent
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
 	TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
 	
-
+	UFUNCTION(BlueprintCallable)
+	int GetNumberOfWheels();
 	FArcadeGearInfo GetGearInfo(int Index);
 	virtual void InitializeComponent() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	void UpdateEngine(float DeltaTime);
 	void UpdateSuspension(float DeltaTime);
-	//trace and applyforces
-	  void WheelTrace(UWorld* World,FArcadeWheelInfo& WheelInfo,float DeltaTime,USceneComponent* ArcadeWheel);
-
+	void UpdateForces(float DeltaTime);
+	//trace and apply forces
+	  void WheelTrace(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
+	  void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
 	
-
+	float CmToM(float In);
 
 	//debug
 
@@ -147,9 +180,8 @@ class TITANMOVEMENT_API UArcadeMovementComponent : public UPawnMovementComponent
 
 	
 #endif
-	UPROPERTY(EditAnywhere)
-	bool bDebugMode;
-	private:
+
+	
 	
 };
 

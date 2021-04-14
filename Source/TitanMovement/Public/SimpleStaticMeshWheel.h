@@ -22,8 +22,10 @@ class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,pub
 	USimpleStaticMeshWheel();
 	GENERATED_BODY()
 
+	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	FArcadeWheelInfo WheelInfo;
+	FWheelState WheelState;
 
 	virtual void UpdateSuspension(float DeltaTime,UArcadeMovementComponent* ArcadeMovementComponent) override;
+	virtual void UpdateForces(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent) override;
 };

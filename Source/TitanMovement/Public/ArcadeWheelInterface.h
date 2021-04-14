@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
+
 #include "UObject/NoExportTypes.h"
 #include "ArcadeWheelInterface.generated.h"
 
@@ -24,5 +26,8 @@ class IArcadeWheelInterface
 
 public:
 	virtual void UpdateSuspension(float DeltaTime,UArcadeMovementComponent* ArcadeMovementComponent){};
+	virtual void UpdateForces(float DeltaTime,UArcadeMovementComponent* ArcadeMovementComponent){};
+	//Index only for multi wheel components(Instanced Static Mesh)
+
 	
 };
