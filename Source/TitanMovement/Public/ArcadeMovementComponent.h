@@ -6,6 +6,8 @@
 
 #include "ArcadeWheelInterface.h"
 #include "GameFramework/PawnMovementComponent.h"
+#include "ModularVehicleData.h"
+#include"ModularVehicleWheelData.h"
 #include "ArcadeMovementComponent.generated.h"
 class AArcadePawn;
 
@@ -15,158 +17,117 @@ class AArcadePawn;
 struct FArcadeVehicleDebugParams
 {
 	bool ShowSuspensionDebug=false;
+	bool ShowInputProcessingDebug=false;
+	bool ShowGearboxLog=false;
+	bool ShowDrawFriction=false;
 };
 
 
-USTRUCT(BlueprintType)
-struct FArcadeWheelSetup
-{	GENERATED_BODY()
-	//How much can wheels drop
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	float SuspensionLength=50;
-	//trace wheel radius
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	float WheelRadius=30;
-
-	//Offset to apply to trace start
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	FVector TraceStartOffset;
-	//Force to apply
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	float Stiffness;
-	//amount of friction when moving forward
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	float LongitudinalFrictionMultiplier=1.0;
-	//amount of friction when moving Side ways
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	float LateralFrictionMultiplier=1.0;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	bool ABSEnabled;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	bool TractionControlEnabled;
-	
-
-	
-};
-USTRUCT(BlueprintType)
-struct FWheelState{
-	GENERATED_BODY()
-	//Ranges from 0-1
-	float PreviousLen;
-	float SteerAngle=0;
-	UPROPERTY()
-	FHitResult HitResult;
-	bool bIsSlipping;
-	//SuspensionForce That was applied;
-	FVector WheelLoad;
-	FVector PreviousWheelCollisionVelocity;
-	UPROPERTY(EditAnywhere)
-	FArcadeWheelSetup WheelSetup;
-	float DriveTorque;
-	float BrakeTorque;
-	float Spin;
-	bool Spinning;
-	float Omega;	// [radians/sec] Wheel Rotation Angular Velocity
-	float AngularPosition;			// [radians]
-	
-};
 
 
 USTRUCT(BlueprintType)
-struct FEngineData
+struct FVehicleState
 {
 	GENERATED_BODY()
-	//Torque curve 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FRuntimeFloatCurve EngineTorqueCurve;
-	//Idle RPM
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float MinRpm;
-	//Max rpm 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float MaxRpm;
+
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category= Setup)
+	UModularVehicleData* VehicleData;
+
+	UPROPERTY(BlueprintReadWrite)
+	float CurrentRpm;
+	UPROPERTY(BlueprintReadWrite)
+	float CurrentRpmRatio;
+	//eof engine
+	// Idle gear should be 0 ,gears before 0 are back after 0 are forward 
+	UPROPERTY(BlueprintReadWrite)
+	int IdleGear;
+	UPROPERTY(BlueprintReadWrite)
+	int CurrentGear;
+	UPROPERTY(BlueprintReadWrite)
+	int TargetGear;
+	UPROPERTY(BlueprintReadWrite)
+	float ForwardSpeed;
+	UPROPERTY(BlueprintReadWrite)
+	float CurrentGearChangeTime;
+
 };
 
-USTRUCT(BlueprintType)
-struct FArcadeGearInfo
-{
-	GENERATED_USTRUCT_BODY()
-	//This Gear's Ratio
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	float GearRatio;
-	/** Value of engineRevs/maxEngineRevs that is low enough to gear down */
-	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0", UIMin = "0.0", ClampMax = "1.0", UIMax = "1.0"))
-	float DownRatio;
 
-	/** Value of engineRevs/maxEngineRevs that is high enough to gear up */
-	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0", UIMin = "0.0", ClampMax = "1.0", UIMax = "1.0"))
-	float UpRatio;
-	FArcadeGearInfo():GearRatio(1.0f),DownRatio(0.1),UpRatio(1.f)
-	{
-		
-	};
-	FArcadeGearInfo(float Ratio):GearRatio(Ratio),DownRatio(0.1),UpRatio(1.f)
-	{
-	}
-};
+
 UCLASS()
 class TITANMOVEMENT_API UArcadeMovementComponent : public UPawnMovementComponent
 {
 	GENERATED_BODY()
 
-
-
-	
+	//Constructor
 	UArcadeMovementComponent();
 	public:
-
-	FVector InputVector;
+	//Wheels
 	UPROPERTY(BlueprintReadOnly)
 	TArray<UActorComponent*> Components;
+	//Return Mesh
 	UMeshComponent* GetMesh();
+	private:
+	
+	UPROPERTY(Transient)
+	float RawBrakeInput;
+	// What the player has the steering set to. Range -1...1
+	UPROPERTY(Transient)
+	float RawSteeringInput;
+
+	// What the player has the accelerator set to. Range -1...1
+	UPROPERTY(Transient)
+	float RawThrottleInput;
+	UPROPERTY(Transient)
+	bool bRawHandbrakeInput;
+public:
+	//input 
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void SetInputThrottle(float Input);
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void SetInputSteering(float Input);
+	/** Set the user input for the vehicle Brake [range 0 to 1] set it if you've turned of reverse as brake */
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void SetBrakeInput(float Brake);
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	FVehicleState VehicleState;
+
+	/** Compute steering input */
+	float CalcSteeringInput();
+
+	/** Compute brake input */
+	float CalcBrakeInput();
+
+	/** Compute handbrake input */
+	float CalcHandbrakeInput();
+
+	float CalcThrottleInput();
 	//Engine
-	UPROPERTY(EditAnywhere,BlueprintReadOnly,Category= Setup)
-	FEngineData EngineConfig;
-	
 
-	UPROPERTY(BlueprintReadOnly)
-	float CurrentRpm;
-	UPROPERTY(BlueprintReadOnly)
-	float CurrentRpmRatio;
-	//eof engine
-	// Idle gear should be 0 ,gears before 0 are back after 0 are forward 
-	UPROPERTY(EditAnywhere,BlueprintReadOnly)
-	TArray<FArcadeGearInfo> Gears;
-	/*Affects rpm calculation ,tweak if rpm is not matching your expectations*/
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	float DifferentialRatio=1.0;
-
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	float DampingCorrectionMultiplier=0.5;
-	UPROPERTY(BlueprintReadOnly)
-	int IdleGear;
-	UPROPERTY(BlueprintReadOnly)
-	int CurrentGear;
-
-
-	//susp
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
-	TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
-	
+	void SetTargetGear(int32 GearNum, bool bImmediate);
+	//Get Number of wheels(some components are allowed to have more than one wheel thats why we just dont count components
 	UFUNCTION(BlueprintCallable)
 	int GetNumberOfWheels();
+	//
 	FArcadeGearInfo GetGearInfo(int Index);
 	virtual void InitializeComponent() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	void UpdateState(float DeltaTime);
+	void UpdateGearBox(float DeltaTime);
 	void UpdateEngine(float DeltaTime);
 	void UpdateSuspension(float DeltaTime);
 	void UpdateForces(float DeltaTime);
-	//trace and apply forces
-	  void WheelTrace(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
-	  void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
-	
-	float CmToM(float In);
+	void UpdateSteering(float DeltaTime);
+	//trace and apply Suspension forces
+	void WheelTrace(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
+	//Apply Drive Brake and friction
+	void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
+	void CalculateSteeringAngle(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel,float InNormSteering);
 
+	
+	//ChaosDefault
+	float CmToM(float In);
+	
 	//debug
 
 	void ShowDebugInfo(class AHUD* HUD, class UCanvas* Canvas, const class FDebugDisplayInfo& DisplayInfo, float& YL, float& YPos);
@@ -177,6 +138,7 @@ class TITANMOVEMENT_API UArcadeMovementComponent : public UPawnMovementComponent
 	void DrawDial(UCanvas* Canvas, FVector2D Pos, float Radius, float CurrentValue, float MaxValue);
 	// draw 2D debug line to UI canvas
 	void DrawLine2D(UCanvas* Canvas, const FVector2D& StartPos, const FVector2D& EndPos, FColor Color, float Thickness = 1.f);
+	
 
 	
 #endif

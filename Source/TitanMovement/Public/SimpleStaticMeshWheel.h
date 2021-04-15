@@ -25,7 +25,10 @@ class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,pub
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	FWheelState WheelState;
-
+	virtual void SetupWheels(UArcadeMovementComponent* ArcadeMovementComponent) override;
 	virtual void UpdateSuspension(float DeltaTime,UArcadeMovementComponent* ArcadeMovementComponent) override;
 	virtual void UpdateForces(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent) override;
+	virtual void UpdateSteering(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent, float SteeringAngle) override;
+	virtual  void SetDriveTorqueOnWheels(float Force) override;
+	virtual float GetFastestWheelOmegaSpeed() override;
 };
