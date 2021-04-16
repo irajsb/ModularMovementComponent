@@ -77,6 +77,9 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 	FRuntimeFloatCurve SteerCurve;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
 	TEnumAsByte<EArcadeSteerType> SteerType;
+	//We Interp steering data so it feels more natural
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
+	float SteeringInterpolationSpeed=1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bReverseAsBrake=true;

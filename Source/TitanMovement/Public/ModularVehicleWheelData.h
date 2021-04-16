@@ -36,10 +36,10 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	//amount of friction when moving Side ways
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	float LateralFrictionMultiplier=1.0;
-	//TODO
+	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	bool ApplyDriveForce;
-	//TODO
+	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	bool SteeringWheel;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
@@ -47,7 +47,8 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	//TODo
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	bool AffectedByHandBrake;
-	
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	float BrakeTorque;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	bool ABSEnabled;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
@@ -87,7 +88,8 @@ struct FWheelState{
 	// [radians/sec] Wheel Rotation Angular Velocity
 	float AngularPosition;// [radians]
 	//Location of wheel relative to body
-	FVector LocalLocation;
+	FVector InitialLocalLocation;
+	FRotator InitialLocalRotation;
 };
 
  

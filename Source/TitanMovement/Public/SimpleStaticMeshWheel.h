@@ -31,4 +31,5 @@ class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,pub
 	virtual void UpdateSteering(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent, float SteeringAngle) override;
 	virtual  void SetDriveTorqueOnWheels(float Force) override;
 	virtual float GetFastestWheelOmegaSpeed() override;
+	virtual void UpdateAnimation(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent) override;
 };

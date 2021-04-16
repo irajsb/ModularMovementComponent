@@ -74,6 +74,10 @@ class TITANMOVEMENT_API UArcadeMovementComponent : public UPawnMovementComponent
 	// What the player has the steering set to. Range -1...1
 	UPROPERTY(Transient)
 	float RawSteeringInput;
+	UPROPERTY(Transient)
+	float SteeringInput;
+	UPROPERTY(Transient)
+	float BrakeInput;
 
 	// What the player has the accelerator set to. Range -1...1
 	UPROPERTY(Transient)
@@ -93,7 +97,7 @@ public:
 	FVehicleState VehicleState;
 
 	/** Compute steering input */
-	float CalcSteeringInput();
+	float CalcSteeringInput(float DeltaTime);
 
 	/** Compute brake input */
 	float CalcBrakeInput();
@@ -118,6 +122,7 @@ public:
 	void UpdateSuspension(float DeltaTime);
 	void UpdateForces(float DeltaTime);
 	void UpdateSteering(float DeltaTime);
+	void UpdateWheelAnimation(float DeltaTime);
 	//trace and apply Suspension forces
 	void WheelTrace(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
 	//Apply Drive Brake and friction

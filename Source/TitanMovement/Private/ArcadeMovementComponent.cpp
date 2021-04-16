@@ -140,6 +140,7 @@ void UArcadeMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	UpdateSteering(fDeltaTime);
 	UpdateGearBox(fDeltaTime);
 	UpdateForces(fDeltaTime);
+	UpdateWheelAnimation(DeltaTime);
 }
 
 void UArcadeMovementComponent::UpdateState(float DeltaTime)
@@ -155,13 +156,13 @@ void UArcadeMovementComponent::UpdateGearBox(float DeltaTime)
 		//for reverse as state we want to automatically shift between reverse and first gear
 		if (FMath::Abs(VehicleState.ForwardSpeed) < VehicleState.VehicleData->WrongDirectionThreshold)	//we only shift between reverse and first if the car is slow enough.
 			{
-			if (RawBrakeInput > KINDA_SMALL_NUMBER &&VehicleState.CurrentGear >= VehicleState.IdleGear && VehicleState.TargetGear >= VehicleState.IdleGear)
+			if (RawThrottleInput < -1*KINDA_SMALL_NUMBER &&VehicleState.CurrentGear >= VehicleState.IdleGear && VehicleState.TargetGear >= VehicleState.IdleGear)
 			{
-				SetTargetGear(-1, false);
+				SetTargetGear(VehicleState.IdleGear-1, true);
 			}
 			else if (RawThrottleInput > KINDA_SMALL_NUMBER &&VehicleState.CurrentGear <= VehicleState.IdleGear && VehicleState.TargetGear <= VehicleState.IdleGear)
 			{
-				SetTargetGear(1, false);
+				SetTargetGear(VehicleState.IdleGear+1, true);
 			}
 			}
 	}
@@ -227,6 +228,7 @@ void UArcadeMovementComponent::UpdateEngine(float DeltaTime)
 	const float EngineTorque= VehicleState.VehicleData->ConstantTorque!=0.0?VehicleState.VehicleData->ConstantTorque*ThrottleInput:ThrottleInput* VehicleState.VehicleData->EngineTorqueCurve.GetRichCurve()->Eval(VehicleState.CurrentRpm);
 	const float TransmissionTorque=GetGearInfo(VehicleState.CurrentGear).GearRatio* VehicleState.VehicleData->TransmissionEfficiency;
 	const float WheelTorque=EngineTorque*TransmissionTorque;
+	
 	for(UActorComponent* Component: Components)
 	{
 		Cast<IArcadeWheelInterface>(Component)->SetDriveTorqueOnWheels(WheelTorque);
@@ -251,10 +253,13 @@ void UArcadeMovementComponent::UpdateSuspension(float DeltaTime)
 void UArcadeMovementComponent::UpdateForces(float DeltaTime)
 {
 
+	
 	ARCADE_CYCLE_COUNTER(STAT_ArcadeForces)
 
 
-	
+	 BrakeInput=CalcBrakeInput();
+	if(GArcadeVehicleDebugParams.ShowInputProcessingDebug)
+		UE_LOG(LogArcadeVehicle,Warning,TEXT("Final Calc NewBrakeInput: %f "),FMath::Abs(BrakeInput));
 
 	for(UActorComponent* Component: Components)
 	{
@@ -266,12 +271,12 @@ void UArcadeMovementComponent::UpdateForces(float DeltaTime)
 void UArcadeMovementComponent::UpdateSteering(float DeltaTime)
 {
 
-	const float SteeringInput=CalcSteeringInput();
+	SteeringInput=CalcSteeringInput(DeltaTime);
+
+	const float SteerSpeedScale =	VehicleState.VehicleData->SteerCurve.GetRichCurve()->IsEmpty()?1:VehicleState.VehicleData->SteerCurve.GetRichCurve()->Eval(VehicleState.ForwardSpeed*0.036/*CmSToKmH*/) ;
 	
-	const float SteerSpeedScale =VehicleState.VehicleData->SteerCurve.GetRichCurve()->Eval(VehicleState.ForwardSpeed*0.036/*CmSToKmH*/) ;
+const 	float UseSteeringValue = SteeringInput * SteerSpeedScale;
 	
-	float UseSteeringValue = SteeringInput ;//TODo* SteerSpeedScale;
-	UE_LOG(LogTemp,Error,TEXT("Steer %f"),UseSteeringValue);
 
 	
 	for(UActorComponent* Component: Components)
@@ -281,9 +286,18 @@ void UArcadeMovementComponent::UpdateSteering(float DeltaTime)
 	
 }
 
+void UArcadeMovementComponent::UpdateWheelAnimation(float DeltaTime)
+{
+
+for(UActorComponent* Component: Components)
+	{
+		Cast<IArcadeWheelInterface>(Component)->UpdateAnimation(DeltaTime,this);
+	}
+}
+
 void UArcadeMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, float DeltaTime, USceneComponent* ArcadeWheel,float InNormSteering)
 {
-	float SteeringAngle = 0.f;
+	
 	/*if (FMath::Abs(GWheeledVehicleDebugParams.SteeringOverride) > 0.01f)
 	{
 	SteeringAngle = PWheel.Setup().WheelState.WheelSetup->SteeringMaxAngle * GWheeledVehicleDebugParams.SteeringOverride;
@@ -292,7 +306,7 @@ void UArcadeMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, f
 	{
 		//
 		
-		float WheelSide =WheelState.LocalLocation.Y;
+		float WheelSide =WheelState.InitialLocalLocation.Y;
 		
 
 
@@ -349,9 +363,10 @@ void UArcadeMovementComponent::WheelTrace(
 	//logic
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(GetOwner());
-	const FVector ComponentLocation=ArcadeWheel->GetComponentLocation()+WheelState.WheelSetup->TraceStartOffset;
+	//TODO Generalize it
+	const FVector ComponentLocation=GetMesh()->GetComponentTransform().TransformPosition(WheelState.InitialLocalLocation+WheelState.WheelSetup->TraceStartOffset) ;
 	FHitResult TraceResult;
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(),ComponentLocation,ComponentLocation+(ArcadeWheel->GetUpVector()*-1*WheelState.WheelSetup->SuspensionLength),WheelState.WheelSetup->WheelRadius,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GArcadeVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,TraceResult,true);
+	UKismetSystemLibrary::SphereTraceSingle(GetWorld(),ComponentLocation,ComponentLocation+(GetMesh()->GetUpVector()*-1*WheelState.WheelSetup->SuspensionLength),WheelState.WheelSetup->WheelRadius,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GArcadeVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,TraceResult,true);
 
 	const float CurrentLen=1-TraceResult.Time;
 	const float DampingCorrection=((CurrentLen-WheelState.PreviousLen)*VehicleState.VehicleData->DampingCorrectionMultiplier*WheelState.WheelSetup->Stiffness);
@@ -389,24 +404,36 @@ void UArcadeMovementComponent::ApplyWheelForces(FWheelState& WheelState, float D
 {
 	if(!WheelState.HitResult.bBlockingHit)
 		return;
-
+//calculate Brake
+	 
+	const float BrakeTorque=BrakeInput*WheelState.WheelSetup->BrakeTorque;
+	WheelState.BrakeTorque=BrakeTorque;
+	if(	0.0f>CalcHandbrakeInput())
+	{
+	if(WheelState.WheelSetup->AffectedByHandBrake)
+	{
+		WheelState.BrakeTorque=WheelState.WheelSetup->BrakeTorque;;
+	}
+	}
 	const FTransform WorldTransform = GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
 	const float SteerAngleDegrees = WheelState.SteerAngle; // temp
 	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
-	const FVector	LocalWheelVelocity = WorldTransform.InverseTransformVector(GetMesh()->GetPhysicsLinearVelocityAtPoint(ArcadeWheel->GetComponentLocation()));
+	//TODO Generalize it 
+	const FVector  LocalWheelVelocity = WorldTransform.InverseTransformVector(GetMesh()->GetPhysicsLinearVelocityAtPoint(WheelState.HitResult.TraceStart));
 	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
-	//TODo const float SlipAngle = FMath::Atan2(GroundVelocityVector.Y, GroundVelocityVector.X);
+	//TODo whats this ?const float SlipAngle = FMath::Atan2(GroundVelocityVector.Y, GroundVelocityVector.X);
 	float FinalLongitudinalForce = 0.f;
 	FVector ForceFromFriction;
 	//EffectiveRadius
 	const float Re=WheelState.WheelSetup->WheelRadius;
 	const float MassPerWheel=(GetMesh()->GetMass()/GetNumberOfWheels());
 	float 	AppliedLinearDriveForce = WheelState.DriveTorque * CmToM(Re);
+	
 	float AppliedLinearBrakeForce = WheelState.BrakeTorque* CmToM(Re);
 
 		// currently just letting the brake override the throttle
 	//TODO
-		bool Braking = WheelState.DriveTorque < /*>*/FMath::Abs(WheelState.BrakeTorque);
+		bool Braking = FMath::Abs(WheelState.DriveTorque) < /*>*/FMath::Abs(WheelState.BrakeTorque);
 		float BrakeFactor = 1.0f;
 		float K =0.4f;
 		
@@ -442,6 +469,8 @@ void UArcadeMovementComponent::ApplyWheelForces(FWheelState& WheelState, float D
 			else
 			{
 				FinalLongitudinalForce = AppliedLinearDriveForce;
+				UE_LOG(LogTemp,Error,TEXT("DriveTorque %f"),AppliedLinearDriveForce);
+				
 			}
 			
 			// lateral grip
@@ -563,8 +592,8 @@ void UArcadeMovementComponent::ApplyWheelForces(FWheelState& WheelState, float D
 	FVector GroundYVector = FVector::CrossProduct(GroundZVector, GroundXVector);
 	FMatrix Mat(GroundXVector, GroundYVector, GroundZVector, GetMesh()->GetComponentLocation());
 	FVector FrictionForceVector = Mat.TransformVector(FrictionForceLocal);
-
-	GetMesh()->AddForceAtLocation(FrictionForceVector,ArcadeWheel->GetComponentLocation());
+	
+	GetMesh()->AddForceAtLocation(FrictionForceVector,WheelState.HitResult.TraceStart);
 	if(GArcadeVehicleDebugParams.ShowDrawFriction)
 	DrawDebugLine(GetWorld(),WheelState.HitResult.ImpactPoint,WheelState.HitResult.ImpactPoint+FrictionForceVector,FColor::Green,false,-1,0,15);
 
@@ -576,11 +605,18 @@ float UArcadeMovementComponent::CmToM(float In)
 }
 
 
-float UArcadeMovementComponent::CalcSteeringInput()
+float UArcadeMovementComponent::CalcSteeringInput(float DeltaTime)
 {
+	
+
+SteeringInput=	UKismetMathLibrary::FInterpTo_Constant(SteeringInput,RawSteeringInput,DeltaTime,VehicleState.VehicleData->SteeringInterpolationSpeed);
+	if(FMath::Abs(SteeringInput)>FMath::Abs(RawSteeringInput))
+	{//decreases are instant
+		SteeringInput=RawSteeringInput;
+	}
 	if(GArcadeVehicleDebugParams.ShowInputProcessingDebug)
-		UE_LOG(LogArcadeVehicle,Warning,TEXT("Final Calc SteeringInput: %f "),FMath::Abs(RawSteeringInput));
-	return  RawSteeringInput;
+		UE_LOG(LogArcadeVehicle,Warning,TEXT("Final Calc SteeringInput: %f "),(SteeringInput));
+	return  SteeringInput;
 }
 
 float UArcadeMovementComponent::CalcBrakeInput()
@@ -601,7 +637,7 @@ float UArcadeMovementComponent::CalcBrakeInput()
 		}
 
 		// if player wants to move backwards...
-		else if (RawBrakeInput > 0.f)
+		else if (RawThrottleInput < 0.f)
 		{
 			// if vehicle is moving forwards, then press brake
 			if (VehicleState.ForwardSpeed > VehicleState.VehicleData->WrongDirectionThreshold)
@@ -638,8 +674,7 @@ float UArcadeMovementComponent::CalcBrakeInput()
 				}
 		}
 
-		if(GArcadeVehicleDebugParams.ShowInputProcessingDebug)
-		UE_LOG(LogArcadeVehicle,Warning,TEXT("Final Calc NewBrakeInput: %f "),FMath::Abs(NewBrakeInput));
+		
 		return NewBrakeInput;
 	}
 
@@ -675,7 +710,8 @@ if(GArcadeVehicleDebugParams.ShowInputProcessingDebug)
 }
 	//
 	
-	return FMath::Abs(NewThrottleInput);
+	//Why??return FMath::Abs(NewThrottleInput);
+	return NewThrottleInput;
 }
 
 void UArcadeMovementComponent::SetTargetGear(int32 GearNum, bool bImmediate)

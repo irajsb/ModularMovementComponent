@@ -33,6 +33,8 @@ public:
 	//Check driveable inside
 	virtual void SetDriveTorqueOnWheels(float Force){};
 	virtual float GetFastestWheelOmegaSpeed(){return  0.0;};
+	virtual void UpdateAnimation(float DeltaTime,UArcadeMovementComponent* ArcadeMovementComponent){};
+	
 	//Index only for multi wheel components(Instanced Static Mesh)
 
 	

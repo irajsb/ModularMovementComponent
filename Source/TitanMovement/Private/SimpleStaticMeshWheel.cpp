@@ -4,7 +4,7 @@
 #include "SimpleStaticMeshWheel.h"
 
 #include "ArcadePawn.h"
-#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
 
 USimpleStaticMeshWheel::USimpleStaticMeshWheel()
 {
@@ -13,7 +13,8 @@ USimpleStaticMeshWheel::USimpleStaticMeshWheel()
 
 void USimpleStaticMeshWheel::SetupWheels(UArcadeMovementComponent* ArcadeMovementComponent)
 {
-	WheelState.LocalLocation=GetRelativeLocation();
+	WheelState.InitialLocalLocation=GetRelativeLocation();
+	WheelState.InitialLocalRotation=GetRelativeRotation();
 }
 
 void USimpleStaticMeshWheel::UpdateSuspension(float DeltaTime,UArcadeMovementComponent* ArcadeMovementComponent)
@@ -29,7 +30,7 @@ void USimpleStaticMeshWheel::UpdateForces(float DeltaTime, UArcadeMovementCompon
 {
 	if(!ArcadeMovementComponent)
 		return;
-	if(WheelState.WheelSetup->ApplyDriveForce)
+	
 	ArcadeMovementComponent->ApplyWheelForces(WheelState,DeltaTime,this);
 }
 
@@ -45,11 +46,23 @@ void USimpleStaticMeshWheel::UpdateSteering(float DeltaTime, UArcadeMovementComp
 void USimpleStaticMeshWheel::SetDriveTorqueOnWheels(float Force)
 {
 
-	
+	if(WheelState.WheelSetup->ApplyDriveForce){
 	WheelState.DriveTorque=Force;
+	}else{
+	WheelState.DriveTorque=0;
+	}
+	
 }
 
 float USimpleStaticMeshWheel::GetFastestWheelOmegaSpeed()
 {
 	return WheelState.Omega;
+}
+
+void USimpleStaticMeshWheel::UpdateAnimation(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent)
+{
+
+	SetRelativeRotation(UKismetMathLibrary::ComposeRotators(WheelState.InitialLocalRotation,FRotator(FMath::RadiansToDegrees(-1*WheelState.AngularPosition),WheelState.SteerAngle,0))) ;
+	SetRelativeLocation(WheelState.InitialLocalLocation-FVector(0,0,(WheelState.HitResult.Time)*WheelState.WheelSetup->SuspensionLength));
+	
 }
