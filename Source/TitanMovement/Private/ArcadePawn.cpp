@@ -2,13 +2,13 @@
 
 
 #include "ArcadePawn.h"
-#include "ArcadeMovementComponent.h"
+#include "ModularMovementComponent.h"
 // Sets default values
 AArcadePawn::AArcadePawn()
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	ArcadeMovementComponent=CreateDefaultSubobject<UArcadeMovementComponent>(TEXT("ArcadeMovementComponent"));
+	ArcadeMovementComponent=CreateDefaultSubobject<UModularMovementComponent>(TEXT("ArcadeMovementComponent"));
 	ArcadeMovementComponent->UpdatedComponent=RootComponent;
 }
 

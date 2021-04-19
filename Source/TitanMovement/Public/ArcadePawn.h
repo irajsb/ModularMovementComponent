@@ -7,7 +7,7 @@
 
 #include "GameFramework/Pawn.h"
 #include "ArcadePawn.generated.h"
-class UArcadeMovementComponent;
+class UModularMovementComponent;
 UCLASS()
 class TITANMOVEMENT_API AArcadePawn : public APawn
 {
@@ -29,7 +29,7 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	UArcadeMovementComponent* ArcadeMovementComponent;
+	UModularMovementComponent* ArcadeMovementComponent;
 
 	//Get Car body
 	UFUNCTION(BlueprintNativeEvent)

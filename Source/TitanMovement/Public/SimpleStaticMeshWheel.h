@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/StaticMeshComponent.h"
-#include "ArcadeMovementComponent.h"
-#include "ArcadeWheelInterface.h"
+#include "ModularMovementComponent.h"
+#include "WheelInterface.h"
 
 #include "SimpleStaticMeshWheel.generated.h"
 
@@ -15,7 +15,7 @@
 
 
 UCLASS( meta=(BlueprintSpawnableComponent))
-class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,public IArcadeWheelInterface
+class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,public IWheelInterface
 {
 	
 	public:
@@ -25,11 +25,12 @@ class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,pub
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	FWheelState WheelState;
-	virtual void SetupWheels(UArcadeMovementComponent* ArcadeMovementComponent) override;
-	virtual void UpdateSuspension(float DeltaTime,UArcadeMovementComponent* ArcadeMovementComponent) override;
-	virtual void UpdateForces(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent) override;
-	virtual void UpdateSteering(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent, float SteeringAngle) override;
+	virtual void SetupWheels(UModularMovementComponent* ArcadeMovementComponent) override;
+	virtual void UpdateSuspension(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent) override;
+	virtual void UpdateForces(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
+	virtual void UpdateSteering(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent, float SteeringAngle) override;
 	virtual  void SetDriveTorqueOnWheels(float Force) override;
 	virtual float GetFastestWheelOmegaSpeed() override;
-	virtual void UpdateAnimation(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent) override;
+	virtual void UpdateAnimation(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
+	virtual void SimulateWheelData(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
 };

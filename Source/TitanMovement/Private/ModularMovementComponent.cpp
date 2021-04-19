@@ -1,10 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
+//TODO Replicate cosmetic data
+//TODO Audio
+//TODO Pathfinding
+//TODO Avoidance
+//TODO SkeletalMesh
+//TODO sliding
+//TODO fix gearbox
+//Cosmetic delegates
 
-
-#include "ArcadeMovementComponent.h"
+#include "ModularMovementComponent.h"
 
 #include "ArcadePawn.h"
-#include "ArcadeWheelInterface.h"
+#include "WheelInterface.h"
 #include "TitanMovement.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -44,37 +51,43 @@ FORCEINLINE float OmegaToRPM(float Omega)
 	return Omega * 30.f / PI;
 }
 
-UArcadeMovementComponent::UArcadeMovementComponent()
+UModularMovementComponent::UModularMovementComponent()
 {
-	AHUD::OnShowDebugInfo.AddUObject(this, &UArcadeMovementComponent::ShowDebugInfo);
+	AHUD::OnShowDebugInfo.AddUObject(this, &UModularMovementComponent::ShowDebugInfo);
+	SetIsReplicatedByDefault(true);
 }
 
-UMeshComponent* UArcadeMovementComponent::GetMesh()
+UMeshComponent* UModularMovementComponent::GetMesh()const
 {
 	return  Cast<UMeshComponent>(UpdatedComponent);
 }
 
-void UArcadeMovementComponent::SetInputThrottle(float Input)
+void UModularMovementComponent::SetThrottleInput(float Input)
 {
 	RawThrottleInput=FMath::Clamp<float>(Input,-1.f,1.f);
 }
 
-void UArcadeMovementComponent::SetInputSteering(float Input)
+void UModularMovementComponent::SetSteeringInput(float Input)
 {
 	RawSteeringInput=FMath::Clamp<float>(Input,-1.f,1.f);
 }
 
-void UArcadeMovementComponent::SetBrakeInput(float Brake)
+void UModularMovementComponent::SetBrakeInput(float Brake)
 {
 	RawBrakeInput = FMath::Clamp(Brake, -1.0f, 1.0f);
 }
 
-int UArcadeMovementComponent::GetNumberOfWheels()
+void UModularMovementComponent::SetHandBrakeInput(bool Brake)
+{
+	HandBrakeInput=Brake;
+}
+
+int UModularMovementComponent::GetNumberOfWheels()
 {//TODo
 	return 4;
 }
 
-FArcadeGearInfo UArcadeMovementComponent::GetGearInfo(int Index)
+FArcadeGearInfo UModularMovementComponent::GetGearInfo(int Index)
 {
 	if(VehicleState.VehicleData->Gears.IsValidIndex(Index))
 	{
@@ -88,7 +101,7 @@ FArcadeGearInfo UArcadeMovementComponent::GetGearInfo(int Index)
 	return  Gear;
 }
 
-void UArcadeMovementComponent::InitializeComponent()
+void UModularMovementComponent::InitializeComponent()
 {
 
 
@@ -100,7 +113,7 @@ if(!VehicleState.VehicleData)
 	return;
 }
 	
-	Components=	GetOwner()->GetComponentsByInterface(UArcadeWheelInterface::StaticClass());
+	Components=	GetOwner()->GetComponentsByInterface(UWheelInterface::StaticClass());
 	//finding Idle
 	for (int Index=0 ;Index!=VehicleState.VehicleData->Gears.Num();++Index)
 	{
@@ -112,15 +125,15 @@ if(!VehicleState.VehicleData)
 		}
 	}
 
-	//Setting up Wheel initital Data
+	//Setting up Wheel initial Data
 	for(UActorComponent* Component: Components)
 	{
-		Cast<IArcadeWheelInterface>(Component)->SetupWheels(this);
+		Cast<IWheelInterface>(Component)->SetupWheels(this);
 	}
 	
 }
 
-void UArcadeMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction)
+void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction)
 {
 	ARCADE_CYCLE_COUNTER(STAT_ArcadeTickComponent)
 	const float fDeltaTime=FMath::Min<float>(DeltaTime,0.0333);
@@ -131,24 +144,50 @@ void UArcadeMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		return;
 	}
 	
-	
-	
-	
 	UpdateState(fDeltaTime);
-	UpdateEngine(fDeltaTime);
-	UpdateSuspension(fDeltaTime);
-	UpdateSteering(fDeltaTime);
-	UpdateGearBox(fDeltaTime);
-	UpdateForces(fDeltaTime);
-	UpdateWheelAnimation(DeltaTime);
+	if(ShouldProcessInput())
+	{
+		UE_LOG(LogTemp,Log,TEXT("%s is processing input"),*GetOwner()->GetHumanReadableName());
+		//code from Prv Vehicle
+		const int32 QThrottleInput = FMath::FloorToInt(RawThrottleInput * 127.f) & 0xFF;
+		const int32 QSteeringInput = (FMath::FloorToInt(RawSteeringInput * 63.f) & 0x7F) << 8;
+		const int32 QHandbrakeInput = HandBrakeInput ? (1 << 15) : 0;
+		const uint16 NewQuantizeInput = QHandbrakeInput | QSteeringInput | QThrottleInput;
+
+		if (QuantizeInput != NewQuantizeInput)
+		{
+			QuantizeInput = NewQuantizeInput;
+			ServerUpdateState(QuantizeInput);
+		}
+	}
+	
+	if(ShouldProcessPhysics())
+	{
+		UE_LOG(LogTemp,Log,TEXT("%s is processing physics delta : %f "),*GetOwner()->GetHumanReadableName(),fDeltaTime);
+	
+		UpdateEngine(fDeltaTime);
+		UpdateSuspension(fDeltaTime);
+		UpdateSteering(fDeltaTime);
+		UpdateGearBox(fDeltaTime);
+		UpdateForces(fDeltaTime);
+	}
+	if(ShouldProcessCosmetics())
+	{
+		UE_LOG(LogTemp,Log,TEXT("%s is processing Cosmetics"),*GetOwner()->GetHumanReadableName());
+		if(GetOwnerRole()!=ENetRole::ROLE_Authority)
+		{
+			SimulateWheelData(fDeltaTime);
+		}
+		UpdateWheelAnimation(DeltaTime);
+	}
 }
 
-void UArcadeMovementComponent::UpdateState(float DeltaTime)
+void UModularMovementComponent::UpdateState(float DeltaTime)
 {
 	VehicleState.ForwardSpeed = FVector::DotProduct(GetMesh()->GetPhysicsLinearVelocity(), GetMesh()->GetForwardVector());
 }
 
-void UArcadeMovementComponent::UpdateGearBox(float DeltaTime)
+void UModularMovementComponent::UpdateGearBox(float DeltaTime)
 {
 
 	if (VehicleState.VehicleData->bReverseAsBrake)
@@ -190,7 +229,7 @@ void UArcadeMovementComponent::UpdateGearBox(float DeltaTime)
 		}
 		else if (VehicleState.CurrentRpmRatio <=  GetGearInfo(VehicleState.CurrentGear).DownRatio && VehicleState.CurrentGear > VehicleState.IdleGear+1) // don't change down to neutral
 			{
-			SetTargetGear(VehicleState.CurrentGear-1,false);
+			SetTargetGear(VehicleState.CurrentGear-1,true);
 			}
 	}
 
@@ -208,7 +247,7 @@ void UArcadeMovementComponent::UpdateGearBox(float DeltaTime)
 	}
 }
 
-void UArcadeMovementComponent::UpdateEngine(float DeltaTime)
+void UModularMovementComponent::UpdateEngine(float DeltaTime)
 {
 
 	ARCADE_CYCLE_COUNTER(STAT_ArcadeEngine)
@@ -216,7 +255,7 @@ void UArcadeMovementComponent::UpdateEngine(float DeltaTime)
 	for(UActorComponent* Component: Components)
 	{
 	
-	const float ComponentOmega=	FMath::Abs(Cast<IArcadeWheelInterface>(Component)->GetFastestWheelOmegaSpeed());
+	const float ComponentOmega=	FMath::Abs(Cast<IWheelInterface>(Component)->GetFastestWheelOmegaSpeed());
 		if(ComponentOmega>HighestOmega)
 			HighestOmega=ComponentOmega;
 	}
@@ -231,14 +270,14 @@ void UArcadeMovementComponent::UpdateEngine(float DeltaTime)
 	
 	for(UActorComponent* Component: Components)
 	{
-		Cast<IArcadeWheelInterface>(Component)->SetDriveTorqueOnWheels(WheelTorque);
+		Cast<IWheelInterface>(Component)->SetDriveTorqueOnWheels(WheelTorque);
 	}
 	
 }
 
 
 
-void UArcadeMovementComponent::UpdateSuspension(float DeltaTime)
+void UModularMovementComponent::UpdateSuspension(float DeltaTime)
 {
 	ARCADE_CYCLE_COUNTER(STAT_ArcadeSuspension)
 
@@ -246,11 +285,11 @@ void UArcadeMovementComponent::UpdateSuspension(float DeltaTime)
 
 	for(UActorComponent* Component: Components)
 	{
-		Cast<IArcadeWheelInterface>(Component)->UpdateSuspension(DeltaTime,this);
+		Cast<IWheelInterface>(Component)->UpdateSuspension(DeltaTime,this);
 	}
 }
 
-void UArcadeMovementComponent::UpdateForces(float DeltaTime)
+void UModularMovementComponent::UpdateForces(float DeltaTime)
 {
 
 	
@@ -263,12 +302,12 @@ void UArcadeMovementComponent::UpdateForces(float DeltaTime)
 
 	for(UActorComponent* Component: Components)
 	{
-		Cast<IArcadeWheelInterface>(Component)->UpdateForces(DeltaTime,this);
+		Cast<IWheelInterface>(Component)->UpdateForces(DeltaTime,this);
 	}
 
 }
 
-void UArcadeMovementComponent::UpdateSteering(float DeltaTime)
+void UModularMovementComponent::UpdateSteering(float DeltaTime)
 {
 
 	SteeringInput=CalcSteeringInput(DeltaTime);
@@ -281,21 +320,29 @@ const 	float UseSteeringValue = SteeringInput * SteerSpeedScale;
 	
 	for(UActorComponent* Component: Components)
 	{
-		Cast<IArcadeWheelInterface>(Component)->UpdateSteering(DeltaTime,this,UseSteeringValue);
+		Cast<IWheelInterface>(Component)->UpdateSteering(DeltaTime,this,UseSteeringValue);
 	}
 	
 }
 
-void UArcadeMovementComponent::UpdateWheelAnimation(float DeltaTime)
+void UModularMovementComponent::UpdateWheelAnimation(float DeltaTime)
 {
 
 for(UActorComponent* Component: Components)
 	{
-		Cast<IArcadeWheelInterface>(Component)->UpdateAnimation(DeltaTime,this);
+		Cast<IWheelInterface>(Component)->UpdateAnimation(DeltaTime,this);
 	}
 }
 
-void UArcadeMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, float DeltaTime, USceneComponent* ArcadeWheel,float InNormSteering)
+void UModularMovementComponent::SimulateWheelData(float DeltaTime)
+{
+	for(UActorComponent* Component: Components)
+	{
+		Cast<IWheelInterface>(Component)->SimulateWheelData(DeltaTime,this);
+	}
+}
+
+void UModularMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, float DeltaTime, USceneComponent* ArcadeWheel,float InNormSteering) const
 {
 	
 	/*if (FMath::Abs(GWheeledVehicleDebugParams.SteeringOverride) > 0.01f)
@@ -305,8 +352,8 @@ void UArcadeMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, f
 	else*/
 	{
 		//
-		
-		float WheelSide =WheelState.InitialLocalLocation.Y;
+
+		const float WheelSide =WheelState.InitialLocalLocation.Y;
 		
 
 
@@ -319,7 +366,7 @@ void UArcadeMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, f
 		{
 		case EArcadeSteerType::AngleRatio:
 			{
-				bool OutsideWheel = (InNormSteering * WheelSide) > 0.f;
+				const bool OutsideWheel = (InNormSteering * WheelSide) > 0.f;
 				OutSteeringAngle = InNormSteering * (OutsideWheel ? WheelState.WheelSetup->SteeringMaxAngle : WheelState.WheelSetup->SteeringMaxAngle *0.7/* Setup().AngleRatio*/);
 
 			}
@@ -356,12 +403,13 @@ void UArcadeMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, f
 
 
 
-void UArcadeMovementComponent::WheelTrace(
-                                          FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel)
+void UModularMovementComponent::WheelTrace(
+                                          FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel) const
 {
 
 	//logic
 	TArray<AActor*> ActorsToIgnore;
+	WheelState.WheelLoad=FVector::ZeroVector;
 	ActorsToIgnore.Add(GetOwner());
 	//TODO Generalize it
 	const FVector ComponentLocation=GetMesh()->GetComponentTransform().TransformPosition(WheelState.InitialLocalLocation+WheelState.WheelSetup->TraceStartOffset) ;
@@ -369,28 +417,26 @@ void UArcadeMovementComponent::WheelTrace(
 	UKismetSystemLibrary::SphereTraceSingle(GetWorld(),ComponentLocation,ComponentLocation+(GetMesh()->GetUpVector()*-1*WheelState.WheelSetup->SuspensionLength),WheelState.WheelSetup->WheelRadius,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GArcadeVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,TraceResult,true);
 
 	const float CurrentLen=1-TraceResult.Time;
-	const float DampingCorrection=((CurrentLen-WheelState.PreviousLen)*VehicleState.VehicleData->DampingCorrectionMultiplier*WheelState.WheelSetup->Stiffness);
-	if(TraceResult.bBlockingHit)
+	const float DampingCorrection=(((CurrentLen-WheelState.PreviousLen)*VehicleState.VehicleData->DampingCorrectionMultiplier*WheelState.WheelSetup->Stiffness))/DeltaTime;
+	if(TraceResult.bBlockingHit&&GetOwnerRole()==ENetRole::ROLE_Authority)
 	{
-	WheelState.WheelLoad=DeltaTime*(FVector(0,0,1)*(WheelState.WheelSetup->Stiffness+DampingCorrection)*(CurrentLen));
+	WheelState.WheelLoad=DeltaTime*((FVector(0,0,1)*(WheelState.WheelSetup->Stiffness+DampingCorrection)*(CurrentLen)));
 	GetMesh()->AddForceAtLocation(WheelState.WheelLoad,TraceResult.TraceStart);
 	
 	}
 	
 	WheelState.PreviousLen=CurrentLen;
 	WheelState.HitResult=TraceResult;
+
+	
 	//logic
 	//Debug
 	#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 
 	if(GArcadeVehicleDebugParams.ShowSuspensionDebug)
 	{
-		DrawDebugLine(GetWorld(),TraceResult.TraceStart,TraceResult.TraceStart+(DeltaTime*60*(TraceResult.ImpactNormal*(WheelState.WheelSetup->Stiffness)*(CurrentLen)))/20,FColor::Red,false,-1,0,5);
-		DrawDebugLine(GetWorld(),TraceResult.TraceStart+FVector(0,20,0),TraceResult.TraceStart+FVector(0,20,0)+(DeltaTime*60*(TraceResult.ImpactNormal*(WheelState.WheelSetup->Stiffness+DampingCorrection)*(CurrentLen)))/20,FColor::Green,false,-1,0,5);
-		DrawDebugLine(GetWorld(),TraceResult.TraceStart+FVector(0,-20,0),TraceResult.TraceStart+FVector(0,-20,0)+FVector(0,0,1)*DampingCorrection/20,FColor::Blue,false,-1,0,5);
-		DrawDebugString(GetWorld(),TraceResult.TraceStart-FVector(-50,-50,0),TEXT("OrginalForce"),0,FColor::Red,0);
-		DrawDebugString(GetWorld(),TraceResult.TraceStart-FVector(-50,-50,-25),TEXT("CorrectedForce"),0,FColor::Green,0);
-		DrawDebugString(GetWorld(),TraceResult.TraceStart-FVector(-50,-50,-50),TEXT("DampingCorrection"),0,FColor::Blue,0);
+		DrawDebugLine(GetWorld(),TraceResult.TraceStart,TraceResult.TraceStart+(DeltaTime*(FVector(0,0,1)*(WheelState.WheelSetup->Stiffness/1000)*(CurrentLen))),FColor::Red,false,-1,0,5);
+	
 
 	}
 
@@ -399,22 +445,41 @@ void UArcadeMovementComponent::WheelTrace(
 
 }
 
-void UArcadeMovementComponent::ApplyWheelForces(FWheelState& WheelState, float DeltaTime,
+
+void UModularMovementComponent::SimulateWheel(FWheelState& WheelState, float DeltaTime,
     USceneComponent* ArcadeWheel)
 {
-	if(!WheelState.HitResult.bBlockingHit)
-		return;
+
+//maybe you'll need to make a simplified version
+
+SteeringInput=CalcSteeringInput(DeltaTime);
+const float SteerSpeedScale =	VehicleState.VehicleData->SteerCurve.GetRichCurve()->IsEmpty()?1:VehicleState.VehicleData->SteerCurve.GetRichCurve()->Eval(VehicleState.ForwardSpeed*0.036/*CmSToKmH*/) ;	
+const 	float UseSteeringValue = SteeringInput * SteerSpeedScale;
+WheelTrace(WheelState,DeltaTime,ArcadeWheel);
+ApplyWheelForces(WheelState,DeltaTime,ArcadeWheel);
+if(WheelState.WheelSetup->SteeringWheel)
+CalculateSteeringAngle(WheelState,DeltaTime,ArcadeWheel,UseSteeringValue);
+
+
+}
+void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float DeltaTime,
+    USceneComponent* ArcadeWheel)
+{
+	
 //calculate Brake
-	 
+	
 	const float BrakeTorque=BrakeInput*WheelState.WheelSetup->BrakeTorque;
 	WheelState.BrakeTorque=BrakeTorque;
-	if(	0.0f>CalcHandbrakeInput())
+	if(	HandBrakeInput)
 	{
-	if(WheelState.WheelSetup->AffectedByHandBrake)
-	{
-		WheelState.BrakeTorque=WheelState.WheelSetup->BrakeTorque;;
+		if(WheelState.WheelSetup->AffectedByHandBrake)
+		{
+			WheelState.BrakeTorque=WheelState.WheelSetup->HandBrakeTorque;
+			WheelState.DriveTorque=0;
+		}
 	}
-	}
+	
+	
 	const FTransform WorldTransform = GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
 	const float SteerAngleDegrees = WheelState.SteerAngle; // temp
 	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
@@ -432,7 +497,8 @@ void UArcadeMovementComponent::ApplyWheelForces(FWheelState& WheelState, float D
 	float AppliedLinearBrakeForce = WheelState.BrakeTorque* CmToM(Re);
 
 		// currently just letting the brake override the throttle
-	//TODO
+
+
 		bool Braking = FMath::Abs(WheelState.DriveTorque) < /*>*/FMath::Abs(WheelState.BrakeTorque);
 		float BrakeFactor = 1.0f;
 		float K =0.4f;
@@ -469,8 +535,6 @@ void UArcadeMovementComponent::ApplyWheelForces(FWheelState& WheelState, float D
 			else
 			{
 				FinalLongitudinalForce = AppliedLinearDriveForce;
-				UE_LOG(LogTemp,Error,TEXT("DriveTorque %f"),AppliedLinearDriveForce);
-				
 			}
 			
 			// lateral grip
@@ -479,14 +543,14 @@ void UArcadeMovementComponent::ApplyWheelForces(FWheelState& WheelState, float D
 			
 			ForceFromFriction.X = FinalLongitudinalForce;
 		
-			float DynamicFrictionLongitudialScaling = 0.75f;
-			float TractionControlAndABSScaling = 0.98f;	// how close to perfection is the system working
+			float DynamicFrictionLongitudinalScaling = 0.75f;
+			float TractionControlAndAbsScaling = 0.98f;	// how close to perfection is the system working
 
 			const float	SideSlipModifier = 1.0f;
 				bool Locked = false;
 			 WheelState.Spinning = false;
 			
-			// we can only obtain as much accel/decel force as the friction will allow
+			// we can only obtain as much accel force as the friction will allow
 			if (FMath::Abs(FinalLongitudinalForce) > LongitudinalAdhesiveLimit)
 			{
 				if (Braking)
@@ -497,7 +561,7 @@ void UArcadeMovementComponent::ApplyWheelForces(FWheelState& WheelState, float D
 				if ((Braking && WheelState.WheelSetup->ABSEnabled) || (!Braking && WheelState.WheelSetup->TractionControlEnabled))
 				{
 					WheelState.Spin = 0.0f;
-					ForceFromFriction.X = LongitudinalAdhesiveLimit * TractionControlAndABSScaling;
+					ForceFromFriction.X = LongitudinalAdhesiveLimit * TractionControlAndAbsScaling;
 				}
 				else
 				{
@@ -511,7 +575,7 @@ void UArcadeMovementComponent::ApplyWheelForces(FWheelState& WheelState, float D
 					{
 						Locked = true;
 					}
-					ForceFromFriction.X = LongitudinalAdhesiveLimit * DynamicFrictionLongitudialScaling;
+					ForceFromFriction.X = LongitudinalAdhesiveLimit * DynamicFrictionLongitudinalScaling;
 					
 				}
 			}
@@ -583,29 +647,65 @@ void UArcadeMovementComponent::ApplyWheelForces(FWheelState& WheelState, float D
 	
 	
 
+	if(!WheelState.HitResult.bBlockingHit)
+		return;
 	//TODO Do we need this?float RotationAngle = FMath::RadiansToDegrees(WheelState.AngularPosition);
-	FVector FrictionForceLocal = ForceFromFriction;
-    FrictionForceLocal = SteeringRotator.RotateVector(FrictionForceLocal);
+	if(GetOwnerRole()==ENetRole::ROLE_Authority)
+	{
+		FVector FrictionForceLocal = ForceFromFriction;
+		FrictionForceLocal = SteeringRotator.RotateVector(FrictionForceLocal);
 
-	FVector GroundZVector = WheelState.HitResult.ImpactNormal;
-	FVector GroundXVector = FVector::CrossProduct(GetMesh()->GetRightVector(), GroundZVector);
-	FVector GroundYVector = FVector::CrossProduct(GroundZVector, GroundXVector);
-	FMatrix Mat(GroundXVector, GroundYVector, GroundZVector, GetMesh()->GetComponentLocation());
-	FVector FrictionForceVector = Mat.TransformVector(FrictionForceLocal);
+		FVector GroundZVector = WheelState.HitResult.ImpactNormal;
+		FVector GroundXVector = FVector::CrossProduct(GetMesh()->GetRightVector(), GroundZVector);
+		FVector GroundYVector = FVector::CrossProduct(GroundZVector, GroundXVector);
+		FMatrix Mat(GroundXVector, GroundYVector, GroundZVector, GetMesh()->GetComponentLocation());
+		FVector FrictionForceVector = Mat.TransformVector(FrictionForceLocal);
 	
-	GetMesh()->AddForceAtLocation(FrictionForceVector,WheelState.HitResult.TraceStart);
-	if(GArcadeVehicleDebugParams.ShowDrawFriction)
-	DrawDebugLine(GetWorld(),WheelState.HitResult.ImpactPoint,WheelState.HitResult.ImpactPoint+FrictionForceVector,FColor::Green,false,-1,0,15);
-
+		GetMesh()->AddForceAtLocation(FrictionForceVector,WheelState.HitResult.TraceStart);
+		if(GArcadeVehicleDebugParams.ShowDrawFriction)
+			DrawDebugLine(GetWorld(),WheelState.HitResult.ImpactPoint,WheelState.HitResult.ImpactPoint+FrictionForceVector,FColor::Green,false,-1,0,15);
+	}
 }
 
-float UArcadeMovementComponent::CmToM(float In)
+float UModularMovementComponent::CmToM(float In)
 {
 	return  In*100;
 }
 
 
-float UArcadeMovementComponent::CalcSteeringInput(float DeltaTime)
+
+bool UModularMovementComponent::ShouldProcessPhysics()const
+{
+	return GetOwnerRole()==ENetRole::ROLE_Authority;
+}
+
+bool UModularMovementComponent::ShouldProcessCosmetics()const
+{
+return 	GetNetMode()==ENetMode::NM_Standalone||(GetNetMode()==ENetMode::NM_Client&&GetOwnerRole()!=ENetRole::ROLE_Authority);
+}
+
+bool UModularMovementComponent::ShouldProcessInput()const
+{
+	return 	(GetPawnOwner()->GetLocalRole()!=ENetRole::ROLE_Authority&&GetPawnOwner()->IsLocallyControlled());
+}
+
+void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuantizeInput)
+{
+	
+	const int32 QThrottleInput = static_cast<int8>(InQuantizeInput & 0xFF);
+	const int32 QSteeringInput = static_cast<int8>(((InQuantizeInput >> 8) & 0x7F) << 1) / 2;
+	const int32 QHandbrakeInput = (InQuantizeInput >> 15) & 1;
+
+	SetThrottleInput(QThrottleInput / 127.f);
+	SetSteeringInput(QSteeringInput / 63.f);
+	UE_LOG(LogTemp,Error,TEXT("Handbrake is %d"),QHandbrakeInput);
+	//HandBrakeInput = QHandbrakeInput;
+
+	//LastUserSteeringInput = QSteeringInput;
+}
+
+
+float UModularMovementComponent::CalcSteeringInput(float DeltaTime)
 {
 	
 
@@ -619,7 +719,7 @@ SteeringInput=	UKismetMathLibrary::FInterpTo_Constant(SteeringInput,RawSteeringI
 	return  SteeringInput;
 }
 
-float UArcadeMovementComponent::CalcBrakeInput()
+float UModularMovementComponent::CalcBrakeInput()const
 {
 	if (VehicleState.VehicleData->bReverseAsBrake)
 	{
@@ -679,11 +779,8 @@ float UArcadeMovementComponent::CalcBrakeInput()
 	}
 
 }
-float UArcadeMovementComponent::CalcHandbrakeInput()
-{
-	return (bRawHandbrakeInput == true) ? 1.0f : 0.0f;
-}
-float UArcadeMovementComponent::CalcThrottleInput()
+
+float UModularMovementComponent::CalcThrottleInput()
 {
 	
 
@@ -714,7 +811,7 @@ if(GArcadeVehicleDebugParams.ShowInputProcessingDebug)
 	return NewThrottleInput;
 }
 
-void UArcadeMovementComponent::SetTargetGear(int32 GearNum, bool bImmediate)
+void UModularMovementComponent::SetTargetGear(int32 GearNum, bool bImmediate)
 {
 	if(GArcadeVehicleDebugParams.ShowGearboxLog)
 	UE_LOG(LogArcadeVehicle,Warning,TEXT("Change gear called with %d "),GearNum);
@@ -736,7 +833,7 @@ void UArcadeMovementComponent::SetTargetGear(int32 GearNum, bool bImmediate)
 //Debug
 ///////////
 ///////////////
-void UArcadeMovementComponent::ShowDebugInfo(AHUD* HUD, UCanvas* Canvas, const FDebugDisplayInfo& DisplayInfo,
+void UModularMovementComponent::ShowDebugInfo(AHUD* HUD, UCanvas* Canvas, const FDebugDisplayInfo& DisplayInfo,
     float& YL, float& YPos)
 {
 	
@@ -762,18 +859,18 @@ void UArcadeMovementComponent::ShowDebugInfo(AHUD* HUD, UCanvas* Canvas, const F
 	}
 }
 
-void UArcadeMovementComponent::DrawDebug(UCanvas* Canvas, float& YL, float& YPos)
+void UModularMovementComponent::DrawDebug(UCanvas* Canvas, float& YL, float& YPos)
 {
 	UFont* RenderFont = GEngine->GetLargeFont();
 	float X, Y;
 	Canvas->GetCenter(X, Y);
-	float YLine = Y * 2.f - 50.f;
-	float Scaling = 2.f;
-	Canvas->DrawText(RenderFont, FString::Printf(TEXT("%d KMH"), (int)(VehicleState.ForwardSpeed*0.036)), X-100, YLine, Scaling, Scaling);
-	Canvas->DrawText(RenderFont, FString::Printf(TEXT("[%d]"), (int)VehicleState.CurrentGear), X, YLine, Scaling, Scaling);
-	Canvas->DrawText(RenderFont, FString::Printf(TEXT("%d RPM"), (int)VehicleState.CurrentRpm), X+50, YLine, Scaling, Scaling);
-	FVector2D DialPos(X+10, YLine-40);
-	float DialRadius = 50;
+	const float YLine = Y * 2.f - 50.f;
+	const float Scaling = 2.f;
+	Canvas->DrawText(RenderFont, FString::Printf(TEXT("%d KMH"),static_cast<int>(VehicleState.ForwardSpeed * 0.036)), X-150, YLine, Scaling, Scaling);
+	Canvas->DrawText(RenderFont, FString::Printf(TEXT("[%d]"), static_cast<int>(VehicleState.CurrentGear)), X, YLine, Scaling, Scaling);
+	Canvas->DrawText(RenderFont, FString::Printf(TEXT("%d RPM"),static_cast<int>(VehicleState.CurrentRpm)), X+50, YLine, Scaling, Scaling);
+	const FVector2D DialPos(X+10, YLine-40);
+const	float DialRadius = 50;
 	DrawDial(Canvas, DialPos, DialRadius, VehicleState.CurrentRpmRatio, 1);
 	
 }
@@ -782,12 +879,12 @@ void UArcadeMovementComponent::DrawDebug(UCanvas* Canvas, float& YL, float& YPos
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 
-float UArcadeMovementComponent::CalcDialAngle(float CurrentValue, float MaxValue)
+float UModularMovementComponent::CalcDialAngle(float CurrentValue, float MaxValue)
 {
 	return (CurrentValue / MaxValue) * 3.f / 2.f * PI - (PI * 0.25f);
 }
 
-void UArcadeMovementComponent::DrawDial(UCanvas* Canvas, FVector2D Pos, float Radius, float CurrentValue, float MaxValue)
+void UModularMovementComponent::DrawDial(UCanvas* Canvas, FVector2D Pos, float Radius, float CurrentValue, float MaxValue)
 {
 	float Angle = CalcDialAngle(CurrentValue, MaxValue);
 	FVector2D PtEnd(Pos.X - FMath::Cos(Angle) * Radius, Pos.Y - FMath::Sin(Angle) * Radius);
@@ -804,13 +901,13 @@ void UArcadeMovementComponent::DrawDial(UCanvas* Canvas, FVector2D Pos, float Ra
 	// the last checkmark
 	Angle = CalcDialAngle(MaxValue, MaxValue);
 	PtEnd.Set(-FMath::Cos(Angle) * Radius, -FMath::Sin(Angle) * Radius);
-	FVector2D PtStart = PtEnd * 0.8f;
+	const FVector2D PtStart = PtEnd * 0.8f;
 	DrawLine2D(Canvas, Pos+PtStart, Pos+PtEnd, FColor::Red, 2.f);
 
 }
 
 
-void UArcadeMovementComponent::DrawLine2D(UCanvas* Canvas, const FVector2D& StartPos, const FVector2D& EndPos, FColor Color, float Thickness)
+void UModularMovementComponent::DrawLine2D(UCanvas* Canvas, const FVector2D& StartPos, const FVector2D& EndPos, FColor Color, float Thickness)
 {
 	if (Canvas)
 	{

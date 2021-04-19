@@ -50,6 +50,8 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	float BrakeTorque;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	float HandBrakeTorque;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	bool ABSEnabled;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	bool TractionControlEnabled;

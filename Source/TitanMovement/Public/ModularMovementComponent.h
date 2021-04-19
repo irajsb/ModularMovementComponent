@@ -4,11 +4,11 @@
 
 #include "CoreMinimal.h"
 
-#include "ArcadeWheelInterface.h"
+#include "WheelInterface.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "ModularVehicleData.h"
 #include"ModularVehicleWheelData.h"
-#include "ArcadeMovementComponent.generated.h"
+#include "ModularMovementComponent.generated.h"
 class AArcadePawn;
 
 
@@ -55,18 +55,18 @@ struct FVehicleState
 
 
 UCLASS()
-class TITANMOVEMENT_API UArcadeMovementComponent : public UPawnMovementComponent
+class TITANMOVEMENT_API UModularMovementComponent : public UPawnMovementComponent
 {
 	GENERATED_BODY()
 
 	//Constructor
-	UArcadeMovementComponent();
+	UModularMovementComponent();
 	public:
 	//Wheels
 	UPROPERTY(BlueprintReadOnly)
 	TArray<UActorComponent*> Components;
 	//Return Mesh
-	UMeshComponent* GetMesh();
+	UMeshComponent* GetMesh()const;
 	private:
 	
 	UPROPERTY(Transient)
@@ -83,16 +83,19 @@ class TITANMOVEMENT_API UArcadeMovementComponent : public UPawnMovementComponent
 	UPROPERTY(Transient)
 	float RawThrottleInput;
 	UPROPERTY(Transient)
-	bool bRawHandbrakeInput;
+	bool HandBrakeInput;
 public:
 	//input 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void SetInputThrottle(float Input);
+	void SetThrottleInput(float Input);
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void SetInputSteering(float Input);
-	/** Set the user input for the vehicle Brake [range 0 to 1] set it if you've turned of reverse as brake */
+	void SetSteeringInput(float Input);
+	/** Set the user input for the vehicle Brake [range 0 to 1] set it if you've turned off reverse as brake */
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
     void SetBrakeInput(float Brake);
+
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void SetHandBrakeInput(bool Brake);
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	FVehicleState VehicleState;
 
@@ -100,10 +103,9 @@ public:
 	float CalcSteeringInput(float DeltaTime);
 
 	/** Compute brake input */
-	float CalcBrakeInput();
+	float CalcBrakeInput()const;
 
-	/** Compute handbrake input */
-	float CalcHandbrakeInput();
+	
 
 	float CalcThrottleInput();
 	//Engine
@@ -123,15 +125,33 @@ public:
 	void UpdateForces(float DeltaTime);
 	void UpdateSteering(float DeltaTime);
 	void UpdateWheelAnimation(float DeltaTime);
+	void SimulateWheelData(float DeltaTime);
 	//trace and apply Suspension forces
-	void WheelTrace(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
+	void WheelTrace(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel) const;
+	//same as top function without force applying
+	void SimulateWheel(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
 	//Apply Drive Brake and friction
 	void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
-	void CalculateSteeringAngle(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel,float InNormSteering);
+	void CalculateSteeringAngle(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel,float InNormSteering) const;
 
 	
 	//ChaosDefault
-	float CmToM(float In);
+	static float CmToM(float In);
+	///replication
+
+
+	bool ShouldProcessPhysics()const;
+	bool ShouldProcessCosmetics()const;
+	bool ShouldProcessInput()const;
+	/** Pass current state to server */
+	UFUNCTION(reliable, server)
+    void ServerUpdateState(uint16 InQuantizeInput);
+	/** Contains: throttle (1), steering (2), handbrake(3). 
+	*  3222 2222 1111 1111
+	*/
+	UPROPERTY(Transient)
+	uint16 QuantizeInput;
+	/////
 	
 	//debug
 
@@ -139,10 +159,10 @@ public:
 	/** Draw 2D debug text graphs on UI for the wheels, suspension and other systems */
 	virtual void DrawDebug(UCanvas* Canvas, float& YL, float& YPos);
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	float CalcDialAngle(float CurrentValue, float MaxValue);
-	void DrawDial(UCanvas* Canvas, FVector2D Pos, float Radius, float CurrentValue, float MaxValue);
+	static float CalcDialAngle(float CurrentValue, float MaxValue);
+	static void DrawDial(UCanvas* Canvas, FVector2D Pos, float Radius, float CurrentValue, float MaxValue);
 	// draw 2D debug line to UI canvas
-	void DrawLine2D(UCanvas* Canvas, const FVector2D& StartPos, const FVector2D& EndPos, FColor Color, float Thickness = 1.f);
+	static void DrawLine2D(UCanvas* Canvas, const FVector2D& StartPos, const FVector2D& EndPos, FColor Color, float Thickness = 1.f);
 	
 
 	

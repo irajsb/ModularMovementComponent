@@ -11,13 +11,13 @@ USimpleStaticMeshWheel::USimpleStaticMeshWheel()
 
 }
 
-void USimpleStaticMeshWheel::SetupWheels(UArcadeMovementComponent* ArcadeMovementComponent)
+void USimpleStaticMeshWheel::SetupWheels(UModularMovementComponent* ArcadeMovementComponent)
 {
 	WheelState.InitialLocalLocation=GetRelativeLocation();
 	WheelState.InitialLocalRotation=GetRelativeRotation();
 }
 
-void USimpleStaticMeshWheel::UpdateSuspension(float DeltaTime,UArcadeMovementComponent* ArcadeMovementComponent)
+void USimpleStaticMeshWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent)
 {
 
 	if(!ArcadeMovementComponent)
@@ -26,7 +26,7 @@ void USimpleStaticMeshWheel::UpdateSuspension(float DeltaTime,UArcadeMovementCom
 	ArcadeMovementComponent->WheelTrace(WheelState,DeltaTime,this);
 }
 
-void USimpleStaticMeshWheel::UpdateForces(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent)
+void USimpleStaticMeshWheel::UpdateForces(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent)
 {
 	if(!ArcadeMovementComponent)
 		return;
@@ -34,7 +34,7 @@ void USimpleStaticMeshWheel::UpdateForces(float DeltaTime, UArcadeMovementCompon
 	ArcadeMovementComponent->ApplyWheelForces(WheelState,DeltaTime,this);
 }
 
-void USimpleStaticMeshWheel::UpdateSteering(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent,
+void USimpleStaticMeshWheel::UpdateSteering(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent,
 	float /*TODO Change name */SteeringAngle)
 {
 	if(WheelState.WheelSetup->SteeringWheel)
@@ -59,10 +59,15 @@ float USimpleStaticMeshWheel::GetFastestWheelOmegaSpeed()
 	return WheelState.Omega;
 }
 
-void USimpleStaticMeshWheel::UpdateAnimation(float DeltaTime, UArcadeMovementComponent* ArcadeMovementComponent)
+void USimpleStaticMeshWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent)
 {
 
 	SetRelativeRotation(UKismetMathLibrary::ComposeRotators(WheelState.InitialLocalRotation,FRotator(FMath::RadiansToDegrees(-1*WheelState.AngularPosition),WheelState.SteerAngle,0))) ;
 	SetRelativeLocation(WheelState.InitialLocalLocation-FVector(0,0,(WheelState.HitResult.Time)*WheelState.WheelSetup->SuspensionLength));
 	
+}
+
+void USimpleStaticMeshWheel::SimulateWheelData(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent)
+{
+	ArcadeMovementComponent->SimulateWheel(WheelState,DeltaTime,this);
 }
