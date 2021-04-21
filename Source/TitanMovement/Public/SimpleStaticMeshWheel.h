@@ -23,7 +23,7 @@ class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,pub
 	GENERATED_BODY()
 
 	
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	UPROPERTY(EditAnywhere)
 	FWheelState WheelState;
 	virtual void SetupWheels(UModularMovementComponent* ArcadeMovementComponent) override;
 	virtual void UpdateSuspension(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent) override;

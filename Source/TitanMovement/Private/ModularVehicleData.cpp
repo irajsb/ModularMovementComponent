@@ -20,4 +20,15 @@ UModularVehicleData::UModularVehicleData()
 	WrongDirectionThreshold=100.f;
 	StopThreshold = 10.0f;
 	IdleBrakeInput=0.0f;
+	ReverseThreshold=0.4;
+	DesireSpeedNormal=200;
+	DesireSpeedTurningAround=-40;
+	DesireSpeedNearGoal=20;
+	NearGoalDistance=5000;
+	FullThrottleSpeed=40;
+	TraceLength=50;
+	TraceSpeedMultiplier=0.1;
+	TurnThreshold=0.4;
+	DesireSpeedTurning=10;
+	AIMaxSteerMultiplier=1.2;
 }

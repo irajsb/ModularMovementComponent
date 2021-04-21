@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-//TODO Replicate cosmetic data
-//TODO Audio
+//TODO TankSteering
+
 //TODO Pathfinding
 //TODO Avoidance
 //TODO SkeletalMesh
 //TODO sliding
 //TODO fix gearbox
-//Cosmetic delegates
+
 
 #include "ModularMovementComponent.h"
 
@@ -17,6 +17,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "DrawDebugHelpers.h"
 #include "Engine.h"
+#include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 FArcadeVehicleDebugParams GArcadeVehicleDebugParams;
 
@@ -43,6 +44,10 @@ static FAutoConsoleVariableRef CVarArcadeVehicleFrictionDraw(
     TEXT("ArcadeVehicle.ShowFriction"),
     GArcadeVehicleDebugParams.ShowDrawFriction,
     TEXT("Toggles Friction force "));
+static FAutoConsoleVariableRef CVarArcadeVehicleAIDebug(
+    TEXT("ArcadeVehicle.AIDebug"),
+    GArcadeVehicleDebugParams.AIDebug,
+    TEXT("Toggles AI Debug "));
 
 #define LOCTEXT_NAMESPACE "ArcadeMovement"
 
@@ -55,6 +60,7 @@ UModularMovementComponent::UModularMovementComponent()
 {
 	AHUD::OnShowDebugInfo.AddUObject(this, &UModularMovementComponent::ShowDebugInfo);
 	SetIsReplicatedByDefault(true);
+	
 }
 
 UMeshComponent* UModularMovementComponent::GetMesh()const
@@ -112,7 +118,7 @@ if(!VehicleState.VehicleData)
 	FMessageLog("Blueprint").Error(LOCTEXT("VehicleDataAssetNotValid", "Passed Assign Vehicle Data Asset "));
 	return;
 }
-	
+	UpdateNavAgent(*GetOwner());
 	Components=	GetOwner()->GetComponentsByInterface(UWheelInterface::StaticClass());
 	//finding Idle
 	for (int Index=0 ;Index!=VehicleState.VehicleData->Gears.Num();++Index)
@@ -135,6 +141,7 @@ if(!VehicleState.VehicleData)
 
 void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction)
 {
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	ARCADE_CYCLE_COUNTER(STAT_ArcadeTickComponent)
 	const float fDeltaTime=FMath::Min<float>(DeltaTime,0.0333);
 	if(!VehicleState.VehicleData)
@@ -147,7 +154,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	UpdateState(fDeltaTime);
 	if(ShouldProcessInput())
 	{
-		UE_LOG(LogTemp,Log,TEXT("%s is processing input"),*GetOwner()->GetHumanReadableName());
+		
 		//code from Prv Vehicle
 		const int32 QThrottleInput = FMath::FloorToInt(RawThrottleInput * 127.f) & 0xFF;
 		const int32 QSteeringInput = (FMath::FloorToInt(RawSteeringInput * 63.f) & 0x7F) << 8;
@@ -163,17 +170,18 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	
 	if(ShouldProcessPhysics())
 	{
-		UE_LOG(LogTemp,Log,TEXT("%s is processing physics delta : %f "),*GetOwner()->GetHumanReadableName(),fDeltaTime);
+		
 	
 		UpdateEngine(fDeltaTime);
 		UpdateSuspension(fDeltaTime);
 		UpdateSteering(fDeltaTime);
 		UpdateGearBox(fDeltaTime);
 		UpdateForces(fDeltaTime);
+		UpdateReplicatedCosmeticData();
 	}
 	if(ShouldProcessCosmetics())
 	{
-		UE_LOG(LogTemp,Log,TEXT("%s is processing Cosmetics"),*GetOwner()->GetHumanReadableName());
+		
 		if(GetOwnerRole()!=ENetRole::ROLE_Authority)
 		{
 			SimulateWheelData(fDeltaTime);
@@ -240,6 +248,7 @@ void UModularMovementComponent::UpdateGearBox(float DeltaTime)
 		if (VehicleState.CurrentGearChangeTime <= 0.f)
 		{
 			VehicleState.CurrentGearChangeTime = 0.f;
+			OnGearChange.Broadcast(VehicleState.CurrentGear,VehicleState.TargetGear,true);
 			VehicleState.CurrentGear =VehicleState.TargetGear;
 			if(GArcadeVehicleDebugParams.ShowGearboxLog)
 				UE_LOG(LogArcadeVehicle,Warning,TEXT("Change gear Timer Finished Gear Now at : %d "),VehicleState.CurrentGear);
@@ -342,9 +351,96 @@ void UModularMovementComponent::SimulateWheelData(float DeltaTime)
 	}
 }
 
+EAIVehicleState UModularMovementComponent::DetermineAIState(float ForwardFactor,float DeltaTime)
+{
+
+	UWorld* World=GetWorld();
+	const FVector VehicleLocation = GetOwner()->GetActorLocation();
+	FHitResult  HitResultF;
+	FHitResult  HitResultB;
+	const FVector VehicleDirection=GetMesh()->GetForwardVector();
+
+	//trace
+		if(World)
+		{
+		TArray<AActor*> ActorsToIgnore;
+	
+		ActorsToIgnore.Add(GetOwner());
+		//TODO Generalize it
+		FHitResult TraceResult;
+		const float TraceLenForward=VehicleState.VehicleData->TraceLength*FMath::Max(VehicleState.VehicleData->TraceLength,static_cast<float>((VehicleState.ForwardSpeed*0.036*VehicleState.VehicleData->TraceSpeedMultiplier)));
+		const float TraceLenBackWard=VehicleState.VehicleData->TraceLength*FMath::Max(VehicleState.VehicleData->TraceLength,static_cast<float>((-1*VehicleState.ForwardSpeed*0.036*VehicleState.VehicleData->TraceSpeedMultiplier)));
+		//start traces
+		
+		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+VehicleDirection*TraceLenForward,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,GArcadeVehicleDebugParams.AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultF,true);
+		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+-1*VehicleDirection*TraceLenBackWard,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,GArcadeVehicleDebugParams.AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultB,true);
+
+		}
+	//determine state
+	//turn around state
+
+VehicleState.LockCurrentStateDelta-=DeltaTime;
+
+	EAIVehicleState OutState=VehicleState.AIState;
+	//if state is locked but there is crash risk avoid it
+	if(VehicleState.LockCurrentStateDelta>0)
+	{
+		if(VehicleState.AIState==TurningAround&&HitResultB.bBlockingHit)
+		{
+			OutState=Normal;
+		}
+		if(VehicleState.AIState!=TurningAround&&HitResultF.bBlockingHit)
+			{
+			OutState=TurningAround;
+			}
+		return  OutState;
+	}
+	//state not locked
+	//Normally moving forward
+	
+	if (VehicleState.AIState==Normal)
+	{
+		//if We need to turn or turn around
+		if(ForwardFactor<VehicleState.VehicleData->ReverseThreshold)
+		{
+			OutState=TurningAround;
+		}
+		//forward is  blocked
+		if(!HitResultB.bBlockingHit&&HitResultF.bBlockingHit)
+		{
+			OutState=TurningAround;
+			VehicleState.LockCurrentStateDelta=0.5;
+		}
+
+
+		
+	}
+
+	//Turning Around
+	else if(VehicleState.AIState==TurningAround)
+	{
+		if(FMath::IsNearlyEqual(ForwardFactor,1.0f,0.1f))
+		{
+			OutState=Normal;
+		}
+		//if back is blocked forward is open we stop reversing
+		if(HitResultB.bBlockingHit&&!HitResultF.bBlockingHit)
+		{
+			VehicleState.LockCurrentStateDelta=0.5;
+			OutState=Normal;
+		}
+	}
+	
+
+	return OutState;
+}
+
+
 void UModularMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, float DeltaTime, USceneComponent* ArcadeWheel,float InNormSteering) const
 {
-	
+
+
+	const float AISteerMultiplier=VehicleState.IsAIVehicle?VehicleState.VehicleData->AIMaxSteerMultiplier:1;
 	/*if (FMath::Abs(GWheeledVehicleDebugParams.SteeringOverride) > 0.01f)
 	{
 	SteeringAngle = PWheel.Setup().WheelState.WheelSetup->SteeringMaxAngle * GWheeledVehicleDebugParams.SteeringOverride;
@@ -367,7 +463,7 @@ void UModularMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, 
 		case EArcadeSteerType::AngleRatio:
 			{
 				const bool OutsideWheel = (InNormSteering * WheelSide) > 0.f;
-				OutSteeringAngle = InNormSteering * (OutsideWheel ? WheelState.WheelSetup->SteeringMaxAngle : WheelState.WheelSetup->SteeringMaxAngle *0.7/* Setup().AngleRatio*/);
+				OutSteeringAngle = InNormSteering * (OutsideWheel ? WheelState.WheelSetup->SteeringMaxAngle*AISteerMultiplier : WheelState.WheelSetup->SteeringMaxAngle*AISteerMultiplier *0.7/*TODO Setup().AngleRatio*/);
 
 			}
 			break;
@@ -386,7 +482,7 @@ void UModularMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, 
 		default:
         case EArcadeSteerType::SingleAngle:
 			{
-				OutSteeringAngle = WheelState.WheelSetup->SteeringMaxAngle * InNormSteering;
+				OutSteeringAngle = WheelState.WheelSetup->SteeringMaxAngle * InNormSteering*AISteerMultiplier;
 			}
 			break;
 
@@ -401,6 +497,95 @@ void UModularMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, 
 	
 }
 
+void UModularMovementComponent::RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed)
+{
+	Super::RequestDirectMove(MoveVelocity, bForceMaxSpeed);
+
+	VehicleState.IsAIVehicle=true;
+	 VehicleState.DesiredSpeed=0.0f;
+	const float DeltaSeconds=GetWorld()->GetDeltaSeconds();
+	const FVector VehicleLocation = GetOwner()->GetActorLocation();
+	const	FVector Destination = VehicleLocation + MoveVelocity * DeltaSeconds;
+	const FVector Distance = Destination - VehicleLocation;
+	const FVector VehicleDirection=GetMesh()->GetForwardVector();
+	float ForwardFactor = FVector::DotProduct(VehicleDirection, Distance.GetSafeNormal());
+	
+	
+	
+	
+	float CurrentYaw = Distance.Rotation().Yaw - GetMesh()->GetForwardVector().Rotation().Yaw;
+	if (CurrentYaw < -180)
+	{
+		CurrentYaw += 360;
+	}
+	else if (CurrentYaw > 180)
+	{
+		CurrentYaw -= 360;
+	}
+
+	float SteeringPosition =(1-( (-CurrentYaw + 180) / 180))*10;
+	
+	VehicleState.AIState=DetermineAIState(ForwardFactor,DeltaSeconds);
+	
+	
+	//react to state
+
+	switch (VehicleState.AIState)
+	{
+	case EAIVehicleState::Normal:
+		SetSteeringInput(SteeringPosition);
+		VehicleState.DesiredSpeed=UKismetMathLibrary::MapRangeClamped(Distance.Size(),0,VehicleState.VehicleData->NearGoalDistance,VehicleState.VehicleData->DesireSpeedNearGoal,VehicleState.VehicleData->DesireSpeedNormal);
+		if(ForwardFactor<VehicleState.VehicleData->TurnThreshold)
+		{
+			VehicleState.DesiredSpeed=VehicleState.VehicleData->DesireSpeedTurning;
+		}
+		break;
+	case EAIVehicleState::TurningAround:
+		VehicleState.DesiredSpeed=VehicleState.VehicleData->DesireSpeedTurningAround;
+		SetSteeringInput(SteeringPosition>0 ?-1:1);
+	
+		break;
+
+	}
+
+
+	//match desired speed
+	const float SpeedDifference =VehicleState.DesiredSpeed-VehicleState.ForwardSpeed * 0.036;//cms to kmh
+
+
+	
+	
+	if(SpeedDifference>0)
+	{//we should add throttle
+	SetThrottleInput(FMath::Clamp<float>(SpeedDifference/VehicleState.VehicleData->FullThrottleSpeed,-1,1));
+	}else
+	{//brake or release throttle 
+		SetThrottleInput(FMath::Clamp<float>(SpeedDifference/VehicleState.VehicleData->FullThrottleSpeed,-1,1));
+	}
+	
+	if(VehicleState.ForwardSpeed)
+	if(GArcadeVehicleDebugParams.AIDebug)
+	{
+		//draw destination
+		DrawDebugSphere(GetWorld(),Destination,30,20,FColor::Red);
+		FString VehicleStateString;
+		switch (VehicleState.AIState)
+		{
+		case EAIVehicleState::Normal:
+		VehicleStateString=TEXT("Normal");
+			break;
+		case EAIVehicleState::TurningAround:
+			VehicleStateString=TEXT("TurningAround");
+			break;
+		
+			
+		}
+	
+		UE_LOG(LogArcadeVehicle,Log,TEXT("ForwardFactor= %f Distance*velocity= %f Steering %f State: %s DesiredSpeed: %f "),ForwardFactor,Distance.Size()*VehicleState.ForwardSpeed,SteeringPosition,*VehicleStateString,VehicleState.DesiredSpeed);
+		
+	}
+	VehicleState.AIPreviousThrottle=RawThrottleInput;
+}
 
 
 void UModularMovementComponent::WheelTrace(
@@ -483,10 +668,9 @@ void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float 
 	const FTransform WorldTransform = GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
 	const float SteerAngleDegrees = WheelState.SteerAngle; // temp
 	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
-	//TODO Generalize it 
 	const FVector  LocalWheelVelocity = WorldTransform.InverseTransformVector(GetMesh()->GetPhysicsLinearVelocityAtPoint(WheelState.HitResult.TraceStart));
 	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
-	//TODo whats this ?const float SlipAngle = FMath::Atan2(GroundVelocityVector.Y, GroundVelocityVector.X);
+	WheelState.SlipAngle = FMath::Atan2(GroundVelocityVector.Y, GroundVelocityVector.X);
 	float FinalLongitudinalForce = 0.f;
 	FVector ForceFromFriction;
 	//EffectiveRadius
@@ -608,7 +792,7 @@ void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float 
 				ForceFromFriction.Y = -ForceFromFriction.Y;
 			}
 
-
+			
 			// wheel rolling - just match the ground speed exactly
 			if (BrakeFactor < 1.0f)
 			{
@@ -667,6 +851,13 @@ void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float 
 	}
 }
 
+void UModularMovementComponent::StopActiveMovement()
+{
+	Super::StopActiveMovement();
+	SetThrottleInput(0.0f);
+	
+}
+
 float UModularMovementComponent::CmToM(float In)
 {
 	return  In*100;
@@ -698,7 +889,7 @@ void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuanti
 
 	SetThrottleInput(QThrottleInput / 127.f);
 	SetSteeringInput(QSteeringInput / 63.f);
-	UE_LOG(LogTemp,Error,TEXT("Handbrake is %d"),QHandbrakeInput);
+	
 	//HandBrakeInput = QHandbrakeInput;
 
 	//LastUserSteeringInput = QSteeringInput;
@@ -819,15 +1010,53 @@ void UModularMovementComponent::SetTargetGear(int32 GearNum, bool bImmediate)
 	{
 		if(bImmediate)
 		{
+			OnGearChange.Broadcast(VehicleState.CurrentGear,GearNum,true);
 			VehicleState.CurrentGear=VehicleState.TargetGear=GearNum;
+			
 		}else
 		{
 			VehicleState.TargetGear=GearNum;
+			OnGearChange.Broadcast(VehicleState.CurrentGear,GearNum,false);
 			VehicleState.CurrentGearChangeTime=VehicleState.VehicleData->GearChangeTime;
 		}
 	}
 }
 
+
+
+
+void UModularMovementComponent::UpdateReplicatedCosmeticData()
+{
+	RepCosmeticData.EngineRPM = VehicleState.CurrentRpmRatio * 255.f;
+	
+	RepCosmeticData.CurrentGear=VehicleState.CurrentGear;
+}
+
+void UModularMovementComponent::OnRep_RepCosmeticData()
+{
+	
+	VehicleState.CurrentRpmRatio=RepCosmeticData.EngineRPM/255.f;
+	VehicleState.CurrentRpm=UKismetMathLibrary::MapRangeClamped(VehicleState.CurrentRpm,0,1,VehicleState.VehicleData->IdleRpm,VehicleState.VehicleData->MaxRpm);
+	if(VehicleState.CurrentGear!=RepCosmeticData.CurrentGear)
+	{
+		OnGearChange.Broadcast(VehicleState.CurrentGear,RepCosmeticData.CurrentGear,true);
+		VehicleState.CurrentGear=RepCosmeticData.CurrentGear;
+	
+	}
+
+	
+}
+
+void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	//DOREPLIFETIME(UModularMovementComponent, bIsSleeping);
+	//DOREPLIFETIME(UModularMovementComponent, bIsMovementEnabled);
+	DOREPLIFETIME(UModularMovementComponent, RepCosmeticData);
+	
+	
+}
 ////////////////
 //////////////
 //Debug

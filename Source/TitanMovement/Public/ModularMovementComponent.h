@@ -12,7 +12,8 @@
 class AArcadePawn;
 
 
-
+//Cosmetic delegates
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange,int,CurrentGear,int,TargetGear,bool,Finished);
 
 struct FArcadeVehicleDebugParams
 {
@@ -20,9 +21,32 @@ struct FArcadeVehicleDebugParams
 	bool ShowInputProcessingDebug=false;
 	bool ShowGearboxLog=false;
 	bool ShowDrawFriction=false;
+	bool AIDebug=false;
 };
 
 
+UENUM()
+enum EAIVehicleState {/*target is in front*/Normal,/*target is in back*/TurningAround  };
+
+USTRUCT()
+struct FRepCosmeticData
+{
+	GENERATED_USTRUCT_BODY()
+
+    /** Engine RPM */
+    UPROPERTY()
+	uint8 EngineRPM;
+
+	uint8 CurrentGear;
+
+	
+
+	FRepCosmeticData()
+	{
+		EngineRPM = 0;
+		CurrentGear=0;
+	}
+};
 
 
 USTRUCT(BlueprintType)
@@ -50,11 +74,16 @@ struct FVehicleState
 	UPROPERTY(BlueprintReadWrite)
 	float CurrentGearChangeTime;
 
+	float DesiredSpeed;
+	float AIPreviousThrottle;
+	EAIVehicleState AIState;
+	bool IsAIVehicle;
+	float LockCurrentStateDelta;
 };
 
 
 
-UCLASS()
+UCLASS(meta=(BlueprintSpawnableComponent))
 class TITANMOVEMENT_API UModularMovementComponent : public UPawnMovementComponent
 {
 	GENERATED_BODY()
@@ -96,7 +125,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
     void SetHandBrakeInput(bool Brake);
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	
+	UPROPERTY(EditAnywhere)
 	FVehicleState VehicleState;
 
 	/** Compute steering input */
@@ -126,6 +156,7 @@ public:
 	void UpdateSteering(float DeltaTime);
 	void UpdateWheelAnimation(float DeltaTime);
 	void SimulateWheelData(float DeltaTime);
+	EAIVehicleState DetermineAIState(float ForwardFactor,float DeltaTime);
 	//trace and apply Suspension forces
 	void WheelTrace(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel) const;
 	//same as top function without force applying
@@ -134,6 +165,9 @@ public:
 	void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
 	void CalculateSteeringAngle(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel,float InNormSteering) const;
 
+	//AI movement
+	virtual void RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed) override;
+	virtual void StopActiveMovement() override;
 	
 	//ChaosDefault
 	static float CmToM(float In);
@@ -143,6 +177,18 @@ public:
 	bool ShouldProcessPhysics()const;
 	bool ShouldProcessCosmetics()const;
 	bool ShouldProcessInput()const;
+
+
+	/** Pack cosmetic data into optimized replicated variable */
+	void UpdateReplicatedCosmeticData();
+
+	/** Replciated cosmetic data  */
+	UPROPERTY(Transient, ReplicatedUsing = OnRep_RepCosmeticData)
+	FRepCosmeticData RepCosmeticData;
+
+	UFUNCTION()
+    void OnRep_RepCosmeticData();
+	
 	/** Pass current state to server */
 	UFUNCTION(reliable, server)
     void ServerUpdateState(uint16 InQuantizeInput);
@@ -151,8 +197,10 @@ public:
 	*/
 	UPROPERTY(Transient)
 	uint16 QuantizeInput;
-	/////
 	
+	//Delegates
+	UPROPERTY(BlueprintAssignable)
+	FOnGearChange OnGearChange;
 	//debug
 
 	void ShowDebugInfo(class AHUD* HUD, class UCanvas* Canvas, const class FDebugDisplayInfo& DisplayInfo, float& YL, float& YPos);

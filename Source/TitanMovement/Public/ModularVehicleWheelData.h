@@ -89,6 +89,10 @@ struct FWheelState{
 	UPROPERTY(BlueprintReadOnly)
 	// [radians/sec] Wheel Rotation Angular Velocity
 	float AngularPosition;// [radians]
+	
+	// Angle between wheel forwards and velocity vector
+	UPROPERTY(BlueprintReadOnly)
+	float SlipAngle;
 	//Location of wheel relative to body
 	FVector InitialLocalLocation;
 	FRotator InitialLocalRotation;
