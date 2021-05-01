@@ -3,25 +3,20 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/StaticMeshComponent.h"
-#include "ModularMovementComponent.h"
-#include "WheelInterface.h"
 
-#include "SimpleStaticMeshWheel.generated.h"
+#include "ModularVehicleWheelData.h"
+#include "WheelInterface.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "SkeletalMeshWheel.generated.h"
 
 /**
  * 
  */
-
-
 UCLASS( meta=(BlueprintSpawnableComponent))
-class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,public IWheelInterface
+class TITANMOVEMENT_API USkeletalMeshWheel : public USkeletalMeshComponent,public IWheelInterface
 {
-	
-	public:
-	USimpleStaticMeshWheel();
 	GENERATED_BODY()
-
+	public:
 	//Some Properties are not valid in SimulatedPawn
 	UPROPERTY(EditAnywhere,BlueprintReadOnly)
 	FWheelState WheelState;

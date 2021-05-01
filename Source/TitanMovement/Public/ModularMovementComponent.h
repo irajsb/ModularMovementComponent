@@ -48,7 +48,14 @@ struct FRepCosmeticData
 	}
 };
 
+USTRUCT()
+struct FModularTrackInfo
+{
+	GENERATED_BODY()
 
+	float TorqueTransfer;
+
+};
 USTRUCT(BlueprintType)
 struct FVehicleState
 {
@@ -79,6 +86,11 @@ struct FVehicleState
 	EAIVehicleState AIState;
 	bool IsAIVehicle;
 	float LockCurrentStateDelta;
+	int DriveWheelsOnGround;
+	FModularTrackInfo TrackLeft;
+	FModularTrackInfo TrackRight;
+	
+	
 };
 
 
@@ -163,7 +175,7 @@ public:
 	void SimulateWheel(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
 	//Apply Drive Brake and friction
 	void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
-	void CalculateSteeringAngle(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel,float InNormSteering) const;
+	void CalculateSteeringAngle(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel,float InNormSteering) ;
 
 	//AI movement
 	virtual void RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed) override;

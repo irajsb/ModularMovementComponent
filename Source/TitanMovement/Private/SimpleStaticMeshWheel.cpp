@@ -2,8 +2,6 @@
 
 
 #include "SimpleStaticMeshWheel.h"
-
-#include "ArcadePawn.h"
 #include "Kismet/KismetMathLibrary.h"
 
 USimpleStaticMeshWheel::USimpleStaticMeshWheel()
@@ -56,7 +54,29 @@ void USimpleStaticMeshWheel::SetDriveTorqueOnWheels(float Force)
 
 float USimpleStaticMeshWheel::GetFastestWheelOmegaSpeed()
 {
-	return WheelState.Omega;
+	if(WheelState.WheelSetup->ApplyDriveForce)
+	{
+		return WheelState.Omega;
+	}return 0.0f;
+	
+}
+
+int USimpleStaticMeshWheel::GetNumOfWheelsTouchingGround(bool OnlyDriveWheels)
+{
+	if(OnlyDriveWheels)
+	{
+		if(WheelState.WheelSetup->ApplyDriveForce)
+		{
+			return WheelState.HitResult.bBlockingHit?1:0;
+		}else
+		{return 0;
+		}
+	}else
+	{
+		return WheelState.HitResult.bBlockingHit?1:0;
+	}
+	
+	
 }
 
 void USimpleStaticMeshWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent)
@@ -64,6 +84,7 @@ void USimpleStaticMeshWheel::UpdateAnimation(float DeltaTime, UModularMovementCo
 
 	SetRelativeRotation(UKismetMathLibrary::ComposeRotators(WheelState.InitialLocalRotation,FRotator(FMath::RadiansToDegrees(-1*WheelState.AngularPosition),WheelState.SteerAngle,0))) ;
 	SetRelativeLocation(WheelState.InitialLocalLocation-FVector(0,0,(WheelState.HitResult.Time)*WheelState.WheelSetup->SuspensionLength));
+
 	
 }
 

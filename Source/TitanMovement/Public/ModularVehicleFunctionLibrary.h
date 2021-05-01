@@ -26,6 +26,15 @@ public:
     static  int GetCurrentGear(UModularMovementComponent* MovementComponent);
     UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
     static  int GetIdleGear(UModularMovementComponent* MovementComponent);
+	/*Will ignore if movementComponent was not Modular Vehicle*/
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static void SetThrottleInputOnModularVehicle(APawn* Pawn,float Throttle);
+	/*Will ignore if movementComponent was not Modular Vehicle*/
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static void SetSteerInputOnModularVehicle(APawn* Pawn,float Steer);
+	/*Will ignore if movementComponent was not Modular Vehicle*/
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static void SetHandBrakeInputOnModularVehicle(APawn* Pawn,bool Brake);
 	
 
 };

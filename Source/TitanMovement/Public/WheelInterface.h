@@ -35,7 +35,7 @@ public:
 	virtual float GetFastestWheelOmegaSpeed(){return  0.0;};
 	virtual void UpdateAnimation(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent){};
 	virtual void SimulateWheelData(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent){};
-	
+	virtual int GetNumOfWheelsTouchingGround(bool OnlyDriveWheels){return 0;};
 	//Index only for multi wheel components(Instanced Static Mesh)
 
 	

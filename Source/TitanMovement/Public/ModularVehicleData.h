@@ -15,7 +15,7 @@ enum  EArcadeSteerType
 {
 	SingleAngle,
     AngleRatio,
-    Ackermann,
+    Tank,
 };
 
 
@@ -83,7 +83,7 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bReverseAsBrake=true;
-
+	
 
 	// Auto-brake when vehicle forward speed is opposite of player input by at least this much (cm/s)
 	UPROPERTY(EditAnywhere, Category = Advanced)
@@ -129,4 +129,8 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 	//how much should we increase trace len by speed (0.1 means for speed of 100KM/h we should trace 10M in front )trace len will not be lower than TraceLength property 
 	UPROPERTY(EditAnywhere, Category=AI)
 	float TraceSpeedMultiplier;
+
+	UPROPERTY(EditAnywhere, Category=Tank)
+	float SideSlip;
+
 };
