@@ -5,7 +5,9 @@
 
 #include "ModularMovementComponent.h"
 #include "TitanMovement.h"
+
 #include "Kismet/KismetMathLibrary.h"
+#include "PhysicsEngine/PhysicsSettings.h"
 
 float UModularVehicleFunctionLibrary::GetEngineRpm(UModularMovementComponent* MovementComponent)
 {
@@ -87,14 +89,13 @@ IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 	
 	FVector	ResultPosition=FVector::ZeroVector;
 	ResultPosition.Z=ContactPointPosition.Z-((FMath::Abs(Sin))*WheelState->WheelSetup->WheelRadius/PI);
-	ResultPosition.Y=ContactPointPosition.Y;
+	//TODO ResultPosition.Y=ContactPointPosition.Y;
 	
 		
 		
 	Result.SetLocation(ResultPosition);
 	
 	Result.SetRotation(UKismetMathLibrary::ComposeRotators(WheelState->InitialLocalRotation,FRotator(FMath::RadiansToDegrees(-1*WheelState->AngularPosition),WheelState->SteerAngle,0)).Quaternion());
-	DrawDebugSphere(Wheel->GetWorld(),WheelState->HitResult.ImpactPoint,10,30,FColor::Red,false);
 	if(WheelState->SuspAngle!=0.0f)
 	{
 	const float CurrentAngle=	UKismetMathLibrary::MapRangeClamped(WheelState->HitResult.Time,0,1,0,WheelState->SuspAngle);
@@ -124,4 +125,54 @@ float UModularVehicleFunctionLibrary::CalculateSuspensionRotationUsingPivot(UAct
 	}
 	return  Result;
 	
+}
+
+bool UModularVehicleFunctionLibrary::CapsuleTraceSingleWithRotation(UObject* WorldContextObject, const FVector Start, const FVector End,FRotator Rot, float Radius, float HalfHeight, ETraceTypeQuery TraceChannel, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, EDrawDebugTrace::Type DrawDebugType, FHitResult& OutHit, bool bIgnoreSelf, FLinearColor TraceColor, FLinearColor TraceHitColor, float DrawTime)
+{
+	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(TraceChannel);
+
+	static const FName CapsuleTraceSingleName(TEXT("CapsuleTraceSingle"));
+	FCollisionQueryParams Params =ConfigureCollisionParams(CapsuleTraceSingleName, bTraceComplex, ActorsToIgnore, bIgnoreSelf, WorldContextObject);
+
+	UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	bool const bHit = World ? World->SweepSingleByChannel(OutHit, Start, End, Rot.Quaternion(), CollisionChannel, FCollisionShape::MakeCapsule(Radius, HalfHeight), Params) : false;
+
+#if ENABLE_DRAW_DEBUG
+	//DrawDebugCapsuleTraceSingle(World, Start, End, Radius, HalfHeight, DrawDebugType, bHit, OutHit, TraceColor, TraceHitColor, DrawTime);
+#endif
+
+	return bHit;
+}
+
+FCollisionQueryParams UModularVehicleFunctionLibrary::ConfigureCollisionParams(FName TraceTag, bool bTraceComplex,
+	const TArray<AActor*>& ActorsToIgnore, bool bIgnoreSelf, UObject* WorldContextObject)
+{FCollisionQueryParams Params(TraceTag, SCENE_QUERY_STAT_ONLY(KismetTraceUtils), bTraceComplex);
+	Params.bReturnPhysicalMaterial = true;
+	Params.bReturnFaceIndex = !UPhysicsSettings::Get()->bSuppressFaceRemapTable; // Ask for face index, as long as we didn't disable globally
+	Params.AddIgnoredActors(ActorsToIgnore);
+	if (bIgnoreSelf)
+	{
+		AActor* IgnoreActor = Cast<AActor>(WorldContextObject);
+		if (IgnoreActor)
+		{
+			Params.AddIgnoredActor(IgnoreActor);
+		}
+		else
+		{
+			// find owner
+			UObject* CurrentObject = WorldContextObject;
+			while (CurrentObject)
+			{
+				CurrentObject = CurrentObject->GetOuter();
+				IgnoreActor = Cast<AActor>(CurrentObject);
+				if (IgnoreActor)
+				{
+					Params.AddIgnoredActor(IgnoreActor);
+					break;
+				}
+			}
+		}
+	}
+
+	return Params;
 }

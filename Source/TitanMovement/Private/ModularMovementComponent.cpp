@@ -656,15 +656,12 @@ void UModularMovementComponent::WheelTrace(
 	TArray<AActor*> ActorsToIgnore;
 	WheelState.WheelLoad=FVector::ZeroVector;
 	ActorsToIgnore.Add(GetOwner());
-	//TODO This will not work with some meshes but there is no need to change for now 
 	const FVector ComponentLocation=GetMesh()->GetComponentTransform().TransformPosition(WheelState.InitialLocalLocation+WheelState.WheelSetup->TraceStartOffset) ;
-	TArray<FHitResult>	 TraceResults;
-
+	
 	const FVector DirectionVector=WheelState.SuspAngle==0.0f?GetMesh()->GetUpVector():GetMesh()->GetUpVector().RotateAngleAxis(WheelState.SuspAngle,FVector(1,0,0));
-	UKismetSystemLibrary::SphereTraceMulti(GetWorld(),ComponentLocation,ComponentLocation+(DirectionVector*-1*WheelState.WheelSetup->SuspensionLength),WheelState.WheelSetup->WheelRadius,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GModularVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,TraceResults,true);
+	const FVector TraceEnd=ComponentLocation+(DirectionVector*-1*WheelState.WheelSetup->SuspensionLength);
 	FHitResult TraceResult;
-	if(TraceResults.IsValidIndex(0))
-	TraceResult=TraceResults[0];
+	UModularVehicleFunctionLibrary::CapsuleTraceSingleWithRotation(GetWorld(),ComponentLocation,TraceEnd,FRotator(0,90,0),WheelState.WheelSetup->WheelRadius,WheelState.WheelSetup->WheelWidth,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GModularVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,TraceResult,true);
 	const float CurrentLen=FMath::Max<float>(0,WheelState.WheelSetup->SuspensionRest-TraceResult.Time);
 	const float DampingCorrection=(((CurrentLen-WheelState.PreviousLen)*VehicleState.VehicleData->DampingCorrectionMultiplier*WheelState.WheelSetup->Stiffness))/DeltaTime;
 	if(TraceResult.bBlockingHit&&GetOwnerRole()==ENetRole::ROLE_Authority)
@@ -689,8 +686,20 @@ void UModularMovementComponent::WheelTrace(
 
 	if(GModularVehicleDebugParams.ShowSuspensionDebug)
 	{
+
+		DrawDebugSphere(GetWorld(),TraceResult.ImpactPoint,10,50,FColor::Red);
+
 		DrawDebugLine(GetWorld(),TraceResult.TraceStart,TraceResult.TraceStart+(DeltaTime*(FVector(0,0,1)*(WheelState.WheelSetup->Stiffness/1000)*(CurrentLen))),FColor::Red,false,-1,0,5);
+		const FVector WheelWidth=FRotator(0,WheelState.SteerAngle,0).RotateVector(ArcadeWheel->GetForwardVector().Rotation().RotateVector(FVector(0,WheelState.WheelSetup->WheelWidth,0)));
+		const FVector WheelRadius=FVector(0,0,WheelState.WheelSetup->WheelRadius);
+		if(TraceResult.bBlockingHit)
+{
 	
+	DrawDebugCylinder(GetWorld(),TraceResult.ImpactPoint+WheelRadius-WheelWidth,TraceResult.ImpactPoint+WheelRadius+WheelWidth,WheelState.WheelSetup->WheelRadius,30,FColor::Red);
+}else
+{
+	DrawDebugCylinder(GetWorld(),TraceResult.TraceEnd-WheelWidth,TraceResult.TraceEnd+WheelWidth,WheelState.WheelSetup->WheelRadius,30,FColor::Blue);
+}
 
 	}
 
@@ -955,7 +964,7 @@ bool UModularMovementComponent::ShouldProcessInput()const
 }
 
 bool UModularMovementComponent::CylinderTrace(UPrimitiveComponent* Shape, FVector Start, FVector End,
-	TArray<FHitResult>& result,const FComponentQueryParams& Params)
+	TArray<FHitResult>& result,const FComponentQueryParams& Params)const
 {
 return 	GetWorld()->ComponentSweepMulti(result,Shape,Start,End,FRotator::ZeroRotator.Quaternion(),Params);
 	//TODO ADDDraw

@@ -19,12 +19,17 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 {
 	GENERATED_BODY()
 	public:
+
+	
 	//How much can wheels drop
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	float SuspensionLength=50;
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	float WheelRadius=30;
+	//trace wheel radius
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	float WheelWidth=30;
 	
 	//Offset to apply to trace start
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)

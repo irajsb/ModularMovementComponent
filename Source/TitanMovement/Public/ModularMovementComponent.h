@@ -190,7 +190,7 @@ public:
 	bool ShouldProcessPhysics()const;
 	bool ShouldProcessCosmetics()const;
 	bool ShouldProcessInput()const;
-	bool CylinderTrace(UPrimitiveComponent* Shape,FVector Start,FVector End ,TArray<FHitResult>& result,const FComponentQueryParams& Params );
+	bool CylinderTrace(UPrimitiveComponent* Shape,FVector Start,FVector End ,TArray<FHitResult>& result,const FComponentQueryParams& Params )const;
 
 	/** Pack cosmetic data into optimized replicated variable */
 	void UpdateReplicatedCosmeticData();
