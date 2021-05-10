@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
+#include "Engine.h"
 
 #include "WheelInterface.h"
 #include "GameFramework/PawnMovementComponent.h"
@@ -15,13 +15,13 @@ class AArcadePawn;
 //Cosmetic delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange,int,CurrentGear,int,TargetGear,bool,Finished);
 
-struct FArcadeVehicleDebugParams
+struct FModularVehicleDebugParams
 {
-	bool ShowSuspensionDebug=false;
-	bool ShowInputProcessingDebug=false;
-	bool ShowGearboxLog=false;
-	bool ShowDrawFriction=false;
-	bool AIDebug=false;
+	int ShowSuspensionDebug=false;
+	int ShowInputProcessingDebug=false;
+	int ShowGearboxLog=false;
+	int ShowDrawFriction=false;
+	int AIDebug=false;
 };
 
 
@@ -102,9 +102,10 @@ class TITANMOVEMENT_API UModularMovementComponent : public UPawnMovementComponen
 
 	//Constructor
 	UModularMovementComponent();
+	void UpdateComponents();
 	public:
 	//Wheels
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY()
 	TArray<UActorComponent*> Components;
 	//Return Mesh
 	UMeshComponent* GetMesh()const;
@@ -189,7 +190,7 @@ public:
 	bool ShouldProcessPhysics()const;
 	bool ShouldProcessCosmetics()const;
 	bool ShouldProcessInput()const;
-
+	bool CylinderTrace(UPrimitiveComponent* Shape,FVector Start,FVector End ,TArray<FHitResult>& result,const FComponentQueryParams& Params );
 
 	/** Pack cosmetic data into optimized replicated variable */
 	void UpdateReplicatedCosmeticData();
@@ -202,7 +203,7 @@ public:
     void OnRep_RepCosmeticData();
 	
 	/** Pass current state to server */
-	UFUNCTION(reliable, server)
+	UFUNCTION(reliable, server,WithValidation)
     void ServerUpdateState(uint16 InQuantizeInput);
 	/** Contains: throttle (1), steering (2), handbrake(3). 
 	*  3222 2222 1111 1111

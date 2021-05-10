@@ -2,6 +2,7 @@
 
 
 #include "SimpleStaticMeshWheel.h"
+#include "ModularVehicleFunctionLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 
 USimpleStaticMeshWheel::USimpleStaticMeshWheel()
@@ -11,8 +12,10 @@ USimpleStaticMeshWheel::USimpleStaticMeshWheel()
 
 void USimpleStaticMeshWheel::SetupWheels(UModularMovementComponent* ArcadeMovementComponent)
 {
-	WheelState.InitialLocalLocation=GetRelativeLocation();
-	WheelState.InitialLocalRotation=GetRelativeRotation();
+	const FTransform Transform=GetRelativeTransform();
+	WheelState.InitialLocalLocation=Transform.GetLocation();//GetRelativeLocation();
+	WheelState.InitialLocalRotation=Transform.GetRotation().Rotator();
+	WheelState.MovementComponent=ArcadeMovementComponent;
 }
 
 void USimpleStaticMeshWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent)
@@ -82,8 +85,9 @@ int USimpleStaticMeshWheel::GetNumOfWheelsTouchingGround(bool OnlyDriveWheels)
 void USimpleStaticMeshWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent)
 {
 
-	SetRelativeRotation(UKismetMathLibrary::ComposeRotators(WheelState.InitialLocalRotation,FRotator(FMath::RadiansToDegrees(-1*WheelState.AngularPosition),WheelState.SteerAngle,0))) ;
-	SetRelativeLocation(WheelState.InitialLocalLocation-FVector(0,0,(WheelState.HitResult.Time)*WheelState.WheelSetup->SuspensionLength));
+const FTransform Result=	UModularVehicleFunctionLibrary::GetWheelAnimationData(this);
+	SetRelativeRotation(Result.GetRotation()) ;
+	SetRelativeLocation(Result.GetLocation());
 
 	
 }
@@ -92,3 +96,9 @@ void USimpleStaticMeshWheel::SimulateWheelData(float DeltaTime, UModularMovement
 {
 	ArcadeMovementComponent->SimulateWheel(WheelState,DeltaTime,this);
 }
+
+FWheelState* USimpleStaticMeshWheel::GetWheelState()
+{
+	return  &WheelState;
+}
+

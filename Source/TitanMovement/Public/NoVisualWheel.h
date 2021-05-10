@@ -3,25 +3,28 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/StaticMeshComponent.h"
-#include "ModularMovementComponent.h"
+
+#include "ModularVehicleWheelData.h"
+#include "Components/SceneComponent.h"
 #include "WheelInterface.h"
-
-#include "SimpleStaticMeshWheel.generated.h"
-
-/**
- * 
- */
+#include "NoVisualWheel.generated.h"
 
 
-UCLASS( meta=(BlueprintSpawnableComponent))
-class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,public IWheelInterface
+UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+class TITANMOVEMENT_API UNoVisualWheel : public USceneComponent,public IWheelInterface
 {
-	
-	public:
-	USimpleStaticMeshWheel();
 	GENERATED_BODY()
 
+public:	
+	// Sets default values for this component's properties
+	UNoVisualWheel();
+
+protected:
+	// Called when the game starts
+	virtual void BeginPlay() override;
+
+public:	
+	// Called every frame
 	//Some Properties are not valid in SimulatedPawn
 	UPROPERTY(EditAnywhere,BlueprintReadOnly)
 	FWheelState WheelState;
@@ -34,5 +37,7 @@ class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,pub
 	virtual int GetNumOfWheelsTouchingGround(bool OnlyDriveWheels) override;
 	virtual void UpdateAnimation(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
 	virtual void SimulateWheelData(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
-	virtual FWheelState* GetWheelState() override;
+
+virtual FWheelState* GetWheelState() override;
+		
 };

@@ -17,9 +17,10 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "DrawDebugHelpers.h"
 #include "Engine.h"
+#include "ModularVehicleFunctionLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/PhysicsSettings.h"
-FArcadeVehicleDebugParams GArcadeVehicleDebugParams;
+FModularVehicleDebugParams GModularVehicleDebugParams;
 
 DECLARE_CYCLE_STAT(TEXT("Arcade Tick Component"), STAT_ArcadeTickComponent, STATGROUP_MovementPhysics);
 DECLARE_CYCLE_STAT(TEXT("Arcade Updage Engine"), STAT_ArcadeEngine, STATGROUP_MovementPhysics);
@@ -28,25 +29,25 @@ DECLARE_CYCLE_STAT(TEXT("Arcade Updage Forces"), STAT_ArcadeForces, STATGROUP_Mo
 
 
 static FAutoConsoleVariableRef CVarArcadeVehicleShowSuspensionDebug(
-    TEXT("ArcadeVehicle.ShowSuspensionDebug"),
-    GArcadeVehicleDebugParams.ShowSuspensionDebug,
+    TEXT("ModularVehicle.ShowSuspensionDebug"),
+    GModularVehicleDebugParams.ShowSuspensionDebug,
     TEXT("Toggles Suspension Debugging visuals"));
 static FAutoConsoleVariableRef CVarArcadeVehicleShowInputProcessLog(
-    TEXT("ArcadeVehicle.ShowInputProcessLog"),
-    GArcadeVehicleDebugParams.ShowInputProcessingDebug,
+    TEXT("ModularVehicle.ShowInputProcessLog"),
+    GModularVehicleDebugParams.ShowInputProcessingDebug,
     TEXT("Toggles Input Debugging UE_LOGs"));
 
 static FAutoConsoleVariableRef CVarArcadeVehicleShowGearBoxProcessLog(
-    TEXT("ArcadeVehicle.ShowGearBoxProcessLog"),
-    GArcadeVehicleDebugParams.ShowGearboxLog,
+    TEXT("ModularVehicle.ShowGearBoxProcessLog"),
+    GModularVehicleDebugParams.ShowGearboxLog,
     TEXT("Toggles GearBox Debugging UE_LOGs"));
 static FAutoConsoleVariableRef CVarArcadeVehicleFrictionDraw(
-    TEXT("ArcadeVehicle.ShowFriction"),
-    GArcadeVehicleDebugParams.ShowDrawFriction,
+    TEXT("ModularVehicle.ShowFriction"),
+    GModularVehicleDebugParams.ShowDrawFriction,
     TEXT("Toggles Friction force "));
 static FAutoConsoleVariableRef CVarArcadeVehicleAIDebug(
-    TEXT("ArcadeVehicle.AIDebug"),
-    GArcadeVehicleDebugParams.AIDebug,
+    TEXT("ModularVehicle.AIDebug"),
+    GModularVehicleDebugParams.AIDebug,
     TEXT("Toggles AI Debug "));
 
 #define LOCTEXT_NAMESPACE "ArcadeMovement"
@@ -59,8 +60,26 @@ FORCEINLINE float OmegaToRPM(float Omega)
 UModularMovementComponent::UModularMovementComponent()
 {
 	AHUD::OnShowDebugInfo.AddUObject(this, &UModularMovementComponent::ShowDebugInfo);
-	SetIsReplicatedByDefault(true);
+	SetIsReplicated(true);
 	
+}
+
+void UModularMovementComponent::UpdateComponents()
+{
+	TArray<UActorComponent*> TempComponents;
+
+	if (UWheelInterface::StaticClass())
+	{
+		for (UActorComponent* Component :GetOwner()->GetComponents())
+		{
+			if (Component && Component->GetClass()->ImplementsInterface(UWheelInterface::StaticClass()))
+			{
+				TempComponents.Add(Component);
+			}
+		}
+	}
+
+Components=TempComponents;
 }
 
 UMeshComponent* UModularMovementComponent::GetMesh()const
@@ -101,7 +120,6 @@ FArcadeGearInfo UModularMovementComponent::GetGearInfo(int Index)
 	}else
 	{
 		UE_LOG(LogArcadeVehicle,Error,TEXT("Wrong GearIndex"));
-		FMessageLog("Blueprint").Warning(LOCTEXT("GearIndexNotValid", "Passed Gear Index was not valid"));
 	}
 	const 	FArcadeGearInfo Gear(1);
 	return  Gear;
@@ -115,11 +133,11 @@ void UModularMovementComponent::InitializeComponent()
 if(!VehicleState.VehicleData)
 {
 	UE_LOG(LogArcadeVehicle,Error,TEXT("Assign The Vehicle DataAsset "));
-	FMessageLog("Blueprint").Error(LOCTEXT("VehicleDataAssetNotValid", "Passed Assign Vehicle Data Asset "));
+
 	return;
 }
 	UpdateNavAgent(*GetOwner());
-	Components=	GetOwner()->GetComponentsByInterface(UWheelInterface::StaticClass());
+	UpdateComponents();
 	//finding Idle
 	for (int Index=0 ;Index!=VehicleState.VehicleData->Gears.Num();++Index)
 	{
@@ -131,10 +149,11 @@ if(!VehicleState.VehicleData)
 		}
 	}
 
-	//Setting up Wheel initial Data
+	//allow wheels to init  the variables that they need
 	for(UActorComponent* Component: Components)
 	{
 		Cast<IWheelInterface>(Component)->SetupWheels(this);
+	
 	}
 	
 }
@@ -147,7 +166,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	if(!VehicleState.VehicleData)
 	{
 		UE_LOG(LogArcadeVehicle,Error,TEXT("Assign The Vehicle DataAsset "));
-		FMessageLog("Blueprint").Error(LOCTEXT("VehicleDataAssetNotValid", "Passed Assign Vehicle Data Asset "));
+	
 		return;
 	}
 	
@@ -256,7 +275,7 @@ if(VehicleState.DriveWheelsOnGround!=0)
 			VehicleState.CurrentGearChangeTime = 0.f;
 			OnGearChange.Broadcast(VehicleState.CurrentGear,VehicleState.TargetGear,true);
 			VehicleState.CurrentGear =VehicleState.TargetGear;
-			if(GArcadeVehicleDebugParams.ShowGearboxLog)
+			if(GModularVehicleDebugParams.ShowGearboxLog)
 				UE_LOG(LogArcadeVehicle,Warning,TEXT("Change gear Timer Finished Gear Now at : %d "),VehicleState.CurrentGear);
 		}
 	}
@@ -321,7 +340,7 @@ void UModularMovementComponent::UpdateForces(float DeltaTime)
 
 
 	 BrakeInput=CalcBrakeInput();
-	if(GArcadeVehicleDebugParams.ShowInputProcessingDebug)
+	if(GModularVehicleDebugParams.ShowInputProcessingDebug)
 	{
 		UE_LOG(LogArcadeVehicle,Warning,TEXT("Final Calc NewBrakeInput: %f "),FMath::Abs(BrakeInput));
 	
@@ -390,8 +409,8 @@ EAIVehicleState UModularMovementComponent::DetermineAIState(float ForwardFactor,
 		const float TraceLenBackWard=VehicleState.VehicleData->TraceLength*FMath::Max(VehicleState.VehicleData->TraceLength,static_cast<float>((-1*VehicleState.ForwardSpeed*0.036*VehicleState.VehicleData->TraceSpeedMultiplier)));
 		//start traces
 		
-		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+VehicleDirection*TraceLenForward,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,GArcadeVehicleDebugParams.AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultF,true);
-		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+-1*VehicleDirection*TraceLenBackWard,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,GArcadeVehicleDebugParams.AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultB,true);
+		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+VehicleDirection*TraceLenForward,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,GModularVehicleDebugParams.AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultF,true);
+		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+-1*VehicleDirection*TraceLenBackWard,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,GModularVehicleDebugParams.AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultB,true);
 
 		}
 	//determine state
@@ -511,7 +530,7 @@ void UModularMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, 
 					WheelState.TorqueTransferFactor=VehicleState.TrackLeft.TorqueTransfer;
 					
 				}OutSteeringAngle=0;
-				if(GArcadeVehicleDebugParams.ShowInputProcessingDebug)
+				if(GModularVehicleDebugParams.ShowInputProcessingDebug)
 				{
 					UE_LOG(LogArcadeVehicle,Warning,TEXT("Tank input Left %f Right %f"),VehicleState.TrackLeft.TorqueTransfer,VehicleState.TrackRight.TorqueTransfer);
 				}
@@ -605,7 +624,7 @@ void UModularMovementComponent::RequestDirectMove(const FVector& MoveVelocity, b
 	}
 	
 	if(VehicleState.ForwardSpeed)
-	if(GArcadeVehicleDebugParams.AIDebug)
+	if(GModularVehicleDebugParams.AIDebug)
 	{
 		//draw destination
 		DrawDebugSphere(GetWorld(),Destination,30,20,FColor::Red);
@@ -639,16 +658,25 @@ void UModularMovementComponent::WheelTrace(
 	ActorsToIgnore.Add(GetOwner());
 	//TODO This will not work with some meshes but there is no need to change for now 
 	const FVector ComponentLocation=GetMesh()->GetComponentTransform().TransformPosition(WheelState.InitialLocalLocation+WheelState.WheelSetup->TraceStartOffset) ;
-	FHitResult TraceResult;
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(),ComponentLocation,ComponentLocation+(GetMesh()->GetUpVector()*-1*WheelState.WheelSetup->SuspensionLength),WheelState.WheelSetup->WheelRadius,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GArcadeVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,TraceResult,true);
+	TArray<FHitResult>	 TraceResults;
 
-	const float CurrentLen=1-TraceResult.Time;
+	const FVector DirectionVector=WheelState.SuspAngle==0.0f?GetMesh()->GetUpVector():GetMesh()->GetUpVector().RotateAngleAxis(WheelState.SuspAngle,FVector(1,0,0));
+	UKismetSystemLibrary::SphereTraceMulti(GetWorld(),ComponentLocation,ComponentLocation+(DirectionVector*-1*WheelState.WheelSetup->SuspensionLength),WheelState.WheelSetup->WheelRadius,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GModularVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,TraceResults,true);
+	FHitResult TraceResult;
+	if(TraceResults.IsValidIndex(0))
+	TraceResult=TraceResults[0];
+	const float CurrentLen=FMath::Max<float>(0,WheelState.WheelSetup->SuspensionRest-TraceResult.Time);
 	const float DampingCorrection=(((CurrentLen-WheelState.PreviousLen)*VehicleState.VehicleData->DampingCorrectionMultiplier*WheelState.WheelSetup->Stiffness))/DeltaTime;
 	if(TraceResult.bBlockingHit&&GetOwnerRole()==ENetRole::ROLE_Authority)
 	{
-	WheelState.WheelLoad=DeltaTime*((FVector(0,0,1)*(WheelState.WheelSetup->Stiffness+DampingCorrection)*(CurrentLen)));
-	GetMesh()->AddForceAtLocation(WheelState.WheelLoad,TraceResult.TraceStart);
-	
+		if(TraceResult.Time<WheelState.WheelSetup->SuspensionRest)
+		{
+			WheelState.WheelLoad=((FVector(0,0,1)*(WheelState.WheelSetup->Stiffness+DampingCorrection)*(CurrentLen)));
+			GetMesh()->AddForceAtLocation(WheelState.WheelLoad,TraceResult.TraceStart);
+		}else
+		{
+			
+		}
 	}
 	
 	WheelState.PreviousLen=CurrentLen;
@@ -659,7 +687,7 @@ void UModularMovementComponent::WheelTrace(
 	//Debug
 	#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 
-	if(GArcadeVehicleDebugParams.ShowSuspensionDebug)
+	if(GModularVehicleDebugParams.ShowSuspensionDebug)
 	{
 		DrawDebugLine(GetWorld(),TraceResult.TraceStart,TraceResult.TraceStart+(DeltaTime*(FVector(0,0,1)*(WheelState.WheelSetup->Stiffness/1000)*(CurrentLen))),FColor::Red,false,-1,0,5);
 	
@@ -888,7 +916,7 @@ void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float 
 		
 		GetMesh()->AddForce(UKismetMathLibrary::Dot_VectorVector(RightVector,GetMesh()->GetPhysicsLinearVelocity())*RightVector*VehicleState.VehicleData->SideSlip*-1	);
 		GetMesh()->AddForceAtLocation(FrictionForceVector,WheelState.HitResult.TraceStart);
-		if(GArcadeVehicleDebugParams.ShowDrawFriction)
+		if(GModularVehicleDebugParams.ShowDrawFriction)
 		{
 			DrawDebugLine(GetWorld(),WheelState.HitResult.ImpactPoint,WheelState.HitResult.ImpactPoint+(FrictionForceVector/500),FColor::Green,false,-1,0,15);
 			DrawDebugLine(GetWorld(),WheelState.HitResult.ImpactPoint,WheelState.HitResult.ImpactPoint+GetMesh()->GetForwardVector()*AppliedLinearDriveForce,FColor::Red,false);
@@ -926,6 +954,19 @@ bool UModularMovementComponent::ShouldProcessInput()const
 	return 	(GetPawnOwner()->GetLocalRole()!=ENetRole::ROLE_Authority&&GetPawnOwner()->IsLocallyControlled());
 }
 
+bool UModularMovementComponent::CylinderTrace(UPrimitiveComponent* Shape, FVector Start, FVector End,
+	TArray<FHitResult>& result,const FComponentQueryParams& Params)
+{
+return 	GetWorld()->ComponentSweepMulti(result,Shape,Start,End,FRotator::ZeroRotator.Quaternion(),Params);
+	//TODO ADDDraw
+}
+
+
+bool UModularMovementComponent::ServerUpdateState_Validate(uint16 InQuantizeInput)
+{
+	return true;
+}
+
 void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuantizeInput)
 {
 	
@@ -951,7 +992,7 @@ SteeringInput=	UKismetMathLibrary::FInterpTo_Constant(SteeringInput,RawSteeringI
 	{//decreases are instant
 		SteeringInput=RawSteeringInput;
 	}
-	if(GArcadeVehicleDebugParams.ShowInputProcessingDebug)
+	if(GModularVehicleDebugParams.ShowInputProcessingDebug)
 		UE_LOG(LogArcadeVehicle,Warning,TEXT("Final Calc SteeringInput: %f "),(SteeringInput));
 	return  SteeringInput;
 }
@@ -1044,7 +1085,7 @@ float UModularMovementComponent::CalcThrottleInput()
 	}
 
 	//Debug
-if(GArcadeVehicleDebugParams.ShowInputProcessingDebug)
+if(GModularVehicleDebugParams.ShowInputProcessingDebug)
 {
 	UE_LOG(LogArcadeVehicle,Warning,TEXT("Throttle raw before process %f"),RawThrottleInput);
 	UE_LOG(LogArcadeVehicle,Warning,TEXT("Final Calc Throttle %f "),FMath::Abs(NewThrottleInput));
@@ -1057,7 +1098,7 @@ if(GArcadeVehicleDebugParams.ShowInputProcessingDebug)
 
 void UModularMovementComponent::SetTargetGear(int32 GearNum, bool bImmediate)
 {
-	if(GArcadeVehicleDebugParams.ShowGearboxLog)
+	if(GModularVehicleDebugParams.ShowGearboxLog)
 	UE_LOG(LogArcadeVehicle,Warning,TEXT("Change gear called with %d "),GearNum);
 	if(VehicleState.VehicleData->Gears.IsValidIndex(GearNum))
 	{

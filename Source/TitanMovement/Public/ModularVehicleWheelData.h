@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
+
 #include "Engine/DataAsset.h"
 #include "ModularVehicleWheelData.generated.h"
 
@@ -11,7 +13,7 @@
  */
 
 
-
+class UModularMovementComponent;
 UCLASS()
 class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 {
@@ -57,6 +59,12 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	bool ABSEnabled;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	bool TractionControlEnabled;
+	//Suspension pivot point (rotates suspension when dropping used for off-road vehicles https://irajsb.github.io/ModularVehicleDocs/Pivot/
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	 float SuspensionPivot;
+	//At which length suspension will be in rest position(don't need to change most of the times only change when a vehicle with long susp sits too high) 
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	float SuspensionRest=1.0f;
 	
 	
 };
@@ -104,6 +112,12 @@ struct FWheelState{
 	FRotator InitialLocalRotation;
 	UPROPERTY(BlueprintReadOnly)
 	float TorqueTransferFactor=1;
+	UPROPERTY(BlueprintReadOnly)
+	float SuspAngle;
+
+	UPROPERTY(BlueprintReadOnly)
+	UModularMovementComponent* MovementComponent;
+	FVector PreviousLocation;
 };
 
  

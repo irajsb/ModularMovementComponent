@@ -37,7 +37,7 @@ public class TitanMovement : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"SlateCore","PhysicsCore"
+				"SlateCore",/*"PhysicsCore"*/
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

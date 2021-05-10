@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
+#include "Components/ActorComponent.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "ModularVehicleFunctionLibrary.generated.h"
 
@@ -35,6 +37,11 @@ public:
 	/*Will ignore if movementComponent was not Modular Vehicle*/
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static void SetHandBrakeInputOnModularVehicle(APawn* Pawn,bool Brake);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static FTransform GetWheelAnimationData(USceneComponent* Wheel);
+
 	
 
+	//not only for BP but we also store common functions here
+	static float CalculateSuspensionRotationUsingPivot(UActorComponent* InComponent);
 };

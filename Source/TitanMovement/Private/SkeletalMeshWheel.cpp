@@ -7,8 +7,10 @@
 
 void USkeletalMeshWheel::SetupWheels(UModularMovementComponent* ArcadeMovementComponent)
 {
-	WheelState.InitialLocalLocation=GetRelativeLocation();
-	WheelState.InitialLocalRotation=GetRelativeRotation();
+	const FTransform Transform=GetRelativeTransform();
+	WheelState.InitialLocalLocation=Transform.GetLocation();//GetRelativeLocation();
+	WheelState.InitialLocalRotation=Transform.GetRotation().Rotator();
+	WheelState.MovementComponent=ArcadeMovementComponent;
 }
 
 void USkeletalMeshWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent)
@@ -85,3 +87,8 @@ void USkeletalMeshWheel::SimulateWheelData(float DeltaTime, UModularMovementComp
 {
 	ArcadeMovementComponent->SimulateWheel(WheelState,DeltaTime,this);
 }
+
+FWheelState* USkeletalMeshWheel::GetWheelState()
+{return  &WheelState;
+}
+

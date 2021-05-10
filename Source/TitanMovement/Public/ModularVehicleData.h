@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
+#include "Engine.h"
 #include "Engine/DataAsset.h"
 #include "ModularVehicleData.generated.h"
 

@@ -4,7 +4,8 @@
 
 #include "CoreMinimal.h"
 
-
+#include "Interface.h"
+#include "ModularVehicleWheelData.h"
 #include "UObject/NoExportTypes.h"
 #include "WheelInterface.generated.h"
 
@@ -36,6 +37,8 @@ public:
 	virtual void UpdateAnimation(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent){};
 	virtual void SimulateWheelData(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent){};
 	virtual int GetNumOfWheelsTouchingGround(bool OnlyDriveWheels){return 0;};
+	virtual FWheelState* GetWheelState(){return  nullptr;};
+
 	//Index only for multi wheel components(Instanced Static Mesh)
 
 	
