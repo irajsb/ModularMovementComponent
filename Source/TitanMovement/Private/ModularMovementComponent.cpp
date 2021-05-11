@@ -557,6 +557,13 @@ void UModularMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, 
 	
 }
 
+float UModularMovementComponent::GetSpringStiffness(FWheelState WheelState, float CompressionRatio)
+{
+	
+const float Compression= 	(WheelState.WheelSetup->SuspensionCurve.GetRichCurve()->IsEmpty()?CompressionRatio:WheelState.WheelSetup->SuspensionCurve.GetRichCurve()->Eval(CompressionRatio)) ;
+return 	Compression*WheelState.WheelSetup->Stiffness;
+}
+
 void UModularMovementComponent::RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed)
 {
 	Super::RequestDirectMove(MoveVelocity, bForceMaxSpeed);
@@ -657,24 +664,19 @@ void UModularMovementComponent::WheelTrace(
 	WheelState.WheelLoad=FVector::ZeroVector;
 	ActorsToIgnore.Add(GetOwner());
 	const FVector ComponentLocation=GetMesh()->GetComponentTransform().TransformPosition(WheelState.InitialLocalLocation+WheelState.WheelSetup->TraceStartOffset) ;
-	
-	const FVector DirectionVector=WheelState.SuspAngle==0.0f?GetMesh()->GetUpVector():GetMesh()->GetUpVector().RotateAngleAxis(WheelState.SuspAngle,FVector(1,0,0));
+	const FQuat LocalRot=	GetMesh()->GetComponentTransform().TransformRotation(FRotator(0,0,WheelState.SuspAngle*-1).Quaternion());
+	const FVector DirectionVector=WheelState.SuspAngle==0.0f?GetMesh()->GetUpVector():LocalRot.RotateVector(GetMesh()->GetUpVector());
 	const FVector TraceEnd=ComponentLocation+(DirectionVector*-1*WheelState.WheelSetup->SuspensionLength);
 	FHitResult TraceResult;
 	UModularVehicleFunctionLibrary::CapsuleTraceSingleWithRotation(GetWorld(),ComponentLocation,TraceEnd,FRotator(0,90,0),WheelState.WheelSetup->WheelRadius,WheelState.WheelSetup->WheelWidth,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GModularVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,TraceResult,true);
-	const float CurrentLen=FMath::Max<float>(0,WheelState.WheelSetup->SuspensionRest-TraceResult.Time);
-	const float DampingCorrection=(((CurrentLen-WheelState.PreviousLen)*VehicleState.VehicleData->DampingCorrectionMultiplier*WheelState.WheelSetup->Stiffness))/DeltaTime;
+	const float CurrentLen=FMath::Max<float>(0,TraceResult.Time);
+	const float Stiffness=GetSpringStiffness(WheelState,1-CurrentLen);
+	const float DampingCorrection=-1*(((CurrentLen-WheelState.PreviousLen)*VehicleState.VehicleData->DampingCorrectionMultiplier*Stiffness))/DeltaTime;
 	if(TraceResult.bBlockingHit&&GetOwnerRole()==ENetRole::ROLE_Authority)
 	{
-		if(TraceResult.Time<WheelState.WheelSetup->SuspensionRest)
-		{
-			WheelState.WheelLoad=((FVector(0,0,1)*(WheelState.WheelSetup->Stiffness+DampingCorrection)*(CurrentLen)));
-			GetMesh()->AddForceAtLocation(WheelState.WheelLoad,TraceResult.TraceStart);
-		}else
-		{
-			
-		}
-	}
+		
+			WheelState.WheelLoad=((FVector::UpVector*(Stiffness+DampingCorrection)));
+			GetMesh()->AddForceAtLocation(WheelState.WheelLoad,TraceResult.TraceStart);}
 	
 	WheelState.PreviousLen=CurrentLen;
 	WheelState.HitResult=TraceResult;
@@ -687,9 +689,13 @@ void UModularMovementComponent::WheelTrace(
 	if(GModularVehicleDebugParams.ShowSuspensionDebug)
 	{
 
+		const FVector Force= FVector::UpVector*Stiffness;
+		const FVector Damp= FVector::UpVector*DampingCorrection;
+		
 		DrawDebugSphere(GetWorld(),TraceResult.ImpactPoint,10,50,FColor::Red);
+		DrawDebugLine(GetWorld(),TraceResult.TraceStart+50,(TraceResult.TraceStart+50)+Damp*0.0003,FColor::Yellow,false,-1,0,10);
 
-		DrawDebugLine(GetWorld(),TraceResult.TraceStart,TraceResult.TraceStart+(DeltaTime*(FVector(0,0,1)*(WheelState.WheelSetup->Stiffness/1000)*(CurrentLen))),FColor::Red,false,-1,0,5);
+		DrawDebugLine(GetWorld(),TraceResult.TraceStart,TraceResult.TraceStart+Force*0.0003,FColor::Red,false,-1,0,5);
 		const FVector WheelWidth=FRotator(0,WheelState.SteerAngle,0).RotateVector(ArcadeWheel->GetForwardVector().Rotation().RotateVector(FVector(0,WheelState.WheelSetup->WheelWidth,0)));
 		const FVector WheelRadius=FVector(0,0,WheelState.WheelSetup->WheelRadius);
 		if(TraceResult.bBlockingHit)

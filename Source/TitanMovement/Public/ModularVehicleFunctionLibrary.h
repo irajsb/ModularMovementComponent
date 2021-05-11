@@ -43,7 +43,6 @@ public:
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static FTransform GetWheelAnimationData(USceneComponent* Wheel);
 
-	
 
 	//not only for BP but we also store common functions here
 	static float CalculateSuspensionRotationUsingPivot(UActorComponent* InComponent);

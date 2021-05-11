@@ -177,7 +177,7 @@ public:
 	//Apply Drive Brake and friction
 	void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
 	void CalculateSteeringAngle(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel,float InNormSteering) ;
-
+	static float GetSpringStiffness(FWheelState WheelState,float CompressionRatio);
 	//AI movement
 	virtual void RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed) override;
 	virtual void StopActiveMovement() override;

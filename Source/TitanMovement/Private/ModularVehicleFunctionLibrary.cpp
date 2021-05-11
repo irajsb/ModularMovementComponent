@@ -78,7 +78,10 @@ IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 		const FVector WheelRadiusVector=FVector(0,0,WheelState->WheelSetup->WheelRadius);
 		const FVector SuspensionTraceLocation=WheelState->HitResult.bBlockingHit?WheelState->HitResult.ImpactPoint+WheelRadiusVector:WheelState->HitResult.TraceEnd;
 		//local
-		 FVector ContactPointPosition=		Wheel->GetComponentTransform().InverseTransformPosition(SuspensionTraceLocation);
+		const FTransform WheelTransform=Wheel->GetComponentTransform();
+		const  FVector ContactPointPosition=		WheelTransform.InverseTransformPosition(SuspensionTraceLocation);
+	
+
 	
 		float Sin,Cos;
 		
@@ -89,22 +92,30 @@ IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 	
 	FVector	ResultPosition=FVector::ZeroVector;
 	ResultPosition.Z=ContactPointPosition.Z-((FMath::Abs(Sin))*WheelState->WheelSetup->WheelRadius/PI);
-	//TODO ResultPosition.Y=ContactPointPosition.Y;
 	
+	
+	if(WheelState->SuspAngle!=0.0f)
+	{
+		const float PivotAngle=	FMath::Atan2(ResultPosition.Z,WheelState->WheelSetup->SuspensionPivot);
+		FMath::SinCos(&Sin,&Cos,PivotAngle);
+		ResultPosition.Y=FMath::Abs(Sin)*WheelState->WheelSetup->SuspensionPivot* FMath::Sign(WheelState->InitialLocalLocation.Y) *-0.5;
+	}
 		
-		
+	ResultPosition=UKismetMathLibrary::VInterpTo_Constant(WheelState->PreviousLocation,ResultPosition,Wheel->GetWorld()->GetDeltaSeconds(),WheelState->WheelSetup->AnimSpeed);
 	Result.SetLocation(ResultPosition);
-	
+	WheelState->PreviousLocation=ResultPosition;
 	Result.SetRotation(UKismetMathLibrary::ComposeRotators(WheelState->InitialLocalRotation,FRotator(FMath::RadiansToDegrees(-1*WheelState->AngularPosition),WheelState->SteerAngle,0)).Quaternion());
 	if(WheelState->SuspAngle!=0.0f)
 	{
-	const float CurrentAngle=	UKismetMathLibrary::MapRangeClamped(WheelState->HitResult.Time,0,1,0,WheelState->SuspAngle);
-		Result.SetRotation((UKismetMathLibrary::ComposeRotators(Result.GetRotation().Rotator(),FRotator(0,0,-CurrentAngle)).Quaternion()));
+		
+	const float CurrentAngle=	UKismetMathLibrary::MapRangeClamped(ResultPosition.Z,WheelState->WheelSetup->SuspensionLength,-WheelState->WheelSetup->SuspensionLength,-WheelState->SuspAngle,WheelState->SuspAngle);
+	Result.SetRotation((UKismetMathLibrary::ComposeRotators(Result.GetRotation().Rotator(),FRotator(0,0,-CurrentAngle)).Quaternion()));
 	}
 
 	}
 	return  Result;
 }
+
 
 float UModularVehicleFunctionLibrary::CalculateSuspensionRotationUsingPivot(UActorComponent* InComponent)
 {
