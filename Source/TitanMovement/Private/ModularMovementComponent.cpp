@@ -161,6 +161,9 @@ if(!VehicleState.VehicleData)
 void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+
+	
 	ARCADE_CYCLE_COUNTER(STAT_ArcadeTickComponent)
 	const float fDeltaTime=FMath::Min<float>(DeltaTime,0.0333);
 	if(!VehicleState.VehicleData)
@@ -634,7 +637,7 @@ void UModularMovementComponent::RequestDirectMove(const FVector& MoveVelocity, b
 	if(GModularVehicleDebugParams.AIDebug)
 	{
 		//draw destination
-		DrawDebugSphere(GetWorld(),Destination,30,20,FColor::Red);
+		DrawDebugSphere(GetWorld(),Destination,30,20,FColor::Red,false,-1,5);
 		FString VehicleStateString;
 		switch (VehicleState.AIState)
 		{
@@ -663,13 +666,52 @@ void UModularMovementComponent::WheelTrace(
 	TArray<AActor*> ActorsToIgnore;
 	WheelState.WheelLoad=FVector::ZeroVector;
 	ActorsToIgnore.Add(GetOwner());
-	const FVector ComponentLocation=GetMesh()->GetComponentTransform().TransformPosition(WheelState.InitialLocalLocation+WheelState.WheelSetup->TraceStartOffset) ;
+	const FTransform MeshTransform=GetMesh()->GetComponentTransform();
+	const FVector ComponentLocation=MeshTransform.TransformPosition(WheelState.InitialLocalLocation+WheelState.WheelSetup->TraceStartOffset) ;
 	const FQuat LocalRot=	GetMesh()->GetComponentTransform().TransformRotation(FRotator(0,0,WheelState.SuspAngle*-1).Quaternion());
-	const FVector DirectionVector=WheelState.SuspAngle==0.0f?GetMesh()->GetUpVector():LocalRot.RotateVector(GetMesh()->GetUpVector());
+	//TODO
+	const FVector DirectionVector=WheelState.WheelSetup->SuspensionPivot==0?GetMesh()->GetUpVector():LocalRot.RotateVector(GetMesh()->GetUpVector());
 	const FVector TraceEnd=ComponentLocation+(DirectionVector*-1*WheelState.WheelSetup->SuspensionLength);
 	FHitResult TraceResult;
-	UModularVehicleFunctionLibrary::CapsuleTraceSingleWithRotation(GetWorld(),ComponentLocation,TraceEnd,FRotator(0,90,0),WheelState.WheelSetup->WheelRadius,WheelState.WheelSetup->WheelWidth,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GModularVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,TraceResult,true);
+	bool ValidHitFound=false;
+	TArray<FHitResult>Hits;
+	TraceResult.TraceStart=ComponentLocation;
+	TraceResult.TraceEnd=TraceEnd;
+	TraceResult.bBlockingHit=false;
+	if(VehicleState.VehicleData->UseSphereSuspension)
+	{
+		UKismetSystemLibrary::SphereTraceMulti(GetWorld(),ComponentLocation,TraceEnd,WheelState.WheelSetup->WheelRadius,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GModularVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,Hits,true);
+	
+		for(auto Hit : Hits)
+		{
+			if(Hit.bBlockingHit)
+			{
+			const FVector Position=	MeshTransform.InverseTransformPosition(Hit.ImpactPoint)-WheelState.InitialLocalLocation;
+			if(FMath::Abs(Position.Y)<WheelState.WheelSetup->WheelWidth)
+			{
+				ValidHitFound=true;
+				TraceResult=Hit;
+				break;
+				
+				}
+				
+					
+				
+			}
+		}
+		if(!ValidHitFound)
+		{
+			
+		}
+	
+
+		
+	}
+	
+		
+	
 	const float CurrentLen=FMath::Max<float>(0,TraceResult.Time);
+	UE_LOG(LogTemp,Log,TEXT("Len %f"),TraceResult.Time)
 	const float Stiffness=GetSpringStiffness(WheelState,1-CurrentLen);
 	const float DampingCorrection=-1*(((CurrentLen-WheelState.PreviousLen)*VehicleState.VehicleData->DampingCorrectionMultiplier*Stiffness))/DeltaTime;
 	if(TraceResult.bBlockingHit&&GetOwnerRole()==ENetRole::ROLE_Authority)
@@ -692,20 +734,12 @@ void UModularMovementComponent::WheelTrace(
 		const FVector Force= FVector::UpVector*Stiffness;
 		const FVector Damp= FVector::UpVector*DampingCorrection;
 		
-		DrawDebugSphere(GetWorld(),TraceResult.ImpactPoint,10,50,FColor::Red);
-		DrawDebugLine(GetWorld(),TraceResult.TraceStart+50,(TraceResult.TraceStart+50)+Damp*0.0003,FColor::Yellow,false,-1,0,10);
+		DrawDebugSphere(GetWorld(),TraceResult.ImpactPoint,10,100,FColor::Red);
+		DrawDebugLine(GetWorld(),TraceResult.TraceStart+50,(TraceResult.TraceStart+50)+Damp*0.0003,FColor::Green,false,-1,0,10);
 
 		DrawDebugLine(GetWorld(),TraceResult.TraceStart,TraceResult.TraceStart+Force*0.0003,FColor::Red,false,-1,0,5);
-		const FVector WheelWidth=FRotator(0,WheelState.SteerAngle,0).RotateVector(ArcadeWheel->GetForwardVector().Rotation().RotateVector(FVector(0,WheelState.WheelSetup->WheelWidth,0)));
-		const FVector WheelRadius=FVector(0,0,WheelState.WheelSetup->WheelRadius);
-		if(TraceResult.bBlockingHit)
-{
 	
-	DrawDebugCylinder(GetWorld(),TraceResult.ImpactPoint+WheelRadius-WheelWidth,TraceResult.ImpactPoint+WheelRadius+WheelWidth,WheelState.WheelSetup->WheelRadius,30,FColor::Red);
-}else
-{
-	DrawDebugCylinder(GetWorld(),TraceResult.TraceEnd-WheelWidth,TraceResult.TraceEnd+WheelWidth,WheelState.WheelSetup->WheelRadius,30,FColor::Blue);
-}
+		
 
 	}
 

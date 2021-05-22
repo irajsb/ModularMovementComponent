@@ -126,6 +126,8 @@ struct FWheelState{
 	UPROPERTY(BlueprintReadOnly)
 	UModularMovementComponent* MovementComponent;
 	FVector PreviousLocation;
+	UPROPERTY(BlueprintReadOnly)
+	float CurrentPivotAngle;
 };
 
  

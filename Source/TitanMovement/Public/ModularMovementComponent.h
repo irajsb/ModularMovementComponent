@@ -139,7 +139,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
     void SetHandBrakeInput(bool Brake);
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,BlueprintReadOnly)
 	FVehicleState VehicleState;
 
 	/** Compute steering input */
@@ -211,6 +211,7 @@ public:
 	UPROPERTY(Transient)
 	uint16 QuantizeInput;
 	
+
 	//Delegates
 	UPROPERTY(BlueprintAssignable)
 	FOnGearChange OnGearChange;

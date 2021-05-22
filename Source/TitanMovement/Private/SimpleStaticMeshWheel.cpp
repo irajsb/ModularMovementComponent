@@ -85,10 +85,12 @@ int USimpleStaticMeshWheel::GetNumOfWheelsTouchingGround(bool OnlyDriveWheels)
 void USimpleStaticMeshWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent)
 {
 
+	FVector Location;
+	FRotator Rotation;
 	
-const FTransform Result=	UModularVehicleFunctionLibrary::GetWheelAnimationData(this);
-	SetRelativeRotation(Result.GetRotation()) ;
-	SetRelativeLocation(Result.GetLocation());
+	UModularVehicleFunctionLibrary::GetWheelAnimationData(this,Location,Rotation);
+	SetRelativeRotation(Rotation) ;
+	SetRelativeLocation(Location);
 
 	
 }

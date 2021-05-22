@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 
 #include "CollisionQueryParams.h"
+#include "ModularVehicleWheelData.h"
 #include "Components/ActorComponent.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -14,6 +15,7 @@
 /**
  * 
  */
+
 class UModularMovementComponent;
 UCLASS()
 class TITANMOVEMENT_API UModularVehicleFunctionLibrary : public UBlueprintFunctionLibrary
@@ -31,6 +33,11 @@ public:
     static  int GetCurrentGear(UModularMovementComponent* MovementComponent);
     UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
     static  int GetIdleGear(UModularMovementComponent* MovementComponent);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static  float GetCurrentGearRatio(UModularMovementComponent* MovementComponent);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static  float GetGearRatio(UModularMovementComponent* MovementComponent,int Index,bool& ValidIndex);
+	
 	/*Will ignore if movementComponent was not Modular Vehicle*/
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static void SetThrottleInputOnModularVehicle(APawn* Pawn,float Throttle);
@@ -40,9 +47,19 @@ public:
 	/*Will ignore if movementComponent was not Modular Vehicle*/
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static void SetHandBrakeInputOnModularVehicle(APawn* Pawn,bool Brake);
+	//actual rotation does not give you acuurate steering and rotation values its has some corrections applied to it so get steering from dedicated values (additional data returned don't affect performance )
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static FTransform GetWheelAnimationData(USceneComponent* Wheel);
-
+	static void GetWheelAnimationData(USceneComponent* Wheel,FVector& Location,FRotator& Rotation);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static float GetWheelRotation(USceneComponent* Wheel);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static float GetWheelPivotRotation(USceneComponent* Wheel);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static float GetWheelSteeringValue(USceneComponent* Wheel);
+	//1 fully compressed 0 fully extended 
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static float GetWheelCompressionValue(USceneComponent* Wheel);
+	
 
 	//not only for BP but we also store common functions here
 	static float CalculateSuspensionRotationUsingPivot(UActorComponent* InComponent);

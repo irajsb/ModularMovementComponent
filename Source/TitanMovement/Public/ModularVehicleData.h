@@ -65,12 +65,18 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 	float DifferentialRatio=1.0;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Transmission)
 	float GearChangeTime=0.5;
-	UPROPERTY(EditDefaultsOnly,Category=Transmission)
+	UPROPERTY(EditDefaultsOnly,BlueprintReadWrite,Category=Transmission)
     TArray<FArcadeGearInfo> Gears;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
     TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	float DampingCorrectionMultiplier=5;
+	//Capsule Trace has no accurate way to draw the trace but it provides you with ability to have a wheel  radius along with width 
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
+	bool UseSphereSuspension=false;
+	//Capsule Trace has no accurate way to draw the trace but it provides you with ability to have a wheel  radius along with width 
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
+	uint8 NumOfSegments=3;
 
 	//steering Curve multiplies the steering value Time should be speed in KMH and Value should be Steering multiplier (ranges from 1-0)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
