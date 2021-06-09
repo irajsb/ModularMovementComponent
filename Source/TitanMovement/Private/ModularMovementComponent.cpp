@@ -289,14 +289,19 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime)
 
 	ARCADE_CYCLE_COUNTER(STAT_ArcadeEngine)
 	float HighestOmega=0;
-	
+	int NumOfDriveWheelsTouchingGround=0;
 	for(UActorComponent* Component: Components)
 	{
-	
-	const float ComponentOmega=	FMath::Abs(Cast<IWheelInterface>(Component)->GetFastestWheelOmegaSpeed());
-
+			IWheelInterface* WheelInterface =Cast<IWheelInterface>(Component) ;
+			const float ComponentOmega=	FMath::Abs(WheelInterface ->GetFastestWheelOmegaSpeed());
+			if(WheelInterface->GetWheelState()->HitResult.bBlockingHit&&WheelInterface->GetWheelState()->WheelSetup->ApplyDriveForce)
+			{
+				NumOfDriveWheelsTouchingGround++;
+			}
 			if(ComponentOmega>HighestOmega)
-			HighestOmega=ComponentOmega;
+			{
+				HighestOmega=ComponentOmega;
+			}
 	}
 
 	const float ThrottleInput=CalcThrottleInput();
@@ -314,7 +319,16 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime)
 	
 	for(UActorComponent* Component: Components)
 	{
-		Cast<IWheelInterface>(Component)->SetDriveTorqueOnWheels(WheelTorque);
+		if(VehicleState.VehicleData->ScaleDriveTorqueToNumberOfWheels)
+		{
+			Cast<IWheelInterface>(Component)->SetDriveTorqueOnWheels(NumOfDriveWheelsTouchingGround!=0 ?WheelTorque/NumOfDriveWheelsTouchingGround:0);
+		}
+		else
+		{
+			Cast<IWheelInterface>(Component)->SetDriveTorqueOnWheels(WheelTorque);
+		}
+	
+		
 	}
 
 	
@@ -668,18 +682,17 @@ void UModularMovementComponent::WheelTrace(
 	ActorsToIgnore.Add(GetOwner());
 	const FTransform MeshTransform=GetMesh()->GetComponentTransform();
 	const FVector ComponentLocation=MeshTransform.TransformPosition(WheelState.InitialLocalLocation+WheelState.WheelSetup->TraceStartOffset) ;
-	const FQuat LocalRot=	GetMesh()->GetComponentTransform().TransformRotation(FRotator(0,0,WheelState.SuspAngle*-1).Quaternion());
+	
 	//TODO
-	const FVector DirectionVector=WheelState.WheelSetup->SuspensionPivot==0?GetMesh()->GetUpVector():LocalRot.RotateVector(GetMesh()->GetUpVector());
+	const FVector DirectionVector=GetMesh()->GetUpVector();
 	const FVector TraceEnd=ComponentLocation+(DirectionVector*-1*WheelState.WheelSetup->SuspensionLength);
 	FHitResult TraceResult;
-	bool ValidHitFound=false;
-	TArray<FHitResult>Hits;
 	TraceResult.TraceStart=ComponentLocation;
 	TraceResult.TraceEnd=TraceEnd;
 	TraceResult.bBlockingHit=false;
-	if(VehicleState.VehicleData->UseSphereSuspension)
-	{
+	
+		TArray<FHitResult> Hits;
+		bool ValidHitFound=false;
 		UKismetSystemLibrary::SphereTraceMulti(GetWorld(),ComponentLocation,TraceEnd,WheelState.WheelSetup->WheelRadius,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GModularVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,Hits,true);
 	
 		for(auto Hit : Hits)
@@ -706,12 +719,11 @@ void UModularMovementComponent::WheelTrace(
 	
 
 		
-	}
+	
 	
 		
 	
 	const float CurrentLen=FMath::Max<float>(0,TraceResult.Time);
-	UE_LOG(LogTemp,Log,TEXT("Len %f"),TraceResult.Time)
 	const float Stiffness=GetSpringStiffness(WheelState,1-CurrentLen);
 	const float DampingCorrection=-1*(((CurrentLen-WheelState.PreviousLen)*VehicleState.VehicleData->DampingCorrectionMultiplier*Stiffness))/DeltaTime;
 	if(TraceResult.bBlockingHit&&GetOwnerRole()==ENetRole::ROLE_Authority)

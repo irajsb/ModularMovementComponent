@@ -88,7 +88,7 @@ void USimpleStaticMeshWheel::UpdateAnimation(float DeltaTime, UModularMovementCo
 	FVector Location;
 	FRotator Rotation;
 	
-	UModularVehicleFunctionLibrary::GetWheelAnimationData(this,Location,Rotation);
+	UModularVehicleFunctionLibrary::GetWheelAnimationData(this,Location,Rotation,DeltaTime);
 	SetRelativeRotation(Rotation) ;
 	SetRelativeLocation(Location);
 

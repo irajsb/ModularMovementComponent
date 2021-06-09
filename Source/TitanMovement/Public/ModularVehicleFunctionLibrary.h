@@ -49,7 +49,7 @@ public:
 	static void SetHandBrakeInputOnModularVehicle(APawn* Pawn,bool Brake);
 	//actual rotation does not give you acuurate steering and rotation values its has some corrections applied to it so get steering from dedicated values (additional data returned don't affect performance )
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static void GetWheelAnimationData(USceneComponent* Wheel,FVector& Location,FRotator& Rotation);
+	static void GetWheelAnimationData(USceneComponent* Wheel,FVector& Location,FRotator& Rotation,float DeltaTime);
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static float GetWheelRotation(USceneComponent* Wheel);
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
@@ -59,7 +59,15 @@ public:
 	//1 fully compressed 0 fully extended 
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static float GetWheelCompressionValue(USceneComponent* Wheel);
-	
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static void ChangeWheelSetup(USceneComponent* Wheel,UModularVehicleWheelData* VehicleWheelData);
+
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static int GetForwardSpeedKMH(UModularMovementComponent* MovementComponent);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static int GetForwardSpeedMPH(UModularMovementComponent* MovementComponent);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static float GetForwardSpeedCMs(UModularMovementComponent* MovementComponent);
 
 	//not only for BP but we also store common functions here
 	static float CalculateSuspensionRotationUsingPivot(UActorComponent* InComponent);

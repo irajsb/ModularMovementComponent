@@ -76,12 +76,12 @@ void UModularVehicleFunctionLibrary::SetHandBrakeInputOnModularVehicle(APawn* Pa
 	}
 }
 
-void UModularVehicleFunctionLibrary::GetWheelAnimationData(USceneComponent* Wheel,FVector& Location,FRotator& Rotation)
+void UModularVehicleFunctionLibrary::GetWheelAnimationData(USceneComponent* Wheel,FVector& Location,FRotator& Rotation,float DeltaTime)
 {
 	
 IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 
-	
+
 	if(WheelInterface&&Wheel->GetWorld()->IsGameWorld())
 	{
 		
@@ -116,11 +116,15 @@ IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 		ResultPosition.Y=FMath::Abs(Sin)*WheelState->WheelSetup->SuspensionPivot* FMath::Sign(WheelState->InitialLocalLocation.Y) *-0.5;
 	}
 		
-	ResultPosition=UKismetMathLibrary::VInterpTo_Constant(WheelState->PreviousLocation,ResultPosition,Wheel->GetWorld()->GetDeltaSeconds(),WheelState->WheelSetup->AnimSpeed);
+	ResultPosition=UKismetMathLibrary::VInterpTo_Constant(WheelState->PreviousLocation,ResultPosition,DeltaTime,WheelState->WheelSetup->AnimSpeed);
 	Location=ResultPosition;
 	WheelState->PreviousLocation=ResultPosition;
-	Rotation=FRotator(FMath::RadiansToDegrees(-1*WheelState->AngularPosition),WheelState->SteerAngle,0);
 	
+	const float Steer=WheelState->MovementComponent?UKismetMathLibrary::FInterpTo_Constant(WheelState->PreviousYaw, WheelState->SteerAngle,DeltaTime,WheelState->MovementComponent->VehicleState.VehicleData->SteeringAnimationSpeed):WheelState->SteerAngle;
+	
+		
+	Rotation=FRotator(FMath::RadiansToDegrees(-1*WheelState->AngularPosition),Steer,0);
+	WheelState->PreviousYaw=Steer;
 	
 	if(WheelState->SuspAngle!=0.0f)
 	{
@@ -166,6 +170,31 @@ float UModularVehicleFunctionLibrary::GetWheelCompressionValue(USceneComponent* 
 	if(WheelInterface)
 		return 1-WheelInterface->GetWheelState()->HitResult.Time;
 	return 0.0f;
+}
+
+void UModularVehicleFunctionLibrary::ChangeWheelSetup(USceneComponent* Wheel,
+	UModularVehicleWheelData* VehicleWheelData)
+{
+	IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
+	if(WheelInterface)
+	{
+		WheelInterface->GetWheelState()->WheelSetup=VehicleWheelData;
+	}
+}
+
+int UModularVehicleFunctionLibrary::GetForwardSpeedKMH(UModularMovementComponent* MovementComponent)
+{
+	return  static_cast<int>(MovementComponent->VehicleState.ForwardSpeed * 0.036);
+}
+
+int UModularVehicleFunctionLibrary::GetForwardSpeedMPH(UModularMovementComponent* MovementComponent)
+{
+	return  static_cast<int>(MovementComponent->VehicleState.ForwardSpeed * 0.0223694);
+}
+
+float UModularVehicleFunctionLibrary::GetForwardSpeedCMs(UModularMovementComponent* MovementComponent)
+{
+	return MovementComponent->VehicleState.ForwardSpeed;
 }
 
 

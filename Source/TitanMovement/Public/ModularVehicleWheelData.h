@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
+#include "Engine.h"
 
 
 #include "Engine/DataAsset.h"
@@ -128,6 +128,9 @@ struct FWheelState{
 	FVector PreviousLocation;
 	UPROPERTY(BlueprintReadOnly)
 	float CurrentPivotAngle;
+	UPROPERTY(BlueprintReadOnly)
+	float PreviousYaw;
+	
 };
 
  

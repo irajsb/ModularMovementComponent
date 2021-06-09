@@ -71,12 +71,9 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
     TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	float DampingCorrectionMultiplier=5;
-	//Capsule Trace has no accurate way to draw the trace but it provides you with ability to have a wheel  radius along with width 
+	//Wheel divide drive torque to number of wheels touching the ground useful for switching between AWD 4WD RWD 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
-	bool UseSphereSuspension=false;
-	//Capsule Trace has no accurate way to draw the trace but it provides you with ability to have a wheel  radius along with width 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
-	uint8 NumOfSegments=3;
+	bool ScaleDriveTorqueToNumberOfWheels;
 
 	//steering Curve multiplies the steering value Time should be speed in KMH and Value should be Steering multiplier (ranges from 1-0)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
@@ -86,6 +83,9 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 	//We Interp steering data so it feels more natural
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
 	float SteeringInterpolationSpeed=1;
+	//Animation speed when steering has been released
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
+	float SteeringAnimationSpeed=1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bReverseAsBrake=true;
