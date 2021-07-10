@@ -160,6 +160,14 @@ RepCosmeticData.TargetGear=	RepCosmeticData.CurrentGear=VehicleState.TargetGear=
 		Cast<IWheelInterface>(Component)->SetupWheels(this);
 	
 	}
+UMeshComponent* MeshComponent=	GetMesh();
+	
+	MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
+	MeshComponent->BodyInstance.bSimulatePhysics = true;
+	MeshComponent->BodyInstance.bNotifyRigidBodyCollision = true;
+	MeshComponent->BodyInstance.bUseCCD = true;
+	MeshComponent->SetGenerateOverlapEvents(true);
+	MeshComponent->SetCanEverAffectNavigation(false);
 	
 }
 
@@ -187,12 +195,13 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		const int32 QSteeringInput = (FMath::FloorToInt(RawSteeringInput * 63.f) & 0x7F) << 8;
 		const int32 QHandbrakeInput = HandBrakeInput ? (1 << 15) : 0;
 		const uint16 NewQuantizeInput = QHandbrakeInput | QSteeringInput | QThrottleInput;
-
+		
 		if (QuantizeInput != NewQuantizeInput)
 		{
 			QuantizeInput = NewQuantizeInput;
 			ServerUpdateState(QuantizeInput);
 		}
+		
 	}
 	
 	if(ShouldProcessPhysics())
@@ -215,6 +224,8 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		}
 		UpdateWheelAnimation(DeltaTime);
 	}
+	if(GetOwnerRole()==ENetRole::ROLE_Authority)
+	ServerTransform=GetMesh()->GetComponentTransform();
 }
 
 void UModularMovementComponent::UpdateState(float DeltaTime)
@@ -749,7 +760,7 @@ void UModularMovementComponent::WheelTrace(
 	const float CurrentLen=FMath::Max<float>(0,TraceResult.Time);
 	const float Stiffness=GetSpringStiffness(WheelState,1-CurrentLen);
 	const float DampingCorrection=-1*(((CurrentLen-WheelState.PreviousLen)*VehicleState.VehicleData->DampingCorrectionMultiplier*Stiffness))/DeltaTime;
-	if(TraceResult.bBlockingHit&&GetOwnerRole()==ENetRole::ROLE_Authority)
+	if(TraceResult.bBlockingHit&&ShouldProcessPhysics())
 	{
 			const float AngleCorrection=(	FVector::DotProduct(TraceResult.ImpactNormal,	(TraceResult.TraceStart-TraceResult.TraceEnd).GetUnsafeNormal()));
 			WheelState.WheelLoad=((AngleCorrection*FVector::UpVector*(Stiffness+DampingCorrection)));
@@ -987,7 +998,7 @@ void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float 
 	if(WheelState.HitResult.bBlockingHit)
 	{
 
-	if(GetOwnerRole()==ENetRole::ROLE_Authority)
+	if(ShouldProcessPhysics())
 	{
 		FVector FrictionForceLocal = ForceFromFriction;
 		FrictionForceLocal =SteeringRotator.RotateVector(FrictionForceLocal);
@@ -999,7 +1010,7 @@ void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float 
 		FVector RightVector=GetMesh()->GetRightVector();
 		
 	
-		GetMesh()->AddForceAtLocation(FrictionForceVector,WheelState.HitResult.TraceStart);
+		GetMesh()->AddForceAtLocation(FrictionForceVector*DeltaTime*30,WheelState.HitResult.TraceStart);
 	}
 		if(GModularVehicleDebugParams.ShowDrawFriction)
 		{
@@ -1032,7 +1043,7 @@ float UModularMovementComponent::CmToM(float In)
 
 bool UModularMovementComponent::ShouldProcessPhysics()const
 {
-	return GetOwnerRole()==ENetRole::ROLE_Authority;
+	return GetOwnerRole()==ENetRole::ROLE_Authority||GetOwnerRole()==ENetRole::ROLE_AutonomousProxy;
 }
 
 bool UModularMovementComponent::ShouldProcessCosmetics()const
@@ -1265,6 +1276,19 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 	
 }
 
+void UModularMovementComponent::OnRep_RepTransform()
+{
+	
+	if(GetOwnerRole()!=ENetRole::ROLE_Authority)
+	{
+		const FTransform LocalTransform=GetMesh()->GetComponentTransform();
+const float DiffSize=	(ServerTransform.GetLocation()-LocalTransform.GetLocation()).Size();
+UE_LOG(LogTemp,Error,TEXT(" Diff Size %f"),DiffSize);
+		GetMesh()->SetWorldTransform(UKismetMathLibrary::TInterpTo(LocalTransform,ServerTransform,GetWorld()->GetDeltaSeconds(),DiffSize));
+	}
+	
+}
+
 void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -1272,7 +1296,7 @@ void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	//DOREPLIFETIME(UModularMovementComponent, bIsSleeping);
 	//DOREPLIFETIME(UModularMovementComponent, bIsMovementEnabled);
 	DOREPLIFETIME(UModularMovementComponent, RepCosmeticData);
-	
+	DOREPLIFETIME(UModularMovementComponent,ServerTransform);
 	
 }
 ////////////////

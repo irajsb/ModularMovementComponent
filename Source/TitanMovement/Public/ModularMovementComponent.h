@@ -173,6 +173,7 @@ public:
 	FArcadeGearInfo GetGearInfo(int Index);
 	//We setup wheels here
 	virtual void InitializeComponent() override;
+
 	//Main updates happen here
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	//Captures some basic info from wheels for feature processes 
@@ -224,7 +225,11 @@ public:
 
 	UFUNCTION()
     void OnRep_RepCosmeticData();
-	
+
+	UPROPERTY(BlueprintReadOnly,Transient, ReplicatedUsing = OnRep_RepTransform)
+	FTransform ServerTransform;
+	UFUNCTION()
+	void OnRep_RepTransform();
 	/** Pass current state to server */
 	UFUNCTION(reliable, server,WithValidation)
     void ServerUpdateState(uint16 InQuantizeInput);
