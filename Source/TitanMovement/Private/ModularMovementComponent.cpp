@@ -168,7 +168,10 @@ UMeshComponent* MeshComponent=	GetMesh();
 	MeshComponent->BodyInstance.bUseCCD = true;
 	MeshComponent->SetGenerateOverlapEvents(true);
 	MeshComponent->SetCanEverAffectNavigation(false);
-	
+	if(GetOwnerRole()==ENetRole::ROLE_SimulatedProxy)
+	{
+		GetMesh()->SetSimulatePhysics(false);
+	}
 }
 
 void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction)
