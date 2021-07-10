@@ -89,8 +89,17 @@ void USimpleStaticMeshWheel::UpdateAnimation(float DeltaTime, UModularMovementCo
 	FRotator Rotation;
 	
 	UModularVehicleFunctionLibrary::GetWheelAnimationData(this,Location,Rotation,DeltaTime);
-	SetRelativeRotation(Rotation) ;
-	SetRelativeLocation(Location);
+	if(MirrorLeftWheel)
+	{
+		//Rotation.Pitch=Rotation.Pitch*-1;
+		Rotation=(Rotation.Quaternion()*WheelState.InitialLocalRotation.Quaternion()).Rotator();
+		SetRelativeRotation(Rotation) ;
+	}else
+	{
+		SetRelativeRotation(Rotation) ;
+	}
+	
+	SetRelativeLocation(Location+WheelState.InitialLocalLocation);
 
 	
 }
@@ -103,5 +112,20 @@ void USimpleStaticMeshWheel::SimulateWheelData(float DeltaTime, UModularMovement
 FWheelState* USimpleStaticMeshWheel::GetWheelState()
 {
 	return  &WheelState;
+}
+
+FTransform USimpleStaticMeshWheel::GetWheelTransform()
+{
+ FTransform OutTransform=GetComponentTransform();
+	
+OutTransform.SetLocation(WheelState.MovementComponent->GetMesh()->GetComponentTransform().TransformPosition(WheelState.InitialLocalLocation));
+	
+OutTransform.SetRotation(UKismetMathLibrary::ComposeRotators(OutTransform.GetRotation().Rotator(),WheelState.InitialLocalRotation).Quaternion());
+	return  OutTransform;
+}
+
+void USimpleStaticMeshWheel::UpdateWheelState(FWheelState In)
+{
+	WheelState=In;
 }
 

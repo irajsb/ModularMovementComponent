@@ -38,13 +38,14 @@ struct FRepCosmeticData
 	uint8 EngineRPM;
 
 	uint8 CurrentGear;
-
+	uint8 TargetGear;
 	
 
 	FRepCosmeticData()
 	{
 		EngineRPM = 0;
 		CurrentGear=0;
+		TargetGear=0;
 	}
 };
 
@@ -110,6 +111,8 @@ class TITANMOVEMENT_API UModularMovementComponent : public UPawnMovementComponen
 	//Return Mesh
 	UMeshComponent* GetMesh()const;
 	private:
+
+	
 	
 	UPROPERTY(Transient)
 	float RawBrakeInput;
@@ -127,18 +130,27 @@ class TITANMOVEMENT_API UModularMovementComponent : public UPawnMovementComponen
 	UPROPERTY(Transient)
 	bool HandBrakeInput;
 public:
-	//input 
+	/*Set throttle Input
+	 *Range -1,1
+	 * No Need for replication
+	 */ 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void SetThrottleInput(float Input);
+	/*Set Steering Input
+	*Range -1,1
+	* No Need for replication
+	*/ 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void SetSteeringInput(float Input);
 	/** Set the user input for the vehicle Brake [range 0 to 1] set it if you've turned off reverse as brake */
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
     void SetBrakeInput(float Brake);
-
+	/*Set HandBrakeInput
+	* No Need for replication
+	*/ 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
     void SetHandBrakeInput(bool Brake);
-	
+	//Data holder
 	UPROPERTY(EditAnywhere,BlueprintReadOnly)
 	FVehicleState VehicleState;
 
@@ -157,22 +169,33 @@ public:
 	//Get Number of wheels(some components are allowed to have more than one wheel thats why we just dont count components
 	UFUNCTION(BlueprintCallable)
 	int GetNumberOfWheels();
-	//
+	//Get Gear info for a certain index
 	FArcadeGearInfo GetGearInfo(int Index);
+	//We setup wheels here
 	virtual void InitializeComponent() override;
+	//Main updates happen here
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	//Captures some basic info from wheels for feature processes 
 	void UpdateState(float DeltaTime);
+	//Update gearbox
 	void UpdateGearBox(float DeltaTime);
+	//Calculate RPM And torque
 	void UpdateEngine(float DeltaTime);
+	//Update Suspensions
 	void UpdateSuspension(float DeltaTime);
+	//Update Friction brake and drive forces
 	void UpdateForces(float DeltaTime);
+	//Set steering to be used by UpdateForces 
 	void UpdateSteering(float DeltaTime);
+	//Handle anim data for wheels
 	void UpdateWheelAnimation(float DeltaTime);
+	//Used for simulated replicated Wheels 
 	void SimulateWheelData(float DeltaTime);
+	//Determine vehicle state in AI Pawns 
 	EAIVehicleState DetermineAIState(float ForwardFactor,float DeltaTime);
 	//trace and apply Suspension forces
 	void WheelTrace(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel) const;
-	//same as top function without force applying
+	//same as top function without force applying for simulated pawns
 	void SimulateWheel(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
 	//Apply Drive Brake and friction
 	void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);

@@ -34,9 +34,9 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	//Offset to apply to trace start
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	FVector TraceStartOffset;
-	//Force to apply
+	//Force to apply for suspension
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	float Stiffness;
+	float Stiffness=800000;
 	//amount of friction when moving forward
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float LongitudinalFrictionMultiplier=1.0;
@@ -53,7 +53,11 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	bool SteeringWheel;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)
 	float SteeringMaxAngle=30;
-	//TODo
+
+	//You can set this to -1 to allow back wheel steering 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steer)
+	float SteeringMultiplier=1;
+
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Brake)
 	bool AffectedByHandBrake;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Brake)
@@ -68,9 +72,9 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Suspension)
 	 float SuspensionPivot;
 
-	//Wheel Animation speed (just location not rotation)
+	//Should we interpolate wheel location (0 to disable ) and whats the speed ?
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	float AnimSpeed;
+	float AnimSpeed=0;
 
 	//1 by 1 chart x axis :(0-1) current compression of spring y axis(0-1) Spring Force multiplier in that given compression 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
@@ -84,20 +88,20 @@ struct FWheelState{
 	//Ranges from 0-1
 	UPROPERTY(BlueprintReadOnly)
 	float PreviousLen;
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite)
 	float SteerAngle=0;
 	UPROPERTY(BlueprintReadOnly)
 	FHitResult HitResult;
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite)
 	bool bIsSlipping;
 	//SuspensionForce That was applied;
 	UPROPERTY(BlueprintReadOnly)
 	FVector WheelLoad;
  	
-	UPROPERTY(EditAnywhere,BlueprintReadOnly)
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	UModularVehicleWheelData* WheelSetup;
 	float DriveTorque;
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite)
 	float BrakeTorque;
 	UPROPERTY(BlueprintReadOnly)
 	float Spin;
@@ -106,7 +110,7 @@ struct FWheelState{
 	// [radians/sec] Wheel Rotation Angular Velocity
 	UPROPERTY(BlueprintReadOnly)
 	float Omega;
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite)
 	// [radians/sec] Wheel Rotation Angular Velocity
 	float AngularPosition;// [radians]
 	

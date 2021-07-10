@@ -36,8 +36,9 @@ public:
 	virtual float GetFastestWheelOmegaSpeed() override;
 	virtual int GetNumOfWheelsTouchingGround(bool OnlyDriveWheels) override;
 	virtual void UpdateAnimation(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
+	virtual FTransform GetWheelTransform() override;
 	virtual void SimulateWheelData(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
-
+	 virtual void UpdateWheelState(FWheelState In) override;
 virtual FWheelState* GetWheelState() override;
 		
 };

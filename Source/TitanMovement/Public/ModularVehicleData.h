@@ -52,14 +52,17 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 	float ConstantTorque;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,meta=(EditCondition="ConstantTorque==0.0"))
 	FRuntimeFloatCurve EngineTorqueCurve;
+	//SetRPMTOZeroWhenShifting
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
+	bool ZeroRpmWhenShifting;
 	//Idle RPM
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
 	float IdleRpm;
 	//Max rpm 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
-	float MaxRpm;
+	float MaxRpm=7500;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Transmission)
-	float TransmissionEfficiency;
+	float TransmissionEfficiency=1;
 	/*Affects rpm calculation ,tweak if rpm is not matching your expectations*/
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Transmission)
 	float DifferentialRatio=1.0;
@@ -70,7 +73,7 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
     TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
-	float DampingCorrectionMultiplier=5;
+	float DampingCorrectionMultiplier=0.3;
 	//Wheel divide drive torque to number of wheels touching the ground useful for switching between AWD 4WD RWD 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	bool ScaleDriveTorqueToNumberOfWheels;
@@ -80,13 +83,16 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 	FRuntimeFloatCurve SteerCurve;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
 	TEnumAsByte<EArcadeSteerType> SteerType;
-	//We Interp steering data so it feels more natural
+	//How fast input should rise  Multiplied by DeltaTime
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
-	float SteeringInterpolationSpeed=1;
+	float SteerInputRise=5;
+	//How fast input should fall  Multiplied by DeltaTime
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
+	float SteerInputFall=20;
+
 	//Animation speed when steering has been released
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
-	float SteeringAnimationSpeed=1;
-
+	float SteeringAnimationSpeed=120;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bReverseAsBrake=true;
 	
@@ -136,7 +142,6 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 	UPROPERTY(EditAnywhere, Category=AI)
 	float TraceSpeedMultiplier;
 
-	UPROPERTY(EditAnywhere, Category=Tank)
-	float SideSlip;
+
 
 };

@@ -42,9 +42,20 @@ float UModularVehicleFunctionLibrary::GetGearRatio(UModularMovementComponent* Mo
 	return 0.0f;
 }
 
+bool UModularVehicleFunctionLibrary::IsChangingGear(UModularMovementComponent* MovementComponent)
+{
+	if(MovementComponent)
+	{
+		if(MovementComponent->VehicleState.CurrentGear!=MovementComponent->VehicleState.TargetGear)
+			return  true;
+	}
+	return false;
+}
+
+
 void UModularVehicleFunctionLibrary::SetThrottleInputOnModularVehicle(APawn* Pawn, float Throttle)
 {
-	
+	if(Pawn)
 	if(UModularMovementComponent* MC=Cast<UModularMovementComponent>(Pawn->GetMovementComponent()))
 	{
 		MC->SetThrottleInput(Throttle);
@@ -56,6 +67,7 @@ void UModularVehicleFunctionLibrary::SetThrottleInputOnModularVehicle(APawn* Paw
 
 void UModularVehicleFunctionLibrary::SetSteerInputOnModularVehicle(APawn* Pawn, float Steer)
 {
+	if(Pawn)
 	if(UModularMovementComponent* MC=Cast<UModularMovementComponent>(Pawn->GetMovementComponent()))
 	{
 		MC->SetSteeringInput(Steer);
@@ -67,6 +79,7 @@ void UModularVehicleFunctionLibrary::SetSteerInputOnModularVehicle(APawn* Pawn, 
 
 void UModularVehicleFunctionLibrary::SetHandBrakeInputOnModularVehicle(APawn* Pawn, bool Brake)
 {
+	if(Pawn)
 	if(UModularMovementComponent* MC=Cast<UModularMovementComponent>(Pawn->GetMovementComponent()))
 	{
 		MC->SetHandBrakeInput(Brake);
@@ -90,8 +103,11 @@ IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 
 		const FVector WheelRadiusVector=FVector(0,0,WheelState->WheelSetup->WheelRadius);
 		const FVector SuspensionTraceLocation=WheelState->HitResult.bBlockingHit?WheelState->HitResult.ImpactPoint+WheelRadiusVector:WheelState->HitResult.TraceEnd;
-	
-		  const FTransform WheelTransform=Wheel->GetComponentTransform();
+		
+		
+		
+		const FTransform WheelTransform=WheelInterface->GetWheelTransform();
+			
 		//local
 		  FVector ContactPointPosition=		WheelTransform.InverseTransformPosition(SuspensionTraceLocation);
 		  ContactPointPosition=	ContactPointPosition=WheelTransform.GetRotation().RotateVector(ContactPointPosition);
@@ -107,6 +123,7 @@ IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 	
 	FVector	ResultPosition=FVector::ZeroVector;
 	ResultPosition.Z=ContactPointPosition.Z-((FMath::Abs(Sin))*WheelState->WheelSetup->WheelRadius/PI);
+	
 		
 	
 	if(WheelState->SuspAngle!=0.0f)
@@ -115,8 +132,14 @@ IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 		FMath::SinCos(&Sin,&Cos,PivotAngle);
 		ResultPosition.Y=FMath::Abs(Sin)*WheelState->WheelSetup->SuspensionPivot* FMath::Sign(WheelState->InitialLocalLocation.Y) *-0.5;
 	}
+
+	if(WheelState->WheelSetup->AnimSpeed!=0.0f)
+	{
+		ResultPosition=UKismetMathLibrary::VInterpTo_Constant(WheelState->PreviousLocation,ResultPosition,DeltaTime,WheelState->WheelSetup->AnimSpeed);
+	}
+	
 		
-	ResultPosition=UKismetMathLibrary::VInterpTo_Constant(WheelState->PreviousLocation,ResultPosition,DeltaTime,WheelState->WheelSetup->AnimSpeed);
+	
 	Location=ResultPosition;
 	WheelState->PreviousLocation=ResultPosition;
 	
@@ -124,6 +147,7 @@ IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 	
 		
 	Rotation=FRotator(FMath::RadiansToDegrees(-1*WheelState->AngularPosition),Steer,0);
+
 	WheelState->PreviousYaw=Steer;
 	
 	if(WheelState->SuspAngle!=0.0f)
@@ -267,4 +291,14 @@ FCollisionQueryParams UModularVehicleFunctionLibrary::ConfigureCollisionParams(F
 	}
 
 	return Params;
+}
+
+void UModularVehicleFunctionLibrary::UpdateWheelState(USceneComponent* Wheel, FWheelState NewWheelState)
+{
+	Cast<IWheelInterface>(Wheel)->UpdateWheelState(NewWheelState);
+}
+
+void UModularVehicleFunctionLibrary::SetSteerOnWheel(USceneComponent* Wheel, float Angle)
+{
+	Cast<IWheelInterface>(Wheel)->GetWheelState()->SteerAngle=Angle;
 }

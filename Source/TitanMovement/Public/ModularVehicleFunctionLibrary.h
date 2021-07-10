@@ -37,7 +37,9 @@ public:
 	static  float GetCurrentGearRatio(UModularMovementComponent* MovementComponent);
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static  float GetGearRatio(UModularMovementComponent* MovementComponent,int Index,bool& ValidIndex);
-	
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static bool  IsChangingGear(UModularMovementComponent* MovementComponent);
+	public:
 	/*Will ignore if movementComponent was not Modular Vehicle*/
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static void SetThrottleInputOnModularVehicle(APawn* Pawn,float Throttle);
@@ -74,5 +76,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Collision", meta=(bIgnoreSelf="true", WorldContext="WorldContextObject", AutoCreateRefTerm="ActorsToIgnore", DisplayName = "CapsuleTraceByChannel", AdvancedDisplay="TraceColor,TraceHitColor,DrawTime", Keywords="sweep"))
     static bool CapsuleTraceSingleWithRotation(UObject* WorldContextObject, const FVector Start, const FVector End,FRotator Rot, float Radius, float HalfHeight, ETraceTypeQuery TraceChannel, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, EDrawDebugTrace::Type DrawDebugType, FHitResult& OutHit, bool bIgnoreSelf, FLinearColor TraceColor = FLinearColor::Red, FLinearColor TraceHitColor = FLinearColor::Green, float DrawTime = 5.0f);
 	static FCollisionQueryParams ConfigureCollisionParams(FName TraceTag, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, bool bIgnoreSelf, UObject* WorldContextObject);
-
+	//ADVANCED: Update wheel state on the wheel (Better to use a previous wheel state and update it and set it on the wheel ) 
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static void UpdateWheelState(USceneComponent* Wheel,FWheelState  NewWheelState);
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static void SetSteerOnWheel(USceneComponent* Wheel,float Angle );
+	
 };

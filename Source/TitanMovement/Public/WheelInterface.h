@@ -37,7 +37,9 @@ public:
 	virtual void UpdateAnimation(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent){};
 	virtual void SimulateWheelData(float DeltaTime,UModularMovementComponent* ArcadeMovementComponent){};
 	virtual int GetNumOfWheelsTouchingGround(bool OnlyDriveWheels){return 0;};
+	virtual FTransform GetWheelTransform(){return  FTransform::Identity;}
 	virtual FWheelState* GetWheelState(){return  nullptr;};
+	virtual void UpdateWheelState(FWheelState In){};
 
 	//Index only for multi wheel components(Instanced Static Mesh)
 

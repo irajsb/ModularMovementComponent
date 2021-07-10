@@ -30,4 +30,6 @@ class TITANMOVEMENT_API USkeletalMeshWheel : public USkeletalMeshComponent,publi
 	virtual void UpdateAnimation(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
 	virtual void SimulateWheelData(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
 	virtual FWheelState* GetWheelState() override;
+	virtual FTransform GetWheelTransform() override;
+	virtual void UpdateWheelState(FWheelState In) override;
 };

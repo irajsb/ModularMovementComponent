@@ -22,6 +22,8 @@ class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,pub
 	USimpleStaticMeshWheel();
 	GENERATED_BODY()
 
+	UPROPERTY(EditAnywhere)
+	bool MirrorLeftWheel=true;
 	//Some Properties are not valid in SimulatedPawn
 	UPROPERTY(EditAnywhere,BlueprintReadOnly)
 	FWheelState WheelState;
@@ -35,4 +37,7 @@ class TITANMOVEMENT_API USimpleStaticMeshWheel : public UStaticMeshComponent,pub
 	virtual void UpdateAnimation(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
 	virtual void SimulateWheelData(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent) override;
 	virtual FWheelState* GetWheelState() override;
+	virtual FTransform GetWheelTransform() override;
+	virtual void UpdateWheelState(FWheelState In) override;
+	
 };

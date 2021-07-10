@@ -92,3 +92,12 @@ FWheelState* USkeletalMeshWheel::GetWheelState()
 {return  &WheelState;
 }
 
+FTransform USkeletalMeshWheel::GetWheelTransform()
+{return  GetComponentTransform();
+}
+
+void USkeletalMeshWheel::UpdateWheelState(FWheelState In)
+{
+	WheelState=In;
+}
+

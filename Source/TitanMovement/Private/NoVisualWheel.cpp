@@ -108,9 +108,17 @@ void UNoVisualWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent*
 	
 }
 
+FTransform UNoVisualWheel::GetWheelTransform()
+{return  GetComponentTransform();
+}
+
 void UNoVisualWheel::SimulateWheelData(float DeltaTime, UModularMovementComponent* ArcadeMovementComponent)
 {
 	ArcadeMovementComponent->SimulateWheel(WheelState,DeltaTime,this);
+}
+
+void UNoVisualWheel::UpdateWheelState(FWheelState In)
+{WheelState=In;
 }
 
 
