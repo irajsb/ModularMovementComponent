@@ -174,6 +174,10 @@ public:
 	//We setup wheels here
 	virtual void InitializeComponent() override;
 
+	void VehicleTick(float DeltaTime,FBodyInstance* BodyInstance);
+	
+	FCalculateCustomPhysics OnCalculateCustomPhysics;
+	
 	//Main updates happen here
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	//Captures some basic info from wheels for feature processes 
@@ -205,6 +209,7 @@ public:
 	//AI movement
 	virtual void RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed) override;
 	virtual void StopActiveMovement() override;
+	void ApplyServerCorrection(float DeltaTime);
 	
 	//ChaosDefault
 	static float CmToM(float In);
@@ -223,13 +228,12 @@ public:
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_RepCosmeticData)
 	FRepCosmeticData RepCosmeticData;
 
+	UPROPERTY(EditAnywhere,Replicated)
+	FRepMovement RepMovement;
 	UFUNCTION()
     void OnRep_RepCosmeticData();
 
-	UPROPERTY(BlueprintReadOnly,Transient, ReplicatedUsing = OnRep_RepTransform)
-	FTransform ServerTransform;
-	UFUNCTION()
-	void OnRep_RepTransform();
+
 	/** Pass current state to server */
 	UFUNCTION(reliable, server,WithValidation)
     void ServerUpdateState(uint16 InQuantizeInput);
