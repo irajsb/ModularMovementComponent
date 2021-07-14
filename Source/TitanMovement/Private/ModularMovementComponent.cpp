@@ -1,12 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-//TODO TankSteering
-
-//TODO Pathfinding
-//TODO Avoidance
-//TODO SkeletalMesh
-//TODO sliding
-//TODO fix gearbox
-
+// @Irajsb 1mohtashamiraj@gmail.com
 
 #include "ModularMovementComponent.h"
 
@@ -20,7 +12,7 @@
 #include "ModularVehicleFunctionLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/PhysicsSettings.h"
-FModularVehicleDebugParams GModularVehicleDebugParams;
+
 
 DECLARE_CYCLE_STAT(TEXT("Arcade Tick Component"), STAT_ArcadeTickComponent, STATGROUP_MovementPhysics);
 DECLARE_CYCLE_STAT(TEXT("Arcade Updage Engine"), STAT_ArcadeEngine, STATGROUP_MovementPhysics);
@@ -28,27 +20,6 @@ DECLARE_CYCLE_STAT(TEXT("Arcade Updage Suspension"), STAT_ArcadeSuspension, STAT
 DECLARE_CYCLE_STAT(TEXT("Arcade Updage Forces"), STAT_ArcadeForces, STATGROUP_MovementPhysics);
 
 
-static FAutoConsoleVariableRef CVarArcadeVehicleShowSuspensionDebug(
-    TEXT("ModularVehicle.ShowSuspensionDebug"),
-    GModularVehicleDebugParams.ShowSuspensionDebug,
-    TEXT("Toggles Suspension Debugging visuals"));
-static FAutoConsoleVariableRef CVarArcadeVehicleShowInputProcessLog(
-    TEXT("ModularVehicle.ShowInputProcessLog"),
-    GModularVehicleDebugParams.ShowInputProcessingDebug,
-    TEXT("Toggles Input Debugging UE_LOGs"));
-
-static FAutoConsoleVariableRef CVarArcadeVehicleShowGearBoxProcessLog(
-    TEXT("ModularVehicle.ShowGearBoxProcessLog"),
-    GModularVehicleDebugParams.ShowGearboxLog,
-    TEXT("Toggles GearBox Debugging UE_LOGs"));
-static FAutoConsoleVariableRef CVarArcadeVehicleFrictionDraw(
-    TEXT("ModularVehicle.DebugFriction"),
-    GModularVehicleDebugParams.ShowDrawFriction,
-    TEXT("Toggles Friction force "));
-static FAutoConsoleVariableRef CVarArcadeVehicleAIDebug(
-    TEXT("ModularVehicle.AIDebug"),
-    GModularVehicleDebugParams.AIDebug,
-    TEXT("Toggles AI Debug "));
 
 #define LOCTEXT_NAMESPACE "ArcadeMovement"
 
@@ -289,7 +260,7 @@ if(VehicleState.DriveWheelsOnGround!=0)
 	// not currently changing gear, also don't want to change up because the wheels are spinning up due to having no load
 	if(VehicleState.CurrentGear>VehicleState.IdleGear)
 	{
-		if (VehicleState.CurrentGearChangeTime==0.f /*&& AllowedToChangeGear*/)
+		if (VehicleState.CurrentGearChangeTime==0.f && AllowedToChangeGear())
 		{
 			if (VehicleState.CurrentRpmRatio >= GetGearInfo(VehicleState.CurrentGear).UpRatio)
 			{
@@ -311,8 +282,13 @@ if(VehicleState.DriveWheelsOnGround!=0)
 			VehicleState.CurrentGearChangeTime = 0.f;
 			OnGearChange.Broadcast(VehicleState.CurrentGear,VehicleState.TargetGear,true);
 			VehicleState.CurrentGear =VehicleState.TargetGear;
-			if(GModularVehicleDebugParams.ShowGearboxLog)
+
+#if !UE_BUILD_SHIPPING
+			if(VehicleState.VehicleData->ShowGearboxDebug)
 				UE_LOG(LogArcadeVehicle,Warning,TEXT("Change gear Timer Finished Gear Now at : %d "),VehicleState.CurrentGear);
+
+#endif
+			
 		}
 	}
 }
@@ -360,8 +336,8 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime)
 		EngineTorque=	VehicleState.VehicleData->ConstantTorque*ThrottleInput;
 			//TODO 
 			if(VehicleState.CurrentRpmRatio==1)
-			{
-				EngineTorque=0;
+			{//TODO 
+			//	EngineTorque=0;
 			}
 		}else
 		{
@@ -410,11 +386,14 @@ void UModularMovementComponent::UpdateForces(float DeltaTime)
 
 
 	 BrakeInput=CalcBrakeInput();
-	if(GModularVehicleDebugParams.ShowInputProcessingDebug)
+#if ! UE_BUILD_SHIPPING
+	if(VehicleState.VehicleData->ShowInputProcessingDebug)
 	{
 		UE_LOG(LogArcadeVehicle,Warning,TEXT("Final Calc NewBrakeInput: %f "),FMath::Abs(BrakeInput));
 	
 	}
+#endif
+	
 
 	
 	for(UActorComponent* Component: Components)
@@ -479,8 +458,8 @@ EAIVehicleState UModularMovementComponent::DetermineAIState(float ForwardFactor,
 		const float TraceLenBackWard=VehicleState.VehicleData->TraceLength*FMath::Max(VehicleState.VehicleData->TraceLength,static_cast<float>((-1*VehicleState.ForwardSpeed*0.036*VehicleState.VehicleData->TraceSpeedMultiplier)));
 		//start traces
 		
-		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+VehicleDirection*TraceLenForward,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,GModularVehicleDebugParams.AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultF,true);
-		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+-1*VehicleDirection*TraceLenBackWard,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,GModularVehicleDebugParams.AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultB,true);
+		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+VehicleDirection*TraceLenForward,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,VehicleState.VehicleData->AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultF,true);
+		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+-1*VehicleDirection*TraceLenBackWard,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,VehicleState.VehicleData->AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultB,true);
 
 		}
 	//determine state
@@ -600,7 +579,7 @@ void UModularMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, 
 					WheelState.TorqueTransferFactor=VehicleState.TrackLeft.TorqueTransfer;
 					
 				}OutSteeringAngle=0;
-				if(GModularVehicleDebugParams.ShowInputProcessingDebug)
+				if(VehicleState.VehicleData->ShowInputProcessingDebug)
 				{
 					UE_LOG(LogArcadeVehicle,Warning,TEXT("Tank input Left %f Right %f"),VehicleState.TrackLeft.TorqueTransfer,VehicleState.TrackRight.TorqueTransfer);
 				}
@@ -701,7 +680,7 @@ void UModularMovementComponent::RequestDirectMove(const FVector& MoveVelocity, b
 	}
 	
 	if(VehicleState.ForwardSpeed)
-	if(GModularVehicleDebugParams.AIDebug)
+	if(VehicleState.VehicleData->AIDebug)
 	{
 		//draw destination
 		DrawDebugSphere(GetWorld(),Destination,30,20,FColor::Red,false,-1,5);
@@ -745,7 +724,13 @@ void UModularMovementComponent::WheelTrace(FWheelState& WheelState,float DeltaTi
 	
 		TArray<FHitResult> Hits;
 		bool ValidHitFound=false;
-		UKismetSystemLibrary::SphereTraceMulti(GetWorld(),ComponentLocation,TraceEnd,WheelState.WheelSetup->WheelRadius,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,GModularVehicleDebugParams.ShowSuspensionDebug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,Hits,true);
+
+	bool Debug=false;
+#if ! UE_BUILD_SHIPPING
+	Debug=WheelState.WheelSetup->ShowSuspensionDebug;
+#endif
+	
+		UKismetSystemLibrary::SphereTraceMulti(GetWorld(),ComponentLocation,TraceEnd,WheelState.WheelSetup->WheelRadius,VehicleState.VehicleData->SuspensionTraceTypeQuery,true,ActorsToIgnore,Debug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,Hits,true);
 	
 		for(auto Hit : Hits)
 		{
@@ -797,7 +782,7 @@ void UModularMovementComponent::WheelTrace(FWheelState& WheelState,float DeltaTi
 	//Debug
 	#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 
-	if(GModularVehicleDebugParams.ShowSuspensionDebug)
+	if(WheelState.WheelSetup->ShowSuspensionDebug)
 	{
 
 		const FVector Force= FVector::UpVector*Stiffness;
@@ -975,13 +960,13 @@ void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float 
 			if (FMath::Abs(FinalLateralForce) > LateralAdhesiveLimit)
 			{
 				ForceFromFriction.Y = LateralAdhesiveLimit *FMath::Sign(FinalLateralForce);
-				//ForceFromFriction.Y= FMath::Lerp(ForceFromFriction.Y,FinalLateralForce,WheelState.WheelSetup->DriftControlCurve.GetRichCurve()->Eval(FMath::Abs(WheelState.SlipAngle)));
+				
 			}
 		
 			
 			
 			// wheel rolling - just match the ground speed exactly
-		/*	if (BrakeFactor < 1.0f)
+			if (BrakeFactor < 1.0f)
 			{
 				WheelState.Omega *= BrakeFactor;
 			}
@@ -993,9 +978,8 @@ void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float 
 			{
 				float GroundOmega = GroundVelocityVector.X / Re;
 				WheelState.Omega += (GroundOmega - WheelState.Omega);
-			}*/
-			float GroundOmega = GroundVelocityVector.X / Re;
-			WheelState.Omega += (GroundOmega - WheelState.Omega);
+			}
+			
 		}
 		// Wheel angular position
 		WheelState.AngularPosition += WheelState.Omega * DeltaTime;
@@ -1036,7 +1020,7 @@ void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float 
 	
 			GetMesh()->GetBodyInstance()->AddForceAtPosition(FrictionForceVector,WheelState.HitResult.TraceStart,false);
 	}
-		if(GModularVehicleDebugParams.ShowDrawFriction)
+		if(WheelState.WheelSetup->ShowDrawFriction)
 		{
 			DrawDebugLine(GetWorld(),WheelState.HitResult.ImpactPoint,WheelState.HitResult.ImpactPoint+(FrictionForceVector/500),FColor::Green,false,-1,0,15);
 			DrawDebugLine(GetWorld(),WheelState.HitResult.ImpactPoint,WheelState.HitResult.ImpactPoint+GetMesh()->GetForwardVector()*AppliedLinearDriveForce,FColor::Red,false);
@@ -1045,7 +1029,7 @@ void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float 
 				State.Append("Locked");
 			if(WheelState.Spinning)
 				State.Append(" Spinning");
-			DrawDebugString(GetWorld(),ArcadeWheel->GetComponentLocation(),State,0,FColor::Red);
+			DrawDebugString(GetWorld(),ArcadeWheel->GetComponentLocation(),State,nullptr,FColor::Red,-1);
 			
 		}
 	}
@@ -1151,7 +1135,7 @@ if(SteerDir==0)
 	}
 	
 	
-	if(GModularVehicleDebugParams.ShowInputProcessingDebug)
+	if(VehicleState.VehicleData->ShowInputProcessingDebug)
 		UE_LOG(LogArcadeVehicle,Warning,TEXT("Final Calc SteeringInput: %f   Raw : %f"),(SteeringInput),RawSteeringInput);
 	return  SteeringInput;
 }
@@ -1244,7 +1228,7 @@ float UModularMovementComponent::CalcThrottleInput()
 	}
 
 	//Debug
-if(GModularVehicleDebugParams.ShowInputProcessingDebug)
+if(VehicleState.VehicleData->ShowInputProcessingDebug)
 {
 	UE_LOG(LogArcadeVehicle,Warning,TEXT("Throttle raw before process %f"),RawThrottleInput);
 	UE_LOG(LogArcadeVehicle,Warning,TEXT("Final Calc Throttle %f "),FMath::Abs(NewThrottleInput));
@@ -1257,7 +1241,7 @@ if(GModularVehicleDebugParams.ShowInputProcessingDebug)
 
 void UModularMovementComponent::SetTargetGear(int32 GearNum, bool bImmediate)
 {
-	if(GModularVehicleDebugParams.ShowGearboxLog)
+	if(VehicleState.VehicleData->ShowGearboxDebug)
 	UE_LOG(LogArcadeVehicle,Warning,TEXT("Change gear called with %d "),GearNum);
 	if(VehicleState.VehicleData->Gears.IsValidIndex(GearNum))
 	{
@@ -1275,7 +1259,20 @@ void UModularMovementComponent::SetTargetGear(int32 GearNum, bool bImmediate)
 	}
 }
 
-
+bool UModularMovementComponent::AllowedToChangeGear()
+{
+	bool Result=true;
+	for(UActorComponent* Component: Components)
+	{
+		
+		if(Cast<IWheelInterface>(Component)->GetWheelState()->Spinning)
+		{
+			Result=false;
+		}
+	
+	}
+	return  Result;
+}
 
 
 void UModularMovementComponent::UpdateReplicatedCosmeticData()

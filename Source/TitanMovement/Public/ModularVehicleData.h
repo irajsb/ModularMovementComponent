@@ -144,4 +144,20 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 
 
 
+
+
+	UPROPERTY(EditAnywhere, Category=Debug)
+	bool ShowGearboxDebug;
+	UPROPERTY(EditAnywhere, Category=Debug)
+	bool ShowInputProcessingDebug;
+	UPROPERTY(EditAnywhere, Category=Debug)
+	bool AIDebug;
+
+
+
+
+
+	
+
+
 };

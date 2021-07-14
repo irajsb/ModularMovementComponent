@@ -166,6 +166,7 @@ public:
 	//Engine
 
 	void SetTargetGear(int32 GearNum, bool bImmediate);
+	bool AllowedToChangeGear();
 	//Get Number of wheels(some components are allowed to have more than one wheel thats why we just dont count components
 	UFUNCTION(BlueprintCallable)
 	int GetNumberOfWheels();

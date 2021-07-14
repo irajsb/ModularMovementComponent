@@ -79,6 +79,17 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	//1 by 1 chart x axis :(0-1) current compression of spring y axis(0-1) Spring Force multiplier in that given compression 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	FRuntimeFloatCurve SuspensionCurve;
+
+
+
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Debug)
+	bool ShowSuspensionDebug;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Debug)
+	bool ShowDrawFriction;
+
+
+
+	
 };
 
 
@@ -134,6 +145,9 @@ struct FWheelState{
 	float CurrentPivotAngle;
 	UPROPERTY(BlueprintReadOnly)
 	float PreviousYaw;
+
+
+	
 	
 };
 
