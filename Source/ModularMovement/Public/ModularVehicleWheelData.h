@@ -15,7 +15,7 @@
 
 class UModularMovementComponent;
 UCLASS()
-class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
+class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 {
 	GENERATED_BODY()
 	public:
@@ -77,7 +77,7 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	float AnimSpeed=0;
 
 	//1 by 1 chart x axis :(0-1) current compression of spring y axis(0-1) Spring Force multiplier in that given compression 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Advanced)
 	FRuntimeFloatCurve SuspensionCurve;
 
 
@@ -88,8 +88,14 @@ class TITANMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	bool ShowDrawFriction;
 
 
-
-	
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=NewSusp)
+	float FrictionMultiplier=2;;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=NewSusp)
+	FRuntimeFloatCurve LateralSlipGraph;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=NewSusp)
+	float CorneringStiffness=1000;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=NewSusp)
+	float MaxSpinRotation=30;
 };
 
 
@@ -146,8 +152,15 @@ struct FWheelState{
 	UPROPERTY(BlueprintReadOnly)
 	float PreviousYaw;
 
+	float AvailableGrip;
+	bool WheelLocked;
+	float SlipOmega;
 
-	
+	//Debug Data
+#if ! UE_BUILD_SHIPPING
+float LateralFrictionRatio;
+float LongitudinalFrictionRatio;
+#endif
 	
 };
 

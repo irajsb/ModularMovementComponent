@@ -4,14 +4,16 @@
 
 #include "Engine.h"
 
-#include "WheelInterface.h"
+
 #include "GameFramework/PawnMovementComponent.h"
 #include "ModularVehicleData.h"
 #include"ModularVehicleWheelData.h"
+
+
 #include "ModularMovementComponent.generated.h"
-class AArcadePawn;
 
 
+class UModularWheel;
 //Cosmetic delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange,int,CurrentGear,int,TargetGear,bool,Finished);
 
@@ -61,7 +63,7 @@ USTRUCT(BlueprintType)
 struct FVehicleState
 {
 	GENERATED_BODY()
-
+	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category= Setup)
 	UModularVehicleData* VehicleData;
 
@@ -97,17 +99,17 @@ struct FVehicleState
 
 
 UCLASS(meta=(BlueprintSpawnableComponent))
-class TITANMOVEMENT_API UModularMovementComponent : public UPawnMovementComponent
+class MODULARMOVEMENT_API UModularMovementComponent : public UPawnMovementComponent
 {
 	GENERATED_BODY()
-
+	friend class UModularWheel;
 	//Constructor
 	UModularMovementComponent();
 	void UpdateComponents();
 	public:
 	//Wheels
 	UPROPERTY()
-	TArray<UActorComponent*> Components;
+	TArray<UModularWheel*> Components;
 	//Return Mesh
 	UMeshComponent* GetMesh()const;
 	private:
@@ -130,6 +132,9 @@ class TITANMOVEMENT_API UModularMovementComponent : public UPawnMovementComponen
 	UPROPERTY(Transient)
 	bool HandBrakeInput;
 public:
+
+
+	UModularVehicleData* GetSetup() const;
 	/*Set throttle Input
 	 *Range -1,1
 	 * No Need for replication
@@ -171,7 +176,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	int GetNumberOfWheels();
 	//Get Gear info for a certain index
-	FArcadeGearInfo GetGearInfo(int Index);
+	FModularGearInfo GetGearInfo(int Index);
 	//We setup wheels here
 	virtual void InitializeComponent() override;
 
@@ -199,13 +204,11 @@ public:
 	void SimulateWheelData(float DeltaTime);
 	//Determine vehicle state in AI Pawns 
 	EAIVehicleState DetermineAIState(float ForwardFactor,float DeltaTime);
-	//trace and apply Suspension forces
-	void WheelTrace(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel) const;
 	//same as top function without force applying for simulated pawns
-	void SimulateWheel(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
+	void SimulateWheel(FWheelState& WheelState,float DeltaTime,USceneComponent* Wheel);
 	//Apply Drive Brake and friction
-	void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel);
-	void CalculateSteeringAngle(FWheelState& WheelState,float DeltaTime,USceneComponent* ArcadeWheel,float InNormSteering) ;
+	void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* Wheel);
+	void CalculateSteeringAngle(FWheelState& WheelState,float DeltaTime,USceneComponent* Wheel,float InNormSteering) ;
 	static float GetSpringStiffness(FWheelState WheelState,float CompressionRatio);
 	//AI movement
 	virtual void RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed) override;
@@ -231,6 +234,7 @@ public:
 
 	UPROPERTY(EditAnywhere,Replicated)
 	FRepMovement RepMovement;
+	
 	UFUNCTION()
     void OnRep_RepCosmeticData();
 

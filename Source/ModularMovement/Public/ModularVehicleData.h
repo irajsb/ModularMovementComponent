@@ -11,16 +11,22 @@
  */
  
 UENUM(BlueprintType)
-enum  EArcadeSteerType 
+enum  EModularSteerType 
 {
 	SingleAngle,
     AngleRatio,
     Tank,
 };
 
-
+UENUM(BlueprintType)
+enum EVehicleNetworkMode
+{	ClientPredictive,
+	ServerAuthoritative,
+	ClientAuthoritative,
+	 
+};
  USTRUCT(BlueprintType)
- struct FArcadeGearInfo
+ struct FModularGearInfo
  {
  	GENERATED_USTRUCT_BODY()
  	//This Gear's Ratio
@@ -33,16 +39,16 @@ enum  EArcadeSteerType
  	/** Value of engineRevs/maxEngineRevs that is high enough to gear up */
  	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0", UIMin = "0.0", ClampMax = "1.0", UIMax = "1.0"))
  	float UpRatio;
- 	FArcadeGearInfo():GearRatio(1.0f),DownRatio(0.1),UpRatio(1.f)
+ 	FModularGearInfo():GearRatio(1.0f),DownRatio(0.1),UpRatio(1.f)
  	{
  		
  	};
- 	FArcadeGearInfo(float Ratio):GearRatio(Ratio),DownRatio(0.1),UpRatio(1.f)
+ 	FModularGearInfo(float Ratio):GearRatio(Ratio),DownRatio(0.1),UpRatio(1.f)
  	{
  	}
  };
 UCLASS()
-class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
+class MODULARMOVEMENT_API UModularVehicleData : public UDataAsset
 {
 	GENERATED_BODY()
 	public:
@@ -69,7 +75,7 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Transmission)
 	float GearChangeTime=0.5;
 	UPROPERTY(EditDefaultsOnly,BlueprintReadWrite,Category=Transmission)
-    TArray<FArcadeGearInfo> Gears;
+    TArray<FModularGearInfo> Gears;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
     TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
@@ -82,7 +88,7 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
 	FRuntimeFloatCurve SteerCurve;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
-	TEnumAsByte<EArcadeSteerType> SteerType;
+	TEnumAsByte<EModularSteerType> SteerType;
 	//How fast input should rise  Multiplied by DeltaTime
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
 	float SteerInputRise=5;
@@ -156,7 +162,8 @@ class TITANMOVEMENT_API UModularVehicleData : public UDataAsset
 
 
 
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Network)
+	TEnumAsByte<EVehicleNetworkMode> NetworkMode;
 	
 
 

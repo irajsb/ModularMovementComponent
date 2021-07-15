@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class TitanMovement : ModuleRules
+public class ModularMovement : ModuleRules
 {
-	public TitanMovement(ReadOnlyTargetRules Target) : base(Target)
+	public ModularMovement(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
@@ -37,7 +37,7 @@ public class TitanMovement : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"SlateCore",/*"PhysicsCore"*/
+				"SlateCore","UMG",/*"PhysicsCore"*/
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

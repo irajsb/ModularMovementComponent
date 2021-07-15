@@ -6,15 +6,15 @@
 UModularVehicleData::UModularVehicleData()
 {
 	//reverse
-	Gears.Add(FArcadeGearInfo(3));
+	Gears.Add(FModularGearInfo(3));
 	//idle
-	Gears.Add(FArcadeGearInfo(0));
+	Gears.Add(FModularGearInfo(0));
 	//Forward
-	Gears.Add(FArcadeGearInfo(3));
-	Gears.Add(FArcadeGearInfo(2));
-	Gears.Add(FArcadeGearInfo(1.55));
-	Gears.Add(FArcadeGearInfo(1.33));
-	Gears.Add(FArcadeGearInfo(1));
+	Gears.Add(FModularGearInfo(3));
+	Gears.Add(FModularGearInfo(2));
+	Gears.Add(FModularGearInfo(1.55));
+	Gears.Add(FModularGearInfo(1.33));
+	Gears.Add(FModularGearInfo(1));
 	
 	SuspensionTraceTypeQuery= UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility);
 	WrongDirectionThreshold=100.f;

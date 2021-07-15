@@ -4,8 +4,10 @@
 #include "ModularVehicleFunctionLibrary.h"
 
 #include "ModularMovementComponent.h"
-#include "TitanMovement.h"
-
+#include "ModularMovement.h"
+#include "VehicleDebugWidget.h"
+#include "WidgetComponent.h"
+#include  "ModularWheel.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 
@@ -61,7 +63,7 @@ void UModularVehicleFunctionLibrary::SetThrottleInputOnModularVehicle(APawn* Paw
 		MC->SetThrottleInput(Throttle);
 	}else
 	{
-		UE_LOG(LogArcadeVehicle,Error,TEXT("No Modular MovementComponent Attached to pawn (called from function library)"))
+		UE_LOG(LogModularVehicle,Error,TEXT("No Modular MovementComponent Attached to pawn (called from function library)"))
 	}
 }
 
@@ -73,7 +75,7 @@ void UModularVehicleFunctionLibrary::SetSteerInputOnModularVehicle(APawn* Pawn, 
 		MC->SetSteeringInput(Steer);
 	}else
 	{
-		UE_LOG(LogArcadeVehicle,Error,TEXT("No Modular MovementComponent Attached to pawn (called from function library)"))
+		UE_LOG(LogModularVehicle,Error,TEXT("No Modular MovementComponent Attached to pawn (called from function library)"))
 	}
 }
 
@@ -85,28 +87,28 @@ void UModularVehicleFunctionLibrary::SetHandBrakeInputOnModularVehicle(APawn* Pa
 		MC->SetHandBrakeInput(Brake);
 	}else
 	{
-		UE_LOG(LogArcadeVehicle,Error,TEXT("No Modular MovementComponent Attached to pawn (called from function library)"))
+		UE_LOG(LogModularVehicle,Error,TEXT("No Modular MovementComponent Attached to pawn (called from function library)"))
 	}
 }
 
-void UModularVehicleFunctionLibrary::GetWheelAnimationData(USceneComponent* Wheel,FVector& Location,FRotator& Rotation,float DeltaTime)
+void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,FVector& Location,FRotator& Rotation,float DeltaTime)
 {
 	
-IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 
 
-	if(WheelInterface&&Wheel->GetWorld()->IsGameWorld())
+
+	if(Wheel->GetWorld()->IsGameWorld())
 	{
 		
 	  
-		 FWheelState* WheelState=WheelInterface->GetWheelState();
+		 FWheelState* WheelState=Wheel->GetWheelState();
 
 		const FVector WheelRadiusVector=FVector(0,0,WheelState->WheelSetup->WheelRadius);
 		const FVector SuspensionTraceLocation=WheelState->HitResult.bBlockingHit?WheelState->HitResult.ImpactPoint+WheelRadiusVector:WheelState->HitResult.TraceEnd;
 		
 		
 		
-		const FTransform WheelTransform=WheelInterface->GetWheelTransform();
+		const FTransform WheelTransform=Wheel->GetWheelTransform();
 			
 		//local
 		  FVector ContactPointPosition=		WheelTransform.InverseTransformPosition(SuspensionTraceLocation);
@@ -165,44 +167,52 @@ IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
 	
 }
 
-float UModularVehicleFunctionLibrary::GetWheelRotation(USceneComponent* Wheel)
+float UModularVehicleFunctionLibrary::GetWheelRotation(UModularWheel* Wheel)
 {
-	IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
-	if(WheelInterface)
-	return FMath::RadiansToDegrees(-1*WheelInterface->GetWheelState()->AngularPosition);
+
+	if(Wheel)
+	return FMath::RadiansToDegrees(-1*Wheel->GetWheelState()->AngularPosition);
 	return 0.0f;
 }
 
-float UModularVehicleFunctionLibrary::GetWheelPivotRotation(USceneComponent* Wheel)
+float UModularVehicleFunctionLibrary::GetWheelPivotRotation(UModularWheel* Wheel)
 {
-	IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
-	if(WheelInterface)
-		return WheelInterface->GetWheelState()->CurrentPivotAngle;
+	
+	if(Wheel)
+		return Wheel->GetWheelState()->CurrentPivotAngle;
 	return 0.0f;
 }
 
-float UModularVehicleFunctionLibrary::GetWheelSteeringValue(USceneComponent* Wheel)
+float UModularVehicleFunctionLibrary::GetWheelSteeringValue(UModularWheel* Wheel)
 {
-	IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
-	if(WheelInterface)
-	return WheelInterface->GetWheelState()->SteerAngle;
+	
+	if(Wheel)
+	return Wheel->GetWheelState()->SteerAngle;
 	return 0.0f;
 }
 
-float UModularVehicleFunctionLibrary::GetWheelCompressionValue(USceneComponent* Wheel)
-{	IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
-	if(WheelInterface)
-		return 1-WheelInterface->GetWheelState()->HitResult.Time;
+float UModularVehicleFunctionLibrary::GetWheelCompressionValue(UModularWheel* Wheel)
+{	
+	if(Wheel)
+		return 1-Wheel->GetWheelState()->HitResult.Time;
 	return 0.0f;
 }
 
-void UModularVehicleFunctionLibrary::ChangeWheelSetup(USceneComponent* Wheel,
-	UModularVehicleWheelData* VehicleWheelData)
+float UModularVehicleFunctionLibrary::GetWheelRPM(UModularWheel* Wheel)
 {
-	IWheelInterface* WheelInterface=	Cast<IWheelInterface>(Wheel);
-	if(WheelInterface)
+	
+	if(Wheel)
+	return 	Wheel->GetWheelState()->Omega * 30.f / PI;
+	return 0.0f;
+}
+
+void UModularVehicleFunctionLibrary::ChangeWheelSetup(UModularWheel* Wheel,
+                                                      UModularVehicleWheelData* VehicleWheelData)
+{
+	
+	if(Wheel)
 	{
-		WheelInterface->GetWheelState()->WheelSetup=VehicleWheelData;
+		Wheel->GetWheelState()->WheelSetup=VehicleWheelData;
 	}
 }
 
@@ -222,23 +232,22 @@ float UModularVehicleFunctionLibrary::GetForwardSpeedCMs(UModularMovementCompone
 }
 
 
-float UModularVehicleFunctionLibrary::CalculateSuspensionRotationUsingPivot(UActorComponent* InComponent)
+float UModularVehicleFunctionLibrary::CalculateSuspensionRotationUsingPivot(UModularWheel* Wheel)
 {
 	//forms a triangle sum of angles =180
 	
 	float Result=0;
-	if(IWheelInterface* WheelInterface= Cast<IWheelInterface>(InComponent))
-	{
-		if(WheelInterface->GetWheelState()->WheelSetup->SuspensionPivot!=0)
+	
+		if(Wheel->GetWheelState()->WheelSetup->SuspensionPivot!=0)
 		{
-			const float PivotLen=WheelInterface->GetWheelState()->WheelSetup->SuspensionPivot;
-			const float SuspLen=WheelInterface->GetWheelState()->WheelSetup->SuspensionLength;
+			const float PivotLen=Wheel->GetWheelState()->WheelSetup->SuspensionPivot;
+			const float SuspLen=Wheel->GetWheelState()->WheelSetup->SuspensionLength;
 			const float DeltaX=PivotLen;
 			const float DeltaY=SuspLen;
 			Result=90-	FMath::RadiansToDegrees(FMath::Atan2(DeltaX,DeltaY));
 		}
 		
-	}
+	
 	return  Result;
 	
 }
@@ -293,12 +302,42 @@ FCollisionQueryParams UModularVehicleFunctionLibrary::ConfigureCollisionParams(F
 	return Params;
 }
 
-void UModularVehicleFunctionLibrary::UpdateWheelState(USceneComponent* Wheel, FWheelState NewWheelState)
+void UModularVehicleFunctionLibrary::UpdateWheelState(UModularWheel* Wheel, FWheelState NewWheelState)
 {
-	Cast<IWheelInterface>(Wheel)->UpdateWheelState(NewWheelState);
+	Wheel->UpdateWheelState(NewWheelState);
 }
 
-void UModularVehicleFunctionLibrary::SetSteerOnWheel(USceneComponent* Wheel, float Angle)
+void UModularVehicleFunctionLibrary::SetSteerOnWheel(UModularWheel* Wheel, float Angle)
 {
-	Cast<IWheelInterface>(Wheel)->GetWheelState()->SteerAngle=Angle;
+	Wheel->GetWheelState()->SteerAngle=Angle;
+}
+
+void UModularVehicleFunctionLibrary::AddDebugWidgetToWheel(UModularWheel* Wheel,
+	TSubclassOf<UVehicleDebugWidget> Widget)
+{
+UWidgetComponent* WidgetComponent=	NewObject<UWidgetComponent>(Wheel,UWidgetComponent::StaticClass(),NAME_None,RF_Transient);
+
+	if(WidgetComponent)
+	{
+		
+		WidgetComponent->RegisterComponent();
+		WidgetComponent->SetWidgetClass(Widget);
+		WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	}
+	FAttachmentTransformRules TransformRules=FAttachmentTransformRules::KeepRelativeTransform;
+	TransformRules.RotationRule=EAttachmentRule::KeepWorld;
+	TransformRules.LocationRule=EAttachmentRule::SnapToTarget;
+	WidgetComponent->AttachToComponent(Wheel,TransformRules,NAME_None);
+Cast<UVehicleDebugWidget>(WidgetComponent->GetUserWidgetObject())->OwningWheel=Wheel;	
+}
+
+void UModularVehicleFunctionLibrary::GetDebugData(UModularWheel* Wheel, float& LateralFrictionRatio,
+	float& LongitudinalFrictionRatio)
+{
+	
+	if(Wheel)
+	{
+		LongitudinalFrictionRatio= Wheel->GetWheelState()->LongitudinalFrictionRatio;
+		LateralFrictionRatio= Wheel->GetWheelState()->LateralFrictionRatio;
+	}
 }
