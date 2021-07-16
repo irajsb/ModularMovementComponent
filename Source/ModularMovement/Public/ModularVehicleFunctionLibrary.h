@@ -63,8 +63,7 @@ public:
 	static float GetWheelCompressionValue(UModularWheel* Wheel);
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static float GetWheelRPM(UModularWheel* Wheel);
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static void ChangeWheelSetup(UModularWheel* Wheel,UModularVehicleWheelData* VehicleWheelData);
+
 
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static int GetForwardSpeedKMH(UModularMovementComponent* MovementComponent);
@@ -81,12 +80,11 @@ public:
 	//ADVANCED: Update wheel state on the wheel (Better to use a previous wheel state and update it and set it on the wheel ) 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static void UpdateWheelState(UModularWheel* Wheel,FWheelState  NewWheelState);
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static void SetSteerOnWheel(UModularWheel* Wheel,float Angle );
+
+	
 
 
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static void AddDebugWidgetToWheel(UModularWheel* Wheel ,TSubclassOf<UVehicleDebugWidget> Widget);
+
 
 	UFUNCTION(BlueprintCallable,BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
 	static void GetDebugData(UModularWheel* Wheel,float & LateralFrictionRatio,float & LongitudinalFrictionRatio);

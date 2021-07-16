@@ -5,7 +5,15 @@
 #include "ModularMovementComponent.h"
 #include "ModularVehicleFunctionLibrary.h"
 #include "ModularMovement.h"
+#include "WidgetComponent.h"
+#include "VehicleDebugWidget.h"
 #include "Kismet/KismetMathLibrary.h"
+
+
+
+DECLARE_CYCLE_STAT(TEXT("Modular Updage Suspension"), STAT_ModularSuspension, STATGROUP_MovementPhysics);
+DECLARE_CYCLE_STAT(TEXT("Modular Updage Forces"), STAT_ModularForces, STATGROUP_MovementPhysics);
+ 
 // Sets default values for this component's properties
 UModularWheel::UModularWheel()
 {
@@ -44,7 +52,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* 
 
 	if(!ModularMovementComponent)
 		return;
-
+	MODULAR_CYCLE_COUNTER(STAT_ModularSuspension)
 	//logic
 	TArray<AActor*> ActorsToIgnore;
 	WheelState.WheelLoad=FVector::ZeroVector;
@@ -143,10 +151,11 @@ void UModularWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* 
 
 void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* ModularMovementComponent)
 {
+	MODULAR_CYCLE_COUNTER(STAT_ModularForces)
 	if(!ModularMovementComponent)
 		return;
 	
-	ModularMovementComponent->ApplyWheelForces(WheelState,DeltaTime,this);
+// TODO Wheel Friction 
 }
 
 void UModularWheel::UpdateSteering(float DeltaTime, UModularMovementComponent* ModularMovementComponent,
@@ -253,23 +262,6 @@ float UModularWheel::GetFastestWheelOmegaSpeed()
 	
 }
 
-int UModularWheel::GetNumOfWheelsTouchingGround(bool OnlyDriveWheels)
-{
-	if(OnlyDriveWheels)
-	{
-		if(WheelState.WheelSetup->ApplyDriveForce)
-		{
-			return WheelState.HitResult.bBlockingHit?1:0;
-		}else
-		{return 0;
-		}
-	}else
-	{
-		return WheelState.HitResult.bBlockingHit?1:0;
-	}
-	
-	
-}
 
 void UModularWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* ModularMovementComponent)
 {
@@ -282,10 +274,7 @@ FTransform UModularWheel::GetWheelTransform()
 {return  GetComponentTransform();
 }
 
-void UModularWheel::SimulateWheelData(float DeltaTime, UModularMovementComponent* ModularMovementComponent)
-{
-	ModularMovementComponent->SimulateWheel(WheelState,DeltaTime,this);
-}
+
 
 void UModularWheel::UpdateWheelState(FWheelState In)
 {WheelState=In;
@@ -300,5 +289,33 @@ FWheelState* UModularWheel::GetWheelState()
 UModularVehicleWheelData* UModularWheel::GetWheelSetup() const
 {
 	return  WheelState.WheelSetup;
+}
+
+void UModularWheel::UpdateWheelSetup(UModularVehicleWheelData* VehicleWheelData)
+{
+	WheelState.WheelSetup=VehicleWheelData;
+}
+
+void UModularWheel::SetSteerOnWheel(float Angle)
+{
+	WheelState.SteerAngle=Angle;
+}
+
+void UModularWheel::AddDebugWidgetToWheel( TSubclassOf<UVehicleDebugWidget> Widget)
+{
+UWidgetComponent* WidgetComponent=	NewObject<UWidgetComponent>(this,UWidgetComponent::StaticClass(),NAME_None,RF_Transient);
+
+	if(WidgetComponent)
+	{
+		
+		WidgetComponent->RegisterComponent();
+		WidgetComponent->SetWidgetClass(Widget);
+		WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	}
+	FAttachmentTransformRules TransformRules=FAttachmentTransformRules::KeepRelativeTransform;
+	TransformRules.RotationRule=EAttachmentRule::KeepWorld;
+	TransformRules.LocationRule=EAttachmentRule::SnapToTarget;
+	WidgetComponent->AttachToComponent(this,TransformRules,NAME_None);
+	Cast<UVehicleDebugWidget>(WidgetComponent->GetUserWidgetObject())->OwningWheel=this;	
 }
 

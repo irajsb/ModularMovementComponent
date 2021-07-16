@@ -156,7 +156,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
     void SetHandBrakeInput(bool Brake);
 	//Data holder
-	UPROPERTY(EditAnywhere,BlueprintReadOnly)
+	UPROPERTY(EditAnywhere,BlueprintReadOnly,meta=(ShowOnlyInnerProperties ))
 	FVehicleState VehicleState;
 
 	/** Compute steering input */
@@ -172,11 +172,11 @@ public:
 
 	void SetTargetGear(int32 GearNum, bool bImmediate);
 	bool AllowedToChangeGear();
-	//Get Number of wheels(some components are allowed to have more than one wheel thats why we just dont count components
+	//Get Number of wheels(some components are allowed to have more than one wheel that's why we just dont count components
 	UFUNCTION(BlueprintCallable)
 	int GetNumberOfWheels();
 	//Get Gear info for a certain index
-	FModularGearInfo GetGearInfo(int Index);
+	FModularGearInfo GetGearInfo(int Index) const;
 	//We setup wheels here
 	virtual void InitializeComponent() override;
 
@@ -187,28 +187,17 @@ public:
 	//Main updates happen here
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	//Captures some basic info from wheels for feature processes 
-	void UpdateState(float DeltaTime);
+	void CaptureState(float DeltaTime);
 	//Update gearbox
 	void UpdateGearBox(float DeltaTime);
 	//Calculate RPM And torque
-	void UpdateEngine(float DeltaTime);
-	//Update Suspensions
-	void UpdateSuspension(float DeltaTime);
-	//Update Friction brake and drive forces
-	void UpdateForces(float DeltaTime);
-	//Set steering to be used by UpdateForces 
-	void UpdateSteering(float DeltaTime);
-	//Handle anim data for wheels
-	void UpdateWheelAnimation(float DeltaTime);
-	//Used for simulated replicated Wheels 
-	void SimulateWheelData(float DeltaTime);
-	//Determine vehicle state in AI Pawns 
+	void UpdateEngine(float DeltaTime,float& WheelTorque);
+	//Update each Wheel
+	void UpdateWheels(float DeltaTime,float WheelTorque);
+	//Determine vehicle state in AI Pawns
 	EAIVehicleState DetermineAIState(float ForwardFactor,float DeltaTime);
-	//same as top function without force applying for simulated pawns
-	void SimulateWheel(FWheelState& WheelState,float DeltaTime,USceneComponent* Wheel);
-	//Apply Drive Brake and friction
-	void ApplyWheelForces(FWheelState& WheelState,float DeltaTime,USceneComponent* Wheel);
-	void CalculateSteeringAngle(FWheelState& WheelState,float DeltaTime,USceneComponent* Wheel,float InNormSteering) ;
+
+
 	static float GetSpringStiffness(FWheelState WheelState,float CompressionRatio);
 	//AI movement
 	virtual void RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed) override;
@@ -222,13 +211,13 @@ public:
 
 	bool ShouldProcessPhysics()const;
 	bool ShouldProcessCosmetics()const;
-	bool ShouldProcessInput()const;
-	bool CylinderTrace(UPrimitiveComponent* Shape,FVector Start,FVector End ,TArray<FHitResult>& result,const FComponentQueryParams& Params )const;
+	bool ShouldReplicateInput()const;
+
 
 	/** Pack cosmetic data into optimized replicated variable */
 	void UpdateReplicatedCosmeticData();
 
-	/** Replciated cosmetic data  */
+	/** Replicated cosmetic data  */
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_RepCosmeticData)
 	FRepCosmeticData RepCosmeticData;
 

@@ -9,15 +9,12 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "DrawDebugHelpers.h"
 #include "Engine.h"
-#include "ModularVehicleFunctionLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 
 
 DECLARE_CYCLE_STAT(TEXT("Modular Tick Component"), STAT_ModularTickComponent, STATGROUP_MovementPhysics);
 DECLARE_CYCLE_STAT(TEXT("Modular Updage Engine"), STAT_ModularEngine, STATGROUP_MovementPhysics);
-DECLARE_CYCLE_STAT(TEXT("Modular Updage Suspension"), STAT_ModularSuspension, STATGROUP_MovementPhysics);
-DECLARE_CYCLE_STAT(TEXT("Modular Updage Forces"), STAT_ModularForces, STATGROUP_MovementPhysics);
 
 
 
@@ -87,11 +84,11 @@ void UModularMovementComponent::SetHandBrakeInput(bool Brake)
 }
 
 int UModularMovementComponent::GetNumberOfWheels()
-{//TODo
-	return 4;
+{
+	return Components.Num();
 }
 
-FModularGearInfo UModularMovementComponent::GetGearInfo(int Index)
+FModularGearInfo UModularMovementComponent::GetGearInfo(int Index) const
 {
 	if(VehicleState.VehicleData->Gears.IsValidIndex(Index))
 	{
@@ -109,21 +106,24 @@ void UModularMovementComponent::InitializeComponent()
 
 
 	Super::InitializeComponent();
-if(!VehicleState.VehicleData)
-{
-	UE_LOG(LogModularVehicle,Error,TEXT("Assign The Vehicle DataAsset "));
+	if(!VehicleState.VehicleData)
+	{
+		UE_LOG(LogModularVehicle,Error,TEXT("Assign The Vehicle DataAsset "));
 
-	return;
-}
+		return;
+	}
+	
 	UpdateNavAgent(*GetOwner());
 	UpdateComponents();
-	//finding Idle
+	
+	//Finding Idle
+	
 	for (int Index=0 ;Index!=VehicleState.VehicleData->Gears.Num();++Index)
 	{
 		if (VehicleState.VehicleData->Gears[Index].GearRatio==0)
 		{
 			VehicleState.IdleGear=Index;
-RepCosmeticData.TargetGear=	RepCosmeticData.CurrentGear=VehicleState.TargetGear=VehicleState.CurrentGear=VehicleState.IdleGear+1;
+			RepCosmeticData.TargetGear=	RepCosmeticData.CurrentGear=VehicleState.TargetGear=VehicleState.CurrentGear=VehicleState.IdleGear+1;
 		}
 	}
 
@@ -133,8 +133,11 @@ RepCosmeticData.TargetGear=	RepCosmeticData.CurrentGear=VehicleState.TargetGear=
 	Component->SetupWheels(this);
 	
 	}
-UMeshComponent* MeshComponent=	GetMesh();
 	
+
+	//Setup Mesh
+	
+	UMeshComponent* MeshComponent=	GetMesh();
 	MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
 	MeshComponent->BodyInstance.bSimulatePhysics = true;
 	MeshComponent->BodyInstance.bNotifyRigidBodyCollision = true;
@@ -145,12 +148,6 @@ UMeshComponent* MeshComponent=	GetMesh();
 	{
 		GetMesh()->SetSimulatePhysics(false);
 	}
-
-	OnCalculateCustomPhysics.BindUObject(this,&UModularMovementComponent::VehicleTick);
-
-		
-		
-	
 	
 }
 
@@ -159,6 +156,8 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* Body
 	UE_LOG(LogTemp,Log,TEXT("Substep Tick %f"),DeltaTime);
 	MODULAR_CYCLE_COUNTER(STAT_ModularTickComponent)
 	const float fDeltaTime=FMath::Min<float>(DeltaTime,0.0633);
+	
+	//Check data 
 	if(!VehicleState.VehicleData)
 	{
 		UE_LOG(LogModularVehicle,Error,TEXT("Assign The Vehicle DataAsset "));
@@ -166,8 +165,8 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* Body
 		return;
 	}
 	
-	UpdateState(fDeltaTime);
-	if(ShouldProcessInput())
+	CaptureState(fDeltaTime);
+	if(ShouldReplicateInput())
 	{
 		
 		//code from Prv Vehicle
@@ -188,21 +187,21 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* Body
 	{
 		
 
-		UpdateSteering(fDeltaTime);
-		UpdateEngine(fDeltaTime);
-		UpdateSuspension(fDeltaTime);
+		
+		float WheelTorque;
+		
+		UpdateEngine(fDeltaTime,WheelTorque);
+	
+		
 		UpdateGearBox(fDeltaTime);
-		UpdateForces(fDeltaTime);
+		UpdateWheels(fDeltaTime,WheelTorque);
 		UpdateReplicatedCosmeticData();
 	}
 	if(ShouldProcessCosmetics())
 	{
 		ApplyServerCorrection(DeltaTime);
-		if(GetOwnerRole()!=ENetRole::ROLE_Authority)
-		{
-			SimulateWheelData(fDeltaTime);
-		}
-		UpdateWheelAnimation(DeltaTime);
+	
+		
 	}
 
 	
@@ -214,23 +213,26 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 	UE_LOG(LogTemp,Log,TEXT(" Tick %f"),DeltaTime);
 	
- if(!UPhysicsSettings::Get()->bSubstepping)
- {
-	 VehicleTick(DeltaTime,nullptr);
- }else
- {
- 	GetMesh()->GetBodyInstance()->AddCustomPhysics(OnCalculateCustomPhysics);
- }
+	if(!UPhysicsSettings::Get()->bSubstepping)
+	{
+		 VehicleTick(DeltaTime,nullptr);
+	}else
+	{
+ 		GetMesh()->GetBodyInstance()->AddCustomPhysics(OnCalculateCustomPhysics);
+	}
 	
 	
 }
 
-void UModularMovementComponent::UpdateState(float DeltaTime)
+void UModularMovementComponent::CaptureState(float DeltaTime)
 {
 	VehicleState.DriveWheelsOnGround=0;
 	for(UModularWheel* Component: Components)
 	{
-		VehicleState.DriveWheelsOnGround+=Component->GetNumOfWheelsTouchingGround(true);
+		if(Component->WheelState.HitResult.bBlockingHit&&Component->WheelState.WheelSetup->ApplyDriveForce)
+		{
+			VehicleState.DriveWheelsOnGround+=1;
+		}
 	}
 	
 	VehicleState.ForwardSpeed = FVector::DotProduct(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity(), GetMesh()->GetForwardVector());
@@ -240,28 +242,28 @@ void UModularMovementComponent::UpdateState(float DeltaTime)
 	{
 		if((VehicleState.VehicleData->NetworkMode==EVehicleNetworkMode::ClientAuthoritative&&GetOwnerRole()==ENetRole::ROLE_AutonomousProxy)||(VehicleState.VehicleData->NetworkMode!=EVehicleNetworkMode::ClientAuthoritative&&GetOwnerRole()==ENetRole::ROLE_Authority))
 		{
-			
+			//TODO : Capture Movement
 		}
 	}
 }
 
 void UModularMovementComponent::UpdateGearBox(float DeltaTime)
 {
-if(VehicleState.DriveWheelsOnGround!=0)
-{
-	if (VehicleState.VehicleData->bReverseAsBrake)
+	if(VehicleState.DriveWheelsOnGround!=0)
 	{
-		//for reverse as state we want to automatically shift between reverse and first gear
-		if (FMath::Abs(VehicleState.ForwardSpeed) < VehicleState.VehicleData->WrongDirectionThreshold)	//we only shift between reverse and first if the car is slow enough.
+		if (VehicleState.VehicleData->bReverseAsBrake)
+		{
+			//for reverse as state we want to automatically shift between reverse and first gear
+			if (FMath::Abs(VehicleState.ForwardSpeed) < VehicleState.VehicleData->WrongDirectionThreshold)	//we only shift between reverse and first if the car is slow enough.
 			{
-			if (RawThrottleInput < -1*KINDA_SMALL_NUMBER &&VehicleState.CurrentGear >= VehicleState.IdleGear && VehicleState.TargetGear >= VehicleState.IdleGear)
-			{
+				if (RawThrottleInput < -1*KINDA_SMALL_NUMBER &&VehicleState.CurrentGear >= VehicleState.IdleGear && VehicleState.TargetGear >= VehicleState.IdleGear)
+				{
 				SetTargetGear(VehicleState.IdleGear-1, true);
-			}
-			else if (RawThrottleInput > KINDA_SMALL_NUMBER &&VehicleState.CurrentGear <= VehicleState.IdleGear && VehicleState.TargetGear <= VehicleState.IdleGear)
-			{
+				}
+				else if (RawThrottleInput > KINDA_SMALL_NUMBER &&VehicleState.CurrentGear <= VehicleState.IdleGear && VehicleState.TargetGear <= VehicleState.IdleGear)
+				{
 				SetTargetGear(VehicleState.IdleGear+1, true);
-			}
+				}
 			}
 	}
 
@@ -303,148 +305,117 @@ if(VehicleState.DriveWheelsOnGround!=0)
 	}
 }
 
-void UModularMovementComponent::UpdateEngine(float DeltaTime)
+void UModularMovementComponent::UpdateEngine(float DeltaTime,float& WheelTorque )
 {
 
 	MODULAR_CYCLE_COUNTER(STAT_ModularEngine)
+	WheelTorque=0;
 	float HighestOmega=0;
-	int NumOfDriveWheelsTouchingGround=0;
+	VehicleState.DriveWheelsOnGround=0;
+	//Get fastest wheel that is attached to engine 
 	for(UModularWheel* Component: Components)
 	{
 		
-			const float ComponentOmega=	FMath::Abs(Component ->GetFastestWheelOmegaSpeed());
-			if(Component->GetWheelState()->HitResult.bBlockingHit&&Component->GetWheelState()->WheelSetup->ApplyDriveForce)
-			{
-				NumOfDriveWheelsTouchingGround++;
-			}
-			if(ComponentOmega>HighestOmega)
-			{
-				HighestOmega=ComponentOmega;
-			}
+		const float ComponentOmega=	FMath::Abs(Component ->GetFastestWheelOmegaSpeed());
+		if(Component->GetWheelState()->HitResult.bBlockingHit&&Component->GetWheelState()->WheelSetup->ApplyDriveForce)
+		{
+			VehicleState.DriveWheelsOnGround++;
+		}
+		if(ComponentOmega>HighestOmega)
+		{
+			HighestOmega=ComponentOmega;
+		}
 	}
 
-	float WheelTorque=0;
+	 
 	const float ThrottleInput=CalcThrottleInput();
 	const float WheelRPM =OmegaToRPM(HighestOmega);
-	
+	//Calculate RPM 
 	VehicleState.CurrentRpm=FMath::Clamp<float>(WheelRPM *GetGearInfo(VehicleState.CurrentGear).GearRatio*VehicleState.VehicleData->DifferentialRatio,VehicleState.VehicleData->IdleRpm,VehicleState.VehicleData->MaxRpm);
+	//TODO Refactor
 	if(VehicleState.VehicleData->ZeroRpmWhenShifting&&VehicleState.CurrentGearChangeTime>0)
 	{
 		VehicleState.CurrentRpm=0;
 		VehicleState.CurrentRpmRatio=0;
 	}else
 	{
+
 		if(VehicleState.DriveWheelsOnGround==0)
 		{
 			VehicleState.CurrentRpm=FMath::Clamp<float>((VehicleState.VehicleData->MaxRpm*ThrottleInput),VehicleState.VehicleData->IdleRpm,VehicleState.VehicleData->MaxRpm);
 		}
 		VehicleState.CurrentRpmRatio= UKismetMathLibrary::MapRangeClamped(VehicleState.CurrentRpm,VehicleState.VehicleData->IdleRpm,VehicleState.VehicleData->MaxRpm,0,1);
+		//Engine Torque 
 		 float EngineTorque;
 		if(VehicleState.VehicleData->ConstantTorque!=0.0)
 		{
 		EngineTorque=	VehicleState.VehicleData->ConstantTorque*ThrottleInput;
-			//TODO 
-			if(VehicleState.CurrentRpmRatio==1)
-			{//TODO 
-			//	EngineTorque=0;
-			}
+		
 		}else
-		{
+		{//Use curve 
 			EngineTorque=ThrottleInput* VehicleState.VehicleData->EngineTorqueCurve.GetRichCurve()->Eval(VehicleState.CurrentRpm);
 		}
+		//Gearbox 
 		const float TransmissionTorque=GetGearInfo(VehicleState.CurrentGear).GearRatio* VehicleState.VehicleData->TransmissionEfficiency;
+		//Final 
 		WheelTorque=EngineTorque*TransmissionTorque;
 	}
+	
+
+	
+	
+}
+void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
+{
+	//Capturing inputs
+	//Steer
+	SteeringInput=CalcSteeringInput(DeltaTime);
+	const float SteerSpeedScale =	VehicleState.VehicleData->SteerCurve.GetRichCurve()->IsEmpty()?1:VehicleState.VehicleData->SteerCurve.GetRichCurve()->Eval(VehicleState.ForwardSpeed*0.036/*CmSToKmH*/) ;
+	const 	float UseSteeringValue = SteeringInput * SteerSpeedScale;
+	//Brake 
+	BrakeInput=CalcBrakeInput();
+
+	
 	for(UModularWheel* Component: Components)
 	{
+
+
+		//calc and Apply susp forces 
+		Component->UpdateSuspension(DeltaTime,this);
+		
+		//Apply Engine Torque 
 		if(VehicleState.VehicleData->ScaleDriveTorqueToNumberOfWheels)
 		{
-			Component->SetDriveTorqueOnWheels(NumOfDriveWheelsTouchingGround!=0 ?WheelTorque/NumOfDriveWheelsTouchingGround:0);
+			Component->SetDriveTorqueOnWheels(VehicleState.DriveWheelsOnGround!=0 ?WheelTorque/VehicleState.DriveWheelsOnGround:0);
 		}
 		else
 		{
 			Component->SetDriveTorqueOnWheels(WheelTorque);
 		}
-	
-		
-	}
-
-	
-	
-}
 
 
-
-void UModularMovementComponent::UpdateSuspension(float DeltaTime)
-{
-	MODULAR_CYCLE_COUNTER(STAT_ModularSuspension)
-
-	
-
-	for(UModularWheel* Component: Components)
-	{
-		Component->UpdateSuspension(DeltaTime,this);
-	}
-}
-
-void UModularMovementComponent::UpdateForces(float DeltaTime)
-{
-
-	
-	MODULAR_CYCLE_COUNTER(STAT_ModularForces)
-
-
-	 BrakeInput=CalcBrakeInput();
-#if ! UE_BUILD_SHIPPING
-	if(VehicleState.VehicleData->ShowInputProcessingDebug)
-	{
-		UE_LOG(LogModularVehicle,Warning,TEXT("Final Calc NewBrakeInput: %f "),FMath::Abs(BrakeInput));
-	
-	}
-#endif
-	
-
-	
-	for(UModularWheel* Component: Components)
-	{
-		Component->UpdateForces(DeltaTime,this);
-	}
-
-}
-
-void UModularMovementComponent::UpdateSteering(float DeltaTime)
-{
-
-	SteeringInput=CalcSteeringInput(DeltaTime);
-
-	const float SteerSpeedScale =	VehicleState.VehicleData->SteerCurve.GetRichCurve()->IsEmpty()?1:VehicleState.VehicleData->SteerCurve.GetRichCurve()->Eval(VehicleState.ForwardSpeed*0.036/*CmSToKmH*/) ;
-const 	float UseSteeringValue = SteeringInput * SteerSpeedScale;
-	
-
-	
-	for(UModularWheel* Component: Components)
-	{
+		//Apply Steering
 		Component->UpdateSteering(DeltaTime,this,UseSteeringValue);
-	}
-	
-}
+		
+		//Apply those torques 
+		Component->UpdateForces(DeltaTime,this);
 
-void UModularMovementComponent::UpdateWheelAnimation(float DeltaTime)
-{
 
-for(UModularWheel* Component: Components)
-	{
+		//TODO Optionial this 
 		Component->UpdateAnimation(DeltaTime,this);
 	}
 }
 
-void UModularMovementComponent::SimulateWheelData(float DeltaTime)
-{
-	for(UModularWheel* Component: Components)
-	{
-		Component->SimulateWheelData(DeltaTime,this);
-	}
-}
+
+
+
+
+
+
+
+
+
+
 
 EAIVehicleState UModularMovementComponent::DetermineAIState(float ForwardFactor,float DeltaTime)
 {
@@ -528,16 +499,6 @@ VehicleState.LockCurrentStateDelta-=DeltaTime;
 	
 
 	return OutState;
-}
-
-
-void UModularMovementComponent::CalculateSteeringAngle(FWheelState& WheelState, float DeltaTime, USceneComponent* Wheel,float InNormSteering) 
-{
-
-
-	
-	
-	
 }
 
 float UModularMovementComponent::GetSpringStiffness(FWheelState WheelState, float CompressionRatio)
@@ -641,266 +602,6 @@ void UModularMovementComponent::RequestDirectMove(const FVector& MoveVelocity, b
 
 
 
-void UModularMovementComponent::SimulateWheel(FWheelState& WheelState, float DeltaTime,
-    USceneComponent* Wheel)
-{
-
-//maybe you'll need to make a simplified version
-//If We are Tank we need to apply a steering value because lateral friction calculation is dependant on steering Value
-
-
-SteeringInput=CalcSteeringInput(DeltaTime);
-const float SteerSpeedScale =	VehicleState.VehicleData->SteerCurve.GetRichCurve()->IsEmpty()?1:VehicleState.VehicleData->SteerCurve.GetRichCurve()->Eval(VehicleState.ForwardSpeed*0.036/*CmSToKmH*/) ;	
-const 	float UseSteeringValue = SteeringInput * SteerSpeedScale;
-//WheelTrace(WheelState,DeltaTime,Wheel);
-ApplyWheelForces(WheelState,DeltaTime,Wheel);
-if(WheelState.WheelSetup->SteeringWheel)
-CalculateSteeringAngle(WheelState,DeltaTime,Wheel,UseSteeringValue);
-
-
-}
-void UModularMovementComponent::ApplyWheelForces(FWheelState& WheelState, float DeltaTime,
-    USceneComponent* Wheel)
-{
-
-
-	float K = 0.4f;
-const float TractionControlAndABSScaling = 0.98f;	// how close to perfection is the system working
-
-
-	
-	WheelState.DriveTorque=WheelState.DriveTorque*WheelState.TorqueTransferFactor;
-	WheelState.BrakeTorque=BrakeInput*WheelState.WheelSetup->BrakeTorque;
-	
-	if(	HandBrakeInput)
-	{
-		if(WheelState.WheelSetup->AffectedByHandBrake)
-		{
-			WheelState.BrakeTorque=WheelState.WheelSetup->HandBrakeTorque;
-			WheelState.DriveTorque=0;
-		}
-	}
-	
-	const FTransform WorldTransform = GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
-	const float SteerAngleDegrees = WheelState.SteerAngle; // temp
-	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
-	const FVector  LocalWheelVelocity = WorldTransform.InverseTransformVector(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocityAtPoint(WheelState.HitResult.TraceStart));
-	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
-	WheelState.SlipAngle = FMath::Abs( FMath::Atan2(GroundVelocityVector.Y, GroundVelocityVector.X));
-
-	float FinalLongitudinalForce = 0.f;
-	float FinalLateralForce = 0.f;
-	
-	if (WheelState.SlipAngle > HALF_PI)
-	{
-		WheelState.SlipAngle = PI - WheelState.SlipAngle;
-	}
-
-	FVector ForceFromFriction=FVector::ZeroVector;
-	//EffectiveRadius
-	const float Re=WheelState.WheelSetup->WheelRadius;
-	const float MassPerWheel=(GetMesh()->GetMass()/GetNumberOfWheels());
-
-	// The physics system is mostly unit-less i.e. can work in meters or cm, however there are 
-	// a couple of places where the results are wrong if Cm is used. This is one of them, the simulated radius
-	// for torque must be real size to obtain the correct output values.
-	float 	AppliedLinearDriveForce = WheelState.DriveTorque * CmToM(Re);
-	float AppliedLinearBrakeForce = WheelState.BrakeTorque* CmToM(Re);
-
-	const float ForceIntoSurface =WheelState.WheelLoad.Size();
-	const float  SurfaceFriction=WheelState.HitResult.PhysMaterial.Get()?WheelState.HitResult.PhysMaterial.Get()->Friction:1.0f;
-	WheelState.AvailableGrip = WheelState.WheelLoad.Size() * SurfaceFriction * WheelState.WheelSetup->FrictionMultiplier;
-	
-	bool Braking = FMath::Abs(WheelState.DriveTorque) < /*>*/FMath::Abs(WheelState.BrakeTorque);
-
-
-		// are we actually touching the ground
-		if (ForceIntoSurface > SMALL_NUMBER)
-		{
-			// ABS limiting brake force to match force from the grip avialable
-			if (WheelState.WheelSetup->ABSEnabled && Braking && FMath::Abs(AppliedLinearBrakeForce) >WheelState.AvailableGrip)
-			{
-				if ((Braking &&WheelState.WheelSetup-> ABSEnabled) || (!Braking &&WheelState.WheelSetup-> TractionControlEnabled))
-				{
-					float Sign = (AppliedLinearBrakeForce > 0.0f) ? 1.0f : -1.0f;
-					AppliedLinearBrakeForce =WheelState. AvailableGrip * TractionControlAndABSScaling * Sign;
-				}
-			}
-
-			// Traction control limiting drive force to match force from grip available
-			if (WheelState.WheelSetup->TractionControlEnabled && !Braking && FMath::Abs(AppliedLinearDriveForce) >WheelState.AvailableGrip)
-			{
-				float Sign = (AppliedLinearDriveForce > 0.0f) ? 1.0f : -1.0f;
-				AppliedLinearDriveForce = WheelState.AvailableGrip * TractionControlAndABSScaling * Sign;
-			}
-
-			if (Braking)
-			{
-				// whether the velocity is +ve or -ve when we brake we are slowing the vehicle down
-				// so force is opposing current direction of travel.
-				float ForceRequiredToBringToStop = MassPerWheel * K * (GroundVelocityVector.X) / DeltaTime;
-				FinalLongitudinalForce = AppliedLinearBrakeForce;
-
-				// check we are not applying more force than required so we end up overshooting 
-				// and accelerating in the opposite direction
-				FinalLongitudinalForce = FMath::Clamp(FinalLongitudinalForce, -FMath::Abs(ForceRequiredToBringToStop), FMath::Abs(ForceRequiredToBringToStop));
-
-				// ensure the brake opposes current direction of travel
-				if (GroundVelocityVector.X > 0.0f)
-				{
-					FinalLongitudinalForce = -FinalLongitudinalForce;
-				}
-
-			}
-			else
-			{
-				FinalLongitudinalForce = AppliedLinearDriveForce;
-			}
-
-			float ForceRequiredToBringToStop = -(MassPerWheel * K * GroundVelocityVector.Y) / DeltaTime;
-
-			// use slip angle to generate a sideways force
-			if (WheelState.WheelSetup->LateralSlipGraph.GetRichCurve()->IsEmpty())
-			{
-				float AngleLimit = FMath::DegreesToRadians(8.0f);
-				if (WheelState.SlipAngle > AngleLimit)
-				{
-					WheelState.SlipAngle = AngleLimit;
-				}
-				else if (WheelState.SlipAngle < AngleLimit)
-				{
-					WheelState.SlipAngle = AngleLimit;
-				}
-				FinalLateralForce = WheelState.SlipAngle * WheelState.WheelSetup->CorneringStiffness;
-				UE_LOG(LogTemp,Error,TEXT("Angle %f Lat %f"),-1*WheelState.SlipAngle,FinalLateralForce);
-			}
-			else
-			{
-				
-				FinalLateralForce =WheelState.WheelSetup->LateralSlipGraph.GetRichCurve()->Eval(FMath::RadiansToDegrees(WheelState.SlipAngle)) *1  /* TODO LateralSlipGraphMultiplier*/;
-				if(WheelState.WheelSetup->ApplyDriveForce)
-				{
-					UE_LOG(LogTemp,Error,TEXT("%f Angle back "),FMath::RadiansToDegrees(WheelState.SlipAngle))
-				}else
-				{
-					UE_LOG(LogTemp,Error,TEXT("%f Angle  "),FMath::RadiansToDegrees(WheelState.SlipAngle))
-				}
-				
-				
-			}
-
-			if (FinalLateralForce > FMath::Abs(ForceRequiredToBringToStop))
-			{
-				FinalLateralForce = FMath::Abs(ForceRequiredToBringToStop);
-			}
-			if (GroundVelocityVector.Y > 0.0f)
-			{
-				FinalLateralForce = -FinalLateralForce;
-			}
-
-
-			// Friction circle
-			FVector InputForces;
-			bool bClipping;
-			InputForces.X = FinalLongitudinalForce;
-			InputForces.Y = FinalLateralForce;
-			
-			float LengthSquared = FinalLongitudinalForce * FinalLongitudinalForce + FinalLateralForce * FinalLateralForce;
-			bClipping = false;
-			if (LengthSquared > 0.05f)
-			{
-				float Length = FMath::Sqrt(LengthSquared);
-
-				float Clip = (WheelState.AvailableGrip) / Length;
-				if (Clip < 1.0f)
-				{
-					if (Braking)
-					{
-					WheelState.WheelLocked = true;
-					}
-					else if (FMath::Abs(FinalLongitudinalForce) >WheelState.AvailableGrip)
-					{
-					WheelState.SlipOmega = (FinalLongitudinalForce < 0.0f) ? -WheelState.WheelSetup->MaxSpinRotation : WheelState.WheelSetup->MaxSpinRotation;
-
-					}
-
-					bClipping = true;
-					
-					FinalLongitudinalForce *= Clip;
-					FinalLateralForce *= Clip;
-
-					FinalLongitudinalForce *= WheelState.WheelSetup->SideSlipModifier;
-					FinalLateralForce *= WheelState.WheelSetup->SideSlipModifier;
-				}
-			}
-		}
-
-		if (WheelState.WheelLocked)
-		{
-		WheelState.Omega = 0.0f;
-		}
-		else
-		{ 
-			float GroundOmega = GroundVelocityVector.X / Re;
-		WheelState.Omega += ((GroundOmega - WheelState.Omega +WheelState.SlipOmega));
-		}
-
-		// Wheel angular position
-	WheelState.AngularPosition +=WheelState. Omega * DeltaTime;
-
-		while (WheelState.AngularPosition >= PI * 2.f)
-		{
-			WheelState.AngularPosition -= PI * 2.f;
-		}
-		while (WheelState.AngularPosition <= -PI * 2.f)
-		{
-			WheelState.AngularPosition += PI * 2.f;
-		}
-
-		if (!WheelState.HitResult.bBlockingHit)
-		{
-			ForceFromFriction = FVector::ZeroVector;
-		}
-		else
-		{
-			ForceFromFriction.X = FinalLongitudinalForce;
-			ForceFromFriction.Y = FinalLateralForce;
-		}
-
-
-	FVector FrictionForceVector;
-	
-	if(WheelState.HitResult.bBlockingHit)
-	{
-
-	if(ShouldProcessPhysics())
-	{
-		FVector FrictionForceLocal = ForceFromFriction;
-		FrictionForceLocal =SteeringRotator.RotateVector(FrictionForceLocal);
-		FVector GroundZVector = WheelState.HitResult.ImpactNormal;
-		FVector GroundXVector = FVector::CrossProduct(GetMesh()->GetRightVector(), GroundZVector);
-		FVector GroundYVector = FVector::CrossProduct(GroundZVector, GroundXVector);
-		FMatrix Mat(GroundXVector, GroundYVector, GroundZVector, GetMesh()->GetComponentLocation());
-		 FrictionForceVector = Mat.TransformVector(FrictionForceLocal);
-		
-		
-	
-			GetMesh()->GetBodyInstance()->AddForceAtPosition(FrictionForceVector,WheelState.HitResult.TraceStart,false);
-	}
-		if(WheelState.WheelSetup->ShowDrawFriction)
-		{
-			DrawDebugLine(GetWorld(),WheelState.HitResult.ImpactPoint,WheelState.HitResult.ImpactPoint+(FrictionForceVector/500),FColor::Green,false,-1,0,15);
-			DrawDebugLine(GetWorld(),WheelState.HitResult.ImpactPoint,WheelState.HitResult.ImpactPoint+GetMesh()->GetForwardVector()*AppliedLinearDriveForce,FColor::Red,false);
-			FString State;
-			if(WheelState.WheelLocked)
-				State.Append("Locked");
-			if(WheelState.Spinning)
-				State.Append(" Spinning");
-			DrawDebugString(GetWorld(),Wheel->GetComponentLocation(),State,nullptr,FColor::Red,-1);
-			
-		}
-	}
-}
 
 void UModularMovementComponent::StopActiveMovement()
 {
@@ -945,17 +646,12 @@ bool UModularMovementComponent::ShouldProcessCosmetics()const
 return 	GetNetMode()==ENetMode::NM_Standalone||(GetNetMode()==ENetMode::NM_Client&&GetOwnerRole()!=ENetRole::ROLE_Authority);
 }
 
-bool UModularMovementComponent::ShouldProcessInput()const
+bool UModularMovementComponent::ShouldReplicateInput()const
 {
 	return 	(GetPawnOwner()->GetLocalRole()!=ENetRole::ROLE_Authority&&GetPawnOwner()->IsLocallyControlled());
 }
 
-bool UModularMovementComponent::CylinderTrace(UPrimitiveComponent* Shape, FVector Start, FVector End,
-	TArray<FHitResult>& result,const FComponentQueryParams& Params)const
-{
-return 	GetWorld()->ComponentSweepMulti(result,Shape,Start,End,FRotator::ZeroRotator.Quaternion(),Params);
-	//TODO ADDDraw
-}
+
 
 
 bool UModularMovementComponent::ServerUpdateState_Validate(uint16 InQuantizeInput)
@@ -981,14 +677,16 @@ void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuanti
 
 float UModularMovementComponent::CalcSteeringInput(float DeltaTime)
 {
-
-		if(SteeringInput==RawSteeringInput)
+	if(SteeringInput==RawSteeringInput)
+	{
 		return  SteeringInput;
-float SteerDir=	FMath::Sign(RawSteeringInput);
-if(SteerDir==0)
-{
+	}
+	float SteerDir=	FMath::Sign(RawSteeringInput);
+	//Find steering direction
+	if(SteerDir==0)
+	{
 	SteerDir=FMath::Sign(SteeringInput)*-1;
-}	
+	}	
 	
 	if(SteeringInput<FMath::Abs(RawSteeringInput))
 	{
@@ -1141,17 +839,17 @@ void UModularMovementComponent::SetTargetGear(int32 GearNum, bool bImmediate)
 
 bool UModularMovementComponent::AllowedToChangeGear()
 {
-	bool Result=true;
+	
 	for(UModularWheel* Component: Components)
 	{
 		
 		if(Component->GetWheelState()->Spinning)
 		{
-			Result=false;
+			return  false;
 		}
 	
 	}
-	return  Result;
+	return true;
 }
 
 

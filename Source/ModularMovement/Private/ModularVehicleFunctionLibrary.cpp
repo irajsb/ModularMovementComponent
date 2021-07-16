@@ -5,7 +5,6 @@
 
 #include "ModularMovementComponent.h"
 #include "ModularMovement.h"
-#include "VehicleDebugWidget.h"
 #include "WidgetComponent.h"
 #include  "ModularWheel.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -206,15 +205,6 @@ float UModularVehicleFunctionLibrary::GetWheelRPM(UModularWheel* Wheel)
 	return 0.0f;
 }
 
-void UModularVehicleFunctionLibrary::ChangeWheelSetup(UModularWheel* Wheel,
-                                                      UModularVehicleWheelData* VehicleWheelData)
-{
-	
-	if(Wheel)
-	{
-		Wheel->GetWheelState()->WheelSetup=VehicleWheelData;
-	}
-}
 
 int UModularVehicleFunctionLibrary::GetForwardSpeedKMH(UModularMovementComponent* MovementComponent)
 {
@@ -235,7 +225,10 @@ float UModularVehicleFunctionLibrary::GetForwardSpeedCMs(UModularMovementCompone
 float UModularVehicleFunctionLibrary::CalculateSuspensionRotationUsingPivot(UModularWheel* Wheel)
 {
 	//forms a triangle sum of angles =180
-	
+	if(!Wheel->GetWheelSetup())
+	{
+		return 0.0f;
+	}
 	float Result=0;
 	
 		if(Wheel->GetWheelState()->WheelSetup->SuspensionPivot!=0)
@@ -307,29 +300,8 @@ void UModularVehicleFunctionLibrary::UpdateWheelState(UModularWheel* Wheel, FWhe
 	Wheel->UpdateWheelState(NewWheelState);
 }
 
-void UModularVehicleFunctionLibrary::SetSteerOnWheel(UModularWheel* Wheel, float Angle)
-{
-	Wheel->GetWheelState()->SteerAngle=Angle;
-}
 
-void UModularVehicleFunctionLibrary::AddDebugWidgetToWheel(UModularWheel* Wheel,
-	TSubclassOf<UVehicleDebugWidget> Widget)
-{
-UWidgetComponent* WidgetComponent=	NewObject<UWidgetComponent>(Wheel,UWidgetComponent::StaticClass(),NAME_None,RF_Transient);
 
-	if(WidgetComponent)
-	{
-		
-		WidgetComponent->RegisterComponent();
-		WidgetComponent->SetWidgetClass(Widget);
-		WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
-	}
-	FAttachmentTransformRules TransformRules=FAttachmentTransformRules::KeepRelativeTransform;
-	TransformRules.RotationRule=EAttachmentRule::KeepWorld;
-	TransformRules.LocationRule=EAttachmentRule::SnapToTarget;
-	WidgetComponent->AttachToComponent(Wheel,TransformRules,NAME_None);
-Cast<UVehicleDebugWidget>(WidgetComponent->GetUserWidgetObject())->OwningWheel=Wheel;	
-}
 
 void UModularVehicleFunctionLibrary::GetDebugData(UModularWheel* Wheel, float& LateralFrictionRatio,
 	float& LongitudinalFrictionRatio)

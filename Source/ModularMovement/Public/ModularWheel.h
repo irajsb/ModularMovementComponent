@@ -9,7 +9,7 @@
 
 #include "ModularWheel.generated.h"
 
-
+class UVehicleDebugWidget;
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MODULARMOVEMENT_API UModularWheel : public USceneComponent
 {
@@ -26,7 +26,7 @@ protected:
 public:	
 	
 	//Some Properties are not valid in SimulatedPawn
-	UPROPERTY(EditAnywhere,BlueprintReadOnly)
+	UPROPERTY(EditAnywhere,BlueprintReadOnly,meta=(ShowOnlyInnerProperties ))
 	FWheelState WheelState;
 	virtual void SetupWheels(UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateSuspension(float DeltaTime,UModularMovementComponent* ModularMovementComponent) ;
@@ -34,12 +34,27 @@ public:
 	virtual void UpdateSteering(float DeltaTime, UModularMovementComponent* ModularMovementComponent, float InNormSteering) ;
 	virtual  void SetDriveTorqueOnWheels(float Force) ;
 	virtual float GetFastestWheelOmegaSpeed() ;
-	virtual int GetNumOfWheelsTouchingGround(bool OnlyDriveWheels) ;
 	virtual void UpdateAnimation(float DeltaTime, UModularMovementComponent* ModularMovementComponent) ;
 	virtual FTransform GetWheelTransform() ;
-	virtual void SimulateWheelData(float DeltaTime, UModularMovementComponent* ModularMovementComponent) ;
+
 	 virtual void UpdateWheelState(FWheelState In) ;
 	virtual FWheelState* GetWheelState() ;
 	UModularVehicleWheelData* GetWheelSetup() const;
-		
+
+
+	///BP
+
+	//Change Wheel Setup
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleWheel",meta =(KeyWords="Set Change Update "))
+	 void UpdateWheelSetup(UModularVehicleWheelData* VehicleWheelData);
+	//Update Wheel Steering 
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleWheel",meta =(KeyWords="Set Change Update "))
+	 void SetSteerOnWheel(float Angle );
+
+
+
+	//Debug
+
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	 void AddDebugWidgetToWheel(TSubclassOf<UVehicleDebugWidget> Widget);
 };
