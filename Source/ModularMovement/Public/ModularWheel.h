@@ -28,6 +28,8 @@ public:
 	//Some Properties are not valid in SimulatedPawn
 	UPROPERTY(EditAnywhere,BlueprintReadOnly,meta=(ShowOnlyInnerProperties ))
 	FWheelState WheelState;
+	UPROPERTY(EditAnywhere)
+	bool AnimateChildComponent;
 	virtual void SetupWheels(UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateSuspension(float DeltaTime,UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateForces(float DeltaTime, UModularMovementComponent* ModularMovementComponent) ;
@@ -41,7 +43,7 @@ public:
 	virtual FWheelState* GetWheelState() ;
 	UModularVehicleWheelData* GetWheelSetup() const;
 
-
+	
 	///BP
 
 	//Change Wheel Setup

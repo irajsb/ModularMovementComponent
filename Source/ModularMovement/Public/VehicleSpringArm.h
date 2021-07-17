@@ -9,9 +9,29 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(ClassGroup=Camera, meta=(BlueprintSpawnableComponent), hideCategories=(Mobility))
 class MODULARMOVEMENT_API UVehicleSpringArm : public USpringArmComponent
 {
 	GENERATED_BODY()
 	
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	public:
+	//Minimum speed to start interpolating CM/s
+	UPROPERTY(EditAnywhere)
+	float MinSpeedRange=5;
+	//Max speed to start interpolating CM/s
+	UPROPERTY(EditAnywhere)
+	float MaxSpeedRange=500;
+	//Interplolation Scale 
+	UPROPERTY(EditAnywhere)
+	float InterpolationStrength=120;
+	UPROPERTY(EditAnywhere)
+	bool IgnorePitch=true;
+
+	//Adds a cooldown in seconds  for when we need to not auto update camera to velocity 
+	UFUNCTION(BlueprintCallable)
+	void SetCooldown(float In);
+
+	private:
+	float CoolDown;
 };

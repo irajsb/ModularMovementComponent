@@ -302,9 +302,8 @@ void UModularVehicleFunctionLibrary::UpdateWheelState(UModularWheel* Wheel, FWhe
 
 
 
-
 void UModularVehicleFunctionLibrary::GetDebugData(UModularWheel* Wheel, float& LateralFrictionRatio,
-	float& LongitudinalFrictionRatio)
+                                                  float& LongitudinalFrictionRatio)
 {
 	
 	if(Wheel)

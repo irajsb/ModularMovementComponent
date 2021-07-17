@@ -110,7 +110,17 @@ void UModularWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* 
 	const float CurrentLen=FMath::Max<float>(0,TraceResult.Time);
 	const float Stiffness=ModularMovementComponent->GetSpringStiffness(WheelState,1-CurrentLen);
 	const float SuspDiff=FMath::Clamp(CurrentLen-WheelState.PreviousLen,-0.15f,0.15f);
-	const float DampingCorrection=-1*(((SuspDiff)*ModularMovementComponent->GetSetup()->DampingCorrectionMultiplier*Stiffness));
+	float DampingCorrection=0;
+	if(CurrentLen-WheelState.PreviousLen<0)
+	{
+		
+		DampingCorrection=-1*(((SuspDiff)*GetWheelSetup()->DampingCompress*Stiffness));
+	}else
+	{
+		
+		DampingCorrection=-1*(((SuspDiff)*GetWheelSetup()->DampingRebound*Stiffness));
+	}
+
 	if(TraceResult.bBlockingHit&&ModularMovementComponent->ShouldProcessPhysics())
 	{
 			const float AngleCorrection=(	FVector::DotProduct(TraceResult.ImpactNormal,	(TraceResult.TraceStart-TraceResult.TraceEnd).GetUnsafeNormal()));
@@ -266,7 +276,33 @@ float UModularWheel::GetFastestWheelOmegaSpeed()
 void UModularWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* ModularMovementComponent)
 {
 
+if(!AnimateChildComponent)
+	return;
+	FVector Location;
+	FRotator Rotation;
+	
+	UModularVehicleFunctionLibrary::GetWheelAnimationData(this,Location,Rotation,DeltaTime);
+	TArray<USceneComponent*> Components;
+	GetChildrenComponents(false,Components);
+	for(USceneComponent* Mesh : Components)
+	{
+		if(Mesh->IsA(UMeshComponent::StaticClass()))
+		{
+			if(1)
+			{
+				//Rotation.Pitch=Rotation.Pitch*-1;
+				Rotation=(Rotation.Quaternion().Rotator());
+			Mesh->SetRelativeRotation(Rotation) ;
+			}else
+			{
+				SetRelativeRotation(Rotation) ;
+			}
 
+	
+			Mesh->SetRelativeLocation(Location+FVector(0,0,WheelState.WheelSetup->WheelRadius));
+		}
+	}
+	
 	
 }
 

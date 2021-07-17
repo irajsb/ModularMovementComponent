@@ -48,6 +48,11 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	float SideSlipModifier=0.5;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	bool ApplyDriveForce;
+
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
+	float DampingRebound=8;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
+	float DampingCompress=5;
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)
 	bool SteeringWheel;

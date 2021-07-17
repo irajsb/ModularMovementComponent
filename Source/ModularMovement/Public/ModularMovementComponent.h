@@ -252,7 +252,7 @@ public:
 	// draw 2D debug line to UI canvas
 	static void DrawLine2D(UCanvas* Canvas, const FVector2D& StartPos, const FVector2D& EndPos, FColor Color, float Thickness = 1.f);
 	
-
+	
 	
 #endif
 

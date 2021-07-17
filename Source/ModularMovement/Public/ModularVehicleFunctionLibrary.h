@@ -81,11 +81,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static void UpdateWheelState(UModularWheel* Wheel,FWheelState  NewWheelState);
 
-	
-
-
-
-
 	UFUNCTION(BlueprintCallable,BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
 	static void GetDebugData(UModularWheel* Wheel,float & LateralFrictionRatio,float & LongitudinalFrictionRatio);
 

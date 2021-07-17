@@ -78,8 +78,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UDataAsset
     TArray<FModularGearInfo> Gears;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
     TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
-	float DampingCorrectionMultiplier=0.3;
+
 	//Wheel divide drive torque to number of wheels touching the ground useful for switching between AWD 4WD RWD 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	bool ScaleDriveTorqueToNumberOfWheels;

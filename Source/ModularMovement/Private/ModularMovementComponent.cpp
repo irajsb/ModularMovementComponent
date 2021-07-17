@@ -148,6 +148,7 @@ void UModularMovementComponent::InitializeComponent()
 	{
 		GetMesh()->SetSimulatePhysics(false);
 	}
+	OnCalculateCustomPhysics.BindUObject(this,&UModularMovementComponent::VehicleTick);
 	
 }
 
@@ -187,6 +188,7 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* Body
 	{
 		
 
+		UE_LOG(LogTemp,Error,TEXT(" Physics"))
 		
 		float WheelTorque;
 		
@@ -625,6 +627,7 @@ float UModularMovementComponent::CmToM(float In)
 
 bool UModularMovementComponent::ShouldProcessPhysics()const
 {
+	
 if(GetNetMode()==ENetMode::NM_Standalone)
 	return  true;
 	
@@ -981,6 +984,8 @@ void UModularMovementComponent::DrawLine2D(UCanvas* Canvas, const FVector2D& Sta
 		Canvas->DrawItem(LineItem);
 	}
 }
+
+
 
 
 #endif
