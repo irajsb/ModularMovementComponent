@@ -30,22 +30,12 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelWidth=30;
-	
 	//Offset to apply to trace start
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	FVector TraceStartOffset;
-	//Force to apply for suspension
+	//Force to apply for suspension N/m 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	float Stiffness=800000;
-	//amount of friction when moving forward
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	float LongitudinalFrictionMultiplier=1.0;
-	//amount of friction when moving Side ways
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	float LateralFrictionMultiplier=1.0;
-	//Modifier for lateral friction when wheels are locked (HandBrake)
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	float SideSlipModifier=0.5;
+	float SpringRate=75304;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	bool ApplyDriveForce;
 
@@ -58,32 +48,18 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	bool SteeringWheel;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)
 	float SteeringMaxAngle=30;
-
 	//You can set this to -1 to allow back wheel steering 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steer)
 	float SteeringMultiplier=1;
 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Brake)
-	bool AffectedByHandBrake;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Brake)
-	float BrakeTorque;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Brake)
-	float HandBrakeTorque;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Brake)
-	bool ABSEnabled;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Brake)
-	bool TractionControlEnabled;
 	//Suspension pivot point (rotates suspension when dropping used for off-road vehicles https://irajsb.github.io/ModularVehicleDocs/Pivot/
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Suspension)
 	 float SuspensionPivot;
-
 	//Should we interpolate wheel location (0 to disable ) and whats the speed ?
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float AnimSpeed=0;
 
-	//1 by 1 chart x axis :(0-1) current compression of spring y axis(0-1) Spring Force multiplier in that given compression 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Advanced)
-	FRuntimeFloatCurve SuspensionCurve;
+
 
 
 
@@ -93,14 +69,7 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	bool ShowDrawFriction;
 
 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=NewSusp)
-	float FrictionMultiplier=2;;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=NewSusp)
-	FRuntimeFloatCurve LateralSlipGraph;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=NewSusp)
-	float CorneringStiffness=1000;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=NewSusp)
-	float MaxSpinRotation=30;
+
 };
 
 

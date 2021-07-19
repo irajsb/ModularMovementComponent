@@ -49,20 +49,7 @@ public:
 	/*Will ignore if movementComponent was not Modular Vehicle*/
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static void SetHandBrakeInputOnModularVehicle(APawn* Pawn,bool Brake);
-	//actual rotation does not give you acuurate steering and rotation values its has some corrections applied to it so get steering from dedicated values (additional data returned don't affect performance )
-	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static void GetWheelAnimationData(UModularWheel* Wheel,FVector& Location,FRotator& Rotation,float DeltaTime);
-	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static float GetWheelRotation(UModularWheel* Wheel);
-	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static float GetWheelPivotRotation(UModularWheel* Wheel);
-	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static float GetWheelSteeringValue(UModularWheel* Wheel);
-	//1 fully compressed 0 fully extended 
-	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static float GetWheelCompressionValue(UModularWheel* Wheel);
-	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static float GetWheelRPM(UModularWheel* Wheel);
+
 
 
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")

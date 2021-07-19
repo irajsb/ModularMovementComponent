@@ -108,24 +108,26 @@ void UModularWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* 
 		
 	
 	const float CurrentLen=FMath::Max<float>(0,TraceResult.Time);
-	const float Stiffness=ModularMovementComponent->GetSpringStiffness(WheelState,1-CurrentLen);
-	const float SuspDiff=FMath::Clamp(CurrentLen-WheelState.PreviousLen,-0.15f,0.15f);
+	const float Stiffness= WheelState.WheelSetup->SpringRate*(1-CurrentLen)*WheelState.WheelSetup->SuspensionLength/100;
+	
+	const float SuspensionDiff=(CurrentLen-WheelState.PreviousLen)*WheelState.WheelSetup->SuspensionLength/100;
+	
 	float DampingCorrection=0;
 	if(CurrentLen-WheelState.PreviousLen<0)
 	{
 		
-		DampingCorrection=-1*(((SuspDiff)*GetWheelSetup()->DampingCompress*Stiffness));
+		DampingCorrection=-1*(((SuspensionDiff)*GetWheelSetup()->DampingCompress))/DeltaTime;
 	}else
 	{
 		
-		DampingCorrection=-1*(((SuspDiff)*GetWheelSetup()->DampingRebound*Stiffness));
+		DampingCorrection=-1*(((SuspensionDiff)*GetWheelSetup()->DampingRebound))/DeltaTime;
 	}
-
+	UE_LOG(LogTemp,Log,TEXT(" Susp Diff %f Damp %f "),SuspensionDiff, DampingCorrection);
 	if(TraceResult.bBlockingHit&&ModularMovementComponent->ShouldProcessPhysics())
 	{
 			const float AngleCorrection=(	FVector::DotProduct(TraceResult.ImpactNormal,	(TraceResult.TraceStart-TraceResult.TraceEnd).GetUnsafeNormal()));
 			WheelState.WheelLoad=((AngleCorrection*FVector::UpVector*(Stiffness+DampingCorrection)));
-			ModularMovementComponent->GetMesh()->GetBodyInstance()->AddForceAtPosition(WheelState.WheelLoad,TraceResult.TraceStart,false );
+			ModularMovementComponent->GetMesh()->GetBodyInstance()->AddForceAtPosition(SIForceToUnrealForce(WheelState.WheelLoad),TraceResult.TraceStart,false );
 	}
 	
 
@@ -164,8 +166,65 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	MODULAR_CYCLE_COUNTER(STAT_ModularForces)
 	if(!ModularMovementComponent)
 		return;
+	const FTransform WorldTransform =ModularMovementComponent->GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
+	const float SteerAngleDegrees = WheelState.SteerAngle; // temp
+	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
+	const FVector WorldMeshVelocity=ModularMovementComponent->GetMesh()->GetBodyInstance()->GetUnrealWorldVelocityAtPoint(WheelState.HitResult.TraceStart);
+	const FVector  LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity);
+	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
+	WheelState.SlipAngle = FMath::Atan2(GroundVelocityVector.Y, GroundVelocityVector.X);
+	FVector FinalForceVector=FVector::ZeroVector;
+
+	//TODO :: Multiplier 
+	const float RollingResistance=-1*ModularMovementComponent->RollingResistanceConstant*GroundVelocityVector.X/100.0f;//CM/S to M/s 
+
+	WheelState.DriveTorque=WheelState.DriveTorque/(WheelState.WheelSetup->WheelRadius/100);
 	
-// TODO Wheel Friction 
+	bool Braking= FMath::Abs(WheelState.DriveTorque) <FMath::Abs(WheelState.BrakeTorque);
+
+
+
+	
+	WheelState.Omega=GroundVelocityVector.X/WheelState.WheelSetup->WheelRadius;
+	UE_LOG(LogTemp,Log,TEXT("Speed %f  radial %f"),GroundVelocityVector.X/100,WheelState.Omega );
+	//Radian speed is per second * Delta Time to calculate speed in this frame 
+	WheelState.AngularPosition += WheelState.Omega *DeltaTime;
+
+	while (WheelState.AngularPosition >= PI * 2.f)
+	{
+		WheelState.AngularPosition -= PI * 2.f;
+	}
+	while (WheelState.AngularPosition <= -PI * 2.f)
+	{
+		WheelState.AngularPosition += PI * 2.f;
+	}
+	
+
+
+
+
+
+
+
+	FinalForceVector.X=WheelState.DriveTorque +RollingResistance;
+	
+
+
+FinalForceVector=SIForceToUnrealForce(FinalForceVector);
+	if(	ModularMovementComponent-> ShouldProcessPhysics())
+	{
+		FVector FrictionForceLocal = FinalForceVector;
+		FrictionForceLocal =SteeringRotator.RotateVector(FrictionForceLocal);
+	const	FVector GroundZVector = WheelState.HitResult.ImpactNormal;
+	const	FVector GroundXVector = FVector::CrossProduct(ModularMovementComponent->GetMesh()->GetRightVector(), GroundZVector);
+	const	FVector GroundYVector = FVector::CrossProduct(GroundZVector, GroundXVector);
+	const	FMatrix Mat(GroundXVector, GroundYVector, GroundZVector, ModularMovementComponent->GetMesh()->GetComponentLocation());
+	const	FVector	FrictionForceVector = Mat.TransformVector(FrictionForceLocal);
+		FVector RightVector=ModularMovementComponent->GetMesh()->GetRightVector();
+		
+	
+	ModularMovementComponent->	GetMesh()->GetBodyInstance()->AddForceAtPosition(FrictionForceVector,WheelState.HitResult.TraceStart,false);
+	}
 }
 
 void UModularWheel::UpdateSteering(float DeltaTime, UModularMovementComponent* ModularMovementComponent,
@@ -255,10 +314,15 @@ void UModularWheel::UpdateSteering(float DeltaTime, UModularMovementComponent* M
 void UModularWheel::SetDriveTorqueOnWheels(float Force)
 {
 
-	if(WheelState.WheelSetup->ApplyDriveForce){
-	WheelState.DriveTorque=Force;
-	}else{
-	WheelState.DriveTorque=0;
+	if(WheelState.WheelSetup->ApplyDriveForce)
+	{
+
+		WheelState.DriveTorque=Force;
+	}
+	else
+	{
+		
+		WheelState.DriveTorque=0;
 	}
 	
 }
@@ -268,7 +332,8 @@ float UModularWheel::GetFastestWheelOmegaSpeed()
 	if(WheelState.WheelSetup->ApplyDriveForce)
 	{
 		return WheelState.Omega;
-	}return 0.0f;
+	}
+	return 0.0f;
 	
 }
 
@@ -281,7 +346,7 @@ if(!AnimateChildComponent)
 	FVector Location;
 	FRotator Rotation;
 	
-	UModularVehicleFunctionLibrary::GetWheelAnimationData(this,Location,Rotation,DeltaTime);
+GetWheelAnimationData(Location,Rotation,DeltaTime);
 	TArray<USceneComponent*> Components;
 	GetChildrenComponents(false,Components);
 	for(USceneComponent* Mesh : Components)
@@ -299,7 +364,7 @@ if(!AnimateChildComponent)
 			}
 
 	
-			Mesh->SetRelativeLocation(Location+FVector(0,0,WheelState.WheelSetup->WheelRadius));
+			Mesh->SetRelativeLocation(Location);
 		}
 	}
 	
@@ -307,13 +372,15 @@ if(!AnimateChildComponent)
 }
 
 FTransform UModularWheel::GetWheelTransform()
-{return  GetComponentTransform();
+{
+	return  GetComponentTransform();
 }
 
 
 
 void UModularWheel::UpdateWheelState(FWheelState In)
-{WheelState=In;
+{
+	WheelState=In;
 }
 
 
@@ -353,5 +420,125 @@ UWidgetComponent* WidgetComponent=	NewObject<UWidgetComponent>(this,UWidgetCompo
 	TransformRules.LocationRule=EAttachmentRule::SnapToTarget;
 	WidgetComponent->AttachToComponent(this,TransformRules,NAME_None);
 	Cast<UVehicleDebugWidget>(WidgetComponent->GetUserWidgetObject())->OwningWheel=this;	
+}
+
+
+
+
+
+
+void UModularWheel::GetWheelAnimationData(FVector& Location,FRotator& Rotation,float DeltaTime)
+{
+	
+
+
+
+	if(GetWorld()->IsGameWorld())
+	{
+		
+	  
+		 
+
+		const FVector WheelRadiusVector=FVector(0,0,WheelState.WheelSetup->WheelRadius);
+		const FVector SuspensionTraceLocation=WheelState.HitResult.bBlockingHit?WheelState.HitResult.ImpactPoint+WheelRadiusVector:WheelState.HitResult.TraceEnd;
+		
+		
+		
+		const FTransform WheelTransform=GetWheelTransform();
+			
+		//local
+		  FVector ContactPointPosition=		WheelTransform.InverseTransformPosition(SuspensionTraceLocation);
+		  ContactPointPosition=	ContactPointPosition=WheelTransform.GetRotation().RotateVector(ContactPointPosition);
+		
+
+	
+		float Sin,Cos;
+		
+		const float ContactPointAngle=	FMath::Atan2(ContactPointPosition.X,WheelState.WheelSetup->WheelRadius)*2;
+		
+		FMath::SinCos(&Sin,&Cos,ContactPointAngle);
+		
+	
+	FVector	ResultPosition=FVector::ZeroVector;
+	ResultPosition.Z=ContactPointPosition.Z-((FMath::Abs(Sin))*WheelState.WheelSetup->WheelRadius/PI);
+	
+		
+	
+	if(WheelState.SuspAngle!=0.0f)
+	{
+		const float PivotAngle=	FMath::Atan2(ResultPosition.Z,WheelState.WheelSetup->SuspensionPivot);
+		FMath::SinCos(&Sin,&Cos,PivotAngle);
+		ResultPosition.Y=FMath::Abs(Sin)*WheelState.WheelSetup->SuspensionPivot* FMath::Sign(WheelState.InitialLocalLocation.Y) *-0.5;
+	}
+
+	if(WheelState.WheelSetup->AnimSpeed!=0.0f)
+	{
+		ResultPosition=UKismetMathLibrary::VInterpTo_Constant(WheelState.PreviousLocation,ResultPosition,DeltaTime,WheelState.WheelSetup->AnimSpeed);
+	}
+	
+		
+	
+	Location=ResultPosition;
+	WheelState.PreviousLocation=ResultPosition;
+	
+	const float Steer=WheelState.MovementComponent?UKismetMathLibrary::FInterpTo_Constant(WheelState.PreviousYaw, WheelState.SteerAngle,DeltaTime,WheelState.MovementComponent->VehicleState.VehicleData->SteeringAnimationSpeed):WheelState.SteerAngle;
+	
+		
+	Rotation=FRotator(FMath::RadiansToDegrees(-1*WheelState.AngularPosition),Steer,0);
+
+	WheelState.PreviousYaw=Steer;
+	
+	if(WheelState.SuspAngle!=0.0f)
+	{
+		
+	const float CurrentAngle=	UKismetMathLibrary::MapRangeClamped(ResultPosition.Z,WheelState.WheelSetup->SuspensionLength,-WheelState.WheelSetup->SuspensionLength,-WheelState.SuspAngle,WheelState.SuspAngle);
+	Rotation=UKismetMathLibrary::ComposeRotators(Rotation,FRotator(0.00f,0.00f,-CurrentAngle));
+	
+	WheelState.CurrentPivotAngle	=CurrentAngle;
+	
+		
+	}
+
+	}
+	
+}
+
+float UModularWheel::GetWheelRotation()
+{
+
+	
+	return FMath::RadiansToDegrees(-1*GetWheelState()->AngularPosition);
+	
+}
+
+float UModularWheel::GetWheelPivotRotation()
+{
+	
+	
+		return GetWheelState()->CurrentPivotAngle;
+	
+}
+
+float UModularWheel::GetWheelSteeringValue()
+{
+	
+
+	return GetWheelState()->SteerAngle;
+
+}
+
+float UModularWheel::GetWheelCompressionValue()
+{	
+
+		return 1-WheelState.HitResult.Time;
+	
+}
+
+float UModularWheel::GetWheelRPM()
+{
+	
+	
+	return WheelState.Omega * 30.f / PI;
+	
 }
 

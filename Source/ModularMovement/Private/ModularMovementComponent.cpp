@@ -149,7 +149,10 @@ void UModularMovementComponent::InitializeComponent()
 		GetMesh()->SetSimulatePhysics(false);
 	}
 	OnCalculateCustomPhysics.BindUObject(this,&UModularMovementComponent::VehicleTick);
-	
+
+	//Calculate Constants
+	AirDragConstant=0.5*VehicleState.VehicleData->AirDragCoefficient*VehicleState.VehicleData->VehicleFrontArea;
+	RollingResistanceConstant=30*AirDragConstant;
 }
 
 void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* BodyInstance)
@@ -191,9 +194,10 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* Body
 		UE_LOG(LogTemp,Error,TEXT(" Physics"))
 		
 		float WheelTorque;
-		
+
+		UpdateAirDrag();
 		UpdateEngine(fDeltaTime,WheelTorque);
-	
+		
 		
 		UpdateGearBox(fDeltaTime);
 		UpdateWheels(fDeltaTime,WheelTorque);
@@ -311,7 +315,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime,float& WheelTorque 
 {
 
 	MODULAR_CYCLE_COUNTER(STAT_ModularEngine)
-	WheelTorque=0;
+	
 	float HighestOmega=0;
 	VehicleState.DriveWheelsOnGround=0;
 	//Get fastest wheel that is attached to engine 
@@ -348,25 +352,33 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime,float& WheelTorque 
 		}
 		VehicleState.CurrentRpmRatio= UKismetMathLibrary::MapRangeClamped(VehicleState.CurrentRpm,VehicleState.VehicleData->IdleRpm,VehicleState.VehicleData->MaxRpm,0,1);
 		//Engine Torque 
-		 float EngineTorque;
-		if(VehicleState.VehicleData->ConstantTorque!=0.0)
-		{
-		EngineTorque=	VehicleState.VehicleData->ConstantTorque*ThrottleInput;
 		
-		}else
-		{//Use curve 
-			EngineTorque=ThrottleInput* VehicleState.VehicleData->EngineTorqueCurve.GetRichCurve()->Eval(VehicleState.CurrentRpm);
-		}
+		
+		//Use curve 
+			const float EngineTorque=ThrottleInput* VehicleState.VehicleData->EngineTorqueCurve.GetRichCurve()->Eval(VehicleState.CurrentRpm);
+		
 		//Gearbox 
-		const float TransmissionTorque=GetGearInfo(VehicleState.CurrentGear).GearRatio* VehicleState.VehicleData->TransmissionEfficiency;
+		const float TransmissionTorque=GetGearInfo(VehicleState.CurrentGear).GearRatio* VehicleState.VehicleData->TransmissionEfficiency*VehicleState.VehicleData->DifferentialRatio;
 		//Final 
+
+		
 		WheelTorque=EngineTorque*TransmissionTorque;
+
+		UE_LOG(LogModularVehicle,Log,TEXT(" Engine Torque : %f Nm GearRatio %f TransmissionEffiency %f  FinalTorque %f"),EngineTorque,GetGearInfo(VehicleState.CurrentGear).GearRatio,VehicleState.VehicleData->TransmissionEfficiency,WheelTorque);
 	}
 	
 
-	
+
 	
 }
+
+void UModularMovementComponent::UpdateAirDrag() const
+{
+const FVector BodyVelocity=	GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity()/100.f;//CM/s To Meter/s
+const FVector DragForce= BodyVelocity*BodyVelocity.Size()*AirDragConstant*-1;
+GetMesh()->GetBodyInstance()->AddForceAtPosition(SIForceToUnrealForce(DragForce),GetMesh()->GetCenterOfMass());
+}
+
 void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 {
 	//Capturing inputs
@@ -503,12 +515,7 @@ VehicleState.LockCurrentStateDelta-=DeltaTime;
 	return OutState;
 }
 
-float UModularMovementComponent::GetSpringStiffness(FWheelState WheelState, float CompressionRatio)
-{
-	
-const float Compression= 	(WheelState.WheelSetup->SuspensionCurve.GetRichCurve()->IsEmpty()?CompressionRatio:WheelState.WheelSetup->SuspensionCurve.GetRichCurve()->Eval(CompressionRatio)) ;
-return 	Compression*WheelState.WheelSetup->Stiffness;
-}
+
 
 void UModularMovementComponent::RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed)
 {

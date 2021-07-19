@@ -53,10 +53,8 @@ class MODULARMOVEMENT_API UModularVehicleData : public UDataAsset
 	GENERATED_BODY()
 	public:
 	UModularVehicleData();
-	//Torque curve
+	//Torque Curve Newton /Meter 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
-	float ConstantTorque;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,meta=(EditCondition="ConstantTorque==0.0"))
 	FRuntimeFloatCurve EngineTorqueCurve;
 	//SetRPMTOZeroWhenShifting
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
@@ -67,7 +65,8 @@ class MODULARMOVEMENT_API UModularVehicleData : public UDataAsset
 	//Max rpm 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
 	float MaxRpm=7500;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Transmission)
+	// Normalized 0-1 how much of energy is wasted in transmission  1 =ideal full efficient ?
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Transmission, Meta=( UIMin="0", UIMax="1", ClampMin="0.0", ClampMax="1.0"))
 	float TransmissionEfficiency=1;
 	/*Affects rpm calculation ,tweak if rpm is not matching your expectations*/
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Transmission)
@@ -148,6 +147,17 @@ class MODULARMOVEMENT_API UModularVehicleData : public UDataAsset
 	float TraceSpeedMultiplier;
 
 
+
+	//For calculating air resistance unit : Meters^2
+	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
+	float VehicleFrontArea=2.2;
+	//Air Density currently equal to planet earth air density 
+	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
+	float AirDensity=1.29;
+	// The drag coefficient is a dimensionless quantity that is used to quantify the drag or resistance of an object in a fluid environment, such as air or water.
+	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
+	float AirDragCoefficient=0.3;
+	
 
 
 

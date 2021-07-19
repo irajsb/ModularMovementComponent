@@ -13,6 +13,7 @@
 #include "ModularMovementComponent.generated.h"
 
 
+#define SIForceToUnrealForce(In) In*100.0f
 class UModularWheel;
 //Cosmetic delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange,int,CurrentGear,int,TargetGear,bool,Finished);
@@ -131,6 +132,9 @@ class MODULARMOVEMENT_API UModularMovementComponent : public UPawnMovementCompon
 	float RawThrottleInput;
 	UPROPERTY(Transient)
 	bool HandBrakeInput;
+
+	float AirDragConstant;
+	float RollingResistanceConstant;
 public:
 
 
@@ -192,13 +196,15 @@ public:
 	void UpdateGearBox(float DeltaTime);
 	//Calculate RPM And torque
 	void UpdateEngine(float DeltaTime,float& WheelTorque);
+	//Apply Air Drag
+	void UpdateAirDrag() const;
 	//Update each Wheel
 	void UpdateWheels(float DeltaTime,float WheelTorque);
 	//Determine vehicle state in AI Pawns
 	EAIVehicleState DetermineAIState(float ForwardFactor,float DeltaTime);
 
 
-	static float GetSpringStiffness(FWheelState WheelState,float CompressionRatio);
+
 	//AI movement
 	virtual void RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed) override;
 	virtual void StopActiveMovement() override;
@@ -206,6 +212,7 @@ public:
 	
 	//ChaosDefault
 	static float CmToM(float In);
+
 	///replication
 
 

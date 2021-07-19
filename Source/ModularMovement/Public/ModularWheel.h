@@ -52,7 +52,20 @@ public:
 	//Update Wheel Steering 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleWheel",meta =(KeyWords="Set Change Update "))
 	 void SetSteerOnWheel(float Angle );
-
+	//actual rotation does not give you acuurate steering and rotation values its has some corrections applied to it so get steering from dedicated values (additional data returned don't affect performance )
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	 void GetWheelAnimationData(FVector& Location,FRotator& Rotation,float DeltaTime);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	 float GetWheelRotation();
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	 float GetWheelPivotRotation();
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	 float GetWheelSteeringValue();
+	//1 fully compressed 0 fully extended 
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	 float GetWheelCompressionValue();
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	 float GetWheelRPM();
 
 
 	//Debug
