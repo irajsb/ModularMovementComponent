@@ -12,7 +12,13 @@
  * 
  */
 
-
+UENUM(BlueprintType)
+enum EWheelStatus
+{
+	Normal,
+	Locked,
+	Spinning 
+};
 class UModularMovementComponent;
 UCLASS()
 class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
@@ -43,7 +49,13 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	float DampingRebound=8;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	float DampingCompress=5;
-	
+	//Mu of the tire 
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
+	float TireFrictionCoefficient=1;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
+	float BrakeTorque=500;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
+	float HandBrakeTorque=0;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)
 	bool SteeringWheel;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)
@@ -60,13 +72,11 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	float AnimSpeed=0;
 
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Advanced)
+	FRuntimeFloatCurve SlipAngle;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Advanced)
+	float GraphMultiplier=1;
 
-
-
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Debug)
-	bool ShowSuspensionDebug;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Debug)
-	bool ShowDrawFriction;
 
 
 
@@ -96,8 +106,7 @@ struct FWheelState{
 	float BrakeTorque;
 	UPROPERTY(BlueprintReadOnly)
 	float Spin;
-	UPROPERTY(BlueprintReadOnly)
-	bool Spinning;
+
 	// [radians/sec] Wheel Rotation Angular Velocity
 	UPROPERTY(BlueprintReadOnly)
 	float Omega;
@@ -126,9 +135,8 @@ struct FWheelState{
 	UPROPERTY(BlueprintReadOnly)
 	float PreviousYaw;
 
-	float AvailableGrip;
-	bool WheelLocked;
-	float SlipOmega;
+
+	TEnumAsByte<EWheelStatus> WheelStatus;
 
 	//Debug Data
 #if ! UE_BUILD_SHIPPING

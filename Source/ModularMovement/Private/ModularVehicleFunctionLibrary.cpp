@@ -106,6 +106,19 @@ float UModularVehicleFunctionLibrary::GetForwardSpeedCMs(UModularMovementCompone
 	return MovementComponent->VehicleState.ForwardSpeed;
 }
 
+int UModularVehicleFunctionLibrary::GetWheelsTouchingGround(UModularMovementComponent* MovementComponent)
+{
+	int WheelCount=0;
+	for(UModularWheel* Wheel : MovementComponent->Components)
+	{
+		if(Wheel->WheelState.HitResult.bBlockingHit)
+		{
+			WheelCount++;
+		}
+	}
+	return  WheelCount;
+}
+
 
 float UModularVehicleFunctionLibrary::CalculateSuspensionRotationUsingPivot(UModularWheel* Wheel)
 {

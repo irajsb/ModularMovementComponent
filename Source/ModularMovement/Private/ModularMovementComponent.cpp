@@ -7,7 +7,7 @@
 #include "ModularMovement.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "DrawDebugHelpers.h"
+
 #include "Engine.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/PhysicsSettings.h"
@@ -27,7 +27,7 @@ FORCEINLINE float OmegaToRPM(float Omega)
 
 UModularMovementComponent::UModularMovementComponent()
 {
-	AHUD::OnShowDebugInfo.AddUObject(this, &UModularMovementComponent::ShowDebugInfo);
+
 	SetIsReplicated(true);
 	
 }
@@ -83,9 +83,14 @@ void UModularMovementComponent::SetHandBrakeInput(bool Brake)
 	HandBrakeInput=Brake;
 }
 
-int UModularMovementComponent::GetNumberOfWheels()
+int UModularMovementComponent::GetNumberOfWheels() const
 {
 	return Components.Num();
+}
+
+int UModularMovementComponent::GetNumberOfDriveWheelsTouchingGround() const
+{
+	return  VehicleState.DriveWheelsOnGround;
 }
 
 FModularGearInfo UModularMovementComponent::GetGearInfo(int Index) const
@@ -157,7 +162,7 @@ void UModularMovementComponent::InitializeComponent()
 
 void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* BodyInstance)
 {
-	UE_LOG(LogTemp,Log,TEXT("Substep Tick %f"),DeltaTime);
+
 	MODULAR_CYCLE_COUNTER(STAT_ModularTickComponent)
 	const float fDeltaTime=FMath::Min<float>(DeltaTime,0.0633);
 	
@@ -191,7 +196,7 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* Body
 	{
 		
 
-		UE_LOG(LogTemp,Error,TEXT(" Physics"))
+		
 		
 		float WheelTorque;
 
@@ -217,7 +222,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	UE_LOG(LogTemp,Log,TEXT(" Tick %f"),DeltaTime);
+	
 	
 	if(!UPhysicsSettings::Get()->bSubstepping)
 	{
@@ -266,11 +271,20 @@ void UModularMovementComponent::UpdateGearBox(float DeltaTime)
 				{
 				SetTargetGear(VehicleState.IdleGear-1, true);
 				}
-				else if (RawThrottleInput > KINDA_SMALL_NUMBER &&VehicleState.CurrentGear <= VehicleState.IdleGear && VehicleState.TargetGear <= VehicleState.IdleGear)
+				 if (RawThrottleInput > KINDA_SMALL_NUMBER &&VehicleState.CurrentGear <= VehicleState.IdleGear && VehicleState.TargetGear <= VehicleState.IdleGear)
 				{
 				SetTargetGear(VehicleState.IdleGear+1, true);
 				}
+			}else
+			{// situations when  car is moving fast and needs to change gear 
+
+				//if car is moving in forward speed and  its in back gear (happens after a -180 degree flip in reverse
+				if(VehicleState.ForwardSpeed>KINDA_SMALL_NUMBER&&RawThrottleInput>KINDA_SMALL_NUMBER&&VehicleState.CurrentGear<VehicleState.IdleGear)
+				{
+					SetTargetGear(VehicleState.IdleGear+1, true);
+				}
 			}
+			
 	}
 
 
@@ -301,11 +315,7 @@ void UModularMovementComponent::UpdateGearBox(float DeltaTime)
 			OnGearChange.Broadcast(VehicleState.CurrentGear,VehicleState.TargetGear,true);
 			VehicleState.CurrentGear =VehicleState.TargetGear;
 
-#if !UE_BUILD_SHIPPING
-			if(VehicleState.VehicleData->ShowGearboxDebug)
-				UE_LOG(LogModularVehicle,Warning,TEXT("Change gear Timer Finished Gear Now at : %d "),VehicleState.CurrentGear);
 
-#endif
 			
 		}
 	}
@@ -338,6 +348,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime,float& WheelTorque 
 	const float WheelRPM =OmegaToRPM(HighestOmega);
 	//Calculate RPM 
 	VehicleState.CurrentRpm=FMath::Clamp<float>(WheelRPM *GetGearInfo(VehicleState.CurrentGear).GearRatio*VehicleState.VehicleData->DifferentialRatio,VehicleState.VehicleData->IdleRpm,VehicleState.VehicleData->MaxRpm);
+	VehicleState.CurrentRpmRatio= UKismetMathLibrary::MapRangeClamped(VehicleState.CurrentRpm,VehicleState.VehicleData->IdleRpm,VehicleState.VehicleData->MaxRpm,0,1);
 	//TODO Refactor
 	if(VehicleState.VehicleData->ZeroRpmWhenShifting&&VehicleState.CurrentGearChangeTime>0)
 	{
@@ -350,7 +361,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime,float& WheelTorque 
 		{
 			VehicleState.CurrentRpm=FMath::Clamp<float>((VehicleState.VehicleData->MaxRpm*ThrottleInput),VehicleState.VehicleData->IdleRpm,VehicleState.VehicleData->MaxRpm);
 		}
-		VehicleState.CurrentRpmRatio= UKismetMathLibrary::MapRangeClamped(VehicleState.CurrentRpm,VehicleState.VehicleData->IdleRpm,VehicleState.VehicleData->MaxRpm,0,1);
+		
 		//Engine Torque 
 		
 		
@@ -364,7 +375,6 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime,float& WheelTorque 
 		
 		WheelTorque=EngineTorque*TransmissionTorque;
 
-		UE_LOG(LogModularVehicle,Log,TEXT(" Engine Torque : %f Nm GearRatio %f TransmissionEffiency %f  FinalTorque %f"),EngineTorque,GetGearInfo(VehicleState.CurrentGear).GearRatio,VehicleState.VehicleData->TransmissionEfficiency,WheelTorque);
 	}
 	
 
@@ -393,7 +403,7 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 	for(UModularWheel* Component: Components)
 	{
 
-
+		
 		//calc and Apply susp forces 
 		Component->UpdateSuspension(DeltaTime,this);
 		
@@ -408,6 +418,17 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 		}
 
 
+		Component->WheelState.BrakeTorque=BrakeInput*Component->WheelState.WheelSetup->BrakeTorque;
+		if(HandBrakeInput)
+		{
+			if(Component->WheelState.WheelSetup->HandBrakeTorque!=0.0f)
+			{
+				Component->WheelState.BrakeTorque=Component->WheelState.WheelSetup->HandBrakeTorque;
+				Component->WheelState.DriveTorque=0;
+				
+			}
+		}
+		
 		//Apply Steering
 		Component->UpdateSteering(DeltaTime,this,UseSteeringValue);
 		
@@ -451,9 +472,9 @@ EAIVehicleState UModularMovementComponent::DetermineAIState(float ForwardFactor,
 		const float TraceLenForward=VehicleState.VehicleData->TraceLength*FMath::Max(VehicleState.VehicleData->TraceLength,static_cast<float>((VehicleState.ForwardSpeed*0.036*VehicleState.VehicleData->TraceSpeedMultiplier)));
 		const float TraceLenBackWard=VehicleState.VehicleData->TraceLength*FMath::Max(VehicleState.VehicleData->TraceLength,static_cast<float>((-1*VehicleState.ForwardSpeed*0.036*VehicleState.VehicleData->TraceSpeedMultiplier)));
 		//start traces
-		
-		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+VehicleDirection*TraceLenForward,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,VehicleState.VehicleData->AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultF,true);
-		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+-1*VehicleDirection*TraceLenBackWard,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,VehicleState.VehicleData->AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultB,true);
+		bool AIDebug=false;
+		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+VehicleDirection*TraceLenForward,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultF,true);
+		UKismetSystemLibrary::LineTraceSingle(World,VehicleLocation,VehicleLocation+-1*VehicleDirection*TraceLenBackWard,VehicleState.VehicleData->SuspensionTraceTypeQuery,false,ActorsToIgnore,AIDebug?EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,HitResultB,true);
 
 		}
 	//determine state
@@ -467,7 +488,7 @@ VehicleState.LockCurrentStateDelta-=DeltaTime;
 	{
 		if(VehicleState.AIState==TurningAround&&HitResultB.bBlockingHit)
 		{
-			OutState=Normal;
+			OutState=Neutral;
 		}
 		if(VehicleState.AIState!=TurningAround&&HitResultF.bBlockingHit)
 			{
@@ -501,13 +522,13 @@ VehicleState.LockCurrentStateDelta-=DeltaTime;
 	{
 		if(FMath::IsNearlyEqual(ForwardFactor,1.0f,0.1f))
 		{
-			OutState=Normal;
+			OutState=Neutral;
 		}
 		//if back is blocked forward is open we stop reversing
 		if(HitResultB.bBlockingHit&&!HitResultF.bBlockingHit)
 		{
 			VehicleState.LockCurrentStateDelta=0.5;
-			OutState=Normal;
+			OutState=Neutral;
 		}
 	}
 	
@@ -552,7 +573,7 @@ void UModularMovementComponent::RequestDirectMove(const FVector& MoveVelocity, b
 
 	switch (VehicleState.AIState)
 	{
-	case EAIVehicleState::Normal:
+	case EAIVehicleState::Neutral:
 		SetSteeringInput(SteeringPosition);
 		VehicleState.DesiredSpeed=UKismetMathLibrary::MapRangeClamped(Distance.Size(),0,VehicleState.VehicleData->NearGoalDistance,VehicleState.VehicleData->DesireSpeedNearGoal,VehicleState.VehicleData->DesireSpeedNormal);
 		if(ForwardFactor<VehicleState.VehicleData->TurnThreshold)
@@ -583,27 +604,8 @@ void UModularMovementComponent::RequestDirectMove(const FVector& MoveVelocity, b
 		SetThrottleInput(FMath::Clamp<float>(SpeedDifference/VehicleState.VehicleData->FullThrottleSpeed,-1,1));
 	}
 	
-	if(VehicleState.ForwardSpeed)
-	if(VehicleState.VehicleData->AIDebug)
-	{
-		//draw destination
-		DrawDebugSphere(GetWorld(),Destination,30,20,FColor::Red,false,-1,5);
-		FString VehicleStateString;
-		switch (VehicleState.AIState)
-		{
-		case EAIVehicleState::Normal:
-		VehicleStateString=TEXT("Normal");
-			break;
-		case EAIVehicleState::TurningAround:
-			VehicleStateString=TEXT("TurningAround");
-			break;
-		
-			
-		}
-	
-		UE_LOG(LogModularVehicle,Log,TEXT("ForwardFactor= %f Distance*velocity= %f Steering %f State: %s DesiredSpeed: %f "),ForwardFactor,Distance.Size()*VehicleState.ForwardSpeed,SteeringPosition,*VehicleStateString,VehicleState.DesiredSpeed);
-		
-	}
+
+
 	VehicleState.AIPreviousThrottle=RawThrottleInput;
 }
 
@@ -723,8 +725,7 @@ float UModularMovementComponent::CalcSteeringInput(float DeltaTime)
 	}
 	
 	
-	if(VehicleState.VehicleData->ShowInputProcessingDebug)
-		UE_LOG(LogModularVehicle,Warning,TEXT("Final Calc SteeringInput: %f   Raw : %f"),(SteeringInput),RawSteeringInput);
+
 	return  SteeringInput;
 }
 
@@ -797,13 +798,13 @@ float UModularMovementComponent::CalcThrottleInput()
 	
 	if (VehicleState.VehicleData->bReverseAsBrake )
 	{
-		if (RawBrakeInput > 0.f &&VehicleState.TargetGear < VehicleState.IdleGear /*PVehicle->GetTransmission().GetTargetGear() < 0/*ForwardSpeed < -WrongDirectionThreshold*/)
+		if (RawBrakeInput > 0.f &&VehicleState.CurrentGear < VehicleState.IdleGear /*PVehicle->GetTransmission().GetTargetGear() < 0/*ForwardSpeed < -WrongDirectionThreshold*/)
 		{
 			NewThrottleInput = RawBrakeInput;
 		}
 		else
 			//If the user is changing direction we should really be braking first and not applying any gas, so wait until they've changed gears
-			if ((RawThrottleInput > 0.f && VehicleState.TargetGear < VehicleState.IdleGear) || (RawBrakeInput > 0.f && VehicleState.TargetGear > VehicleState.IdleGear))
+			if ((RawThrottleInput > 0.f && VehicleState.TargetGear < VehicleState.IdleGear) || (RawThrottleInput < 0.f && VehicleState.TargetGear > VehicleState.IdleGear))
 			{
 				NewThrottleInput = 0.f;
 			}
@@ -815,22 +816,14 @@ float UModularMovementComponent::CalcThrottleInput()
 		NewThrottleInput=RawThrottleInput=FMath::Clamp((FMath::Abs<float>(VehicleState.TrackRight.TorqueTransfer)+FMath::Abs<float>(VehicleState.TrackLeft.TorqueTransfer))/2,0.f,1.f);
 	}
 
-	//Debug
-if(VehicleState.VehicleData->ShowInputProcessingDebug)
-{
-	UE_LOG(LogModularVehicle,Warning,TEXT("Throttle raw before process %f"),RawThrottleInput);
-	UE_LOG(LogModularVehicle,Warning,TEXT("Final Calc Throttle %f "),FMath::Abs(NewThrottleInput));
-}
-	//
+
 	
-	//Why??return FMath::Abs(NewThrottleInput);
 	return NewThrottleInput;
 }
 
 void UModularMovementComponent::SetTargetGear(int32 GearNum, bool bImmediate)
 {
-	if(VehicleState.VehicleData->ShowGearboxDebug)
-	UE_LOG(LogModularVehicle,Warning,TEXT("Change gear called with %d "),GearNum);
+	
 	if(VehicleState.VehicleData->Gears.IsValidIndex(GearNum))
 	{
 		if(bImmediate||VehicleState.VehicleData->GearChangeTime==0.f)
@@ -853,7 +846,7 @@ bool UModularMovementComponent::AllowedToChangeGear()
 	for(UModularWheel* Component: Components)
 	{
 		
-		if(Component->GetWheelState()->Spinning)
+		if(Component->GetWheelState()->WheelStatus==Spinning||Component->GetWheelState()->WheelStatus==Locked)
 		{
 			return  false;
 		}
@@ -902,102 +895,4 @@ void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	DOREPLIFETIME(UModularMovementComponent,RepMovement);
 	
 }
-////////////////
-//////////////
-//Debug
-///////////
-///////////////
-void UModularMovementComponent::ShowDebugInfo(AHUD* HUD, UCanvas* Canvas, const FDebugDisplayInfo& DisplayInfo,
-    float& YL, float& YPos)
-{
-	
-	if (Canvas && HUD)
-	{
-		static FName NAME_Vehicle = FName(TEXT("Vehicle"));
-		
-		if(GetPawnOwner())
-		{
-			if(APlayerController* PlayerController= Cast<APlayerController>(GetPawnOwner()->GetController()))
-			{
-				
-				if (PlayerController->IsLocalPlayerController()&& HUD->ShouldDisplayDebug(NAME_Vehicle))
-				{
-					
-					DrawDebug(Canvas, YL, YPos);
-				}
-			}
-			
-		}
-		
-		
-	}
-}
-
-void UModularMovementComponent::DrawDebug(UCanvas* Canvas, float& YL, float& YPos)
-{
-	UFont* RenderFont = GEngine->GetLargeFont();
-	float X, Y;
-	Canvas->GetCenter(X, Y);
-	const float YLine = Y * 2.f - 50.f;
-	const float Scaling = 2.f;
-	Canvas->DrawText(RenderFont, FString::Printf(TEXT("%d KMH"),static_cast<int>(VehicleState.ForwardSpeed * 0.036)), X-150, YLine, Scaling, Scaling);
-	Canvas->DrawText(RenderFont, FString::Printf(TEXT("[%d]"), static_cast<int>(VehicleState.CurrentGear)), X, YLine, Scaling, Scaling);
-	Canvas->DrawText(RenderFont, FString::Printf(TEXT("%d RPM"),static_cast<int>(VehicleState.CurrentRpm)), X+50, YLine, Scaling, Scaling);
-	const FVector2D DialPos(X+10, YLine-40);
-	const	float DialRadius = 50;
-	DrawDial(Canvas, DialPos, DialRadius, VehicleState.CurrentRpmRatio, 1);
-	
-}
-
-
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-
-float UModularMovementComponent::CalcDialAngle(float CurrentValue, float MaxValue)
-{
-	return (CurrentValue / MaxValue) * 3.f / 2.f * PI - (PI * 0.25f);
-}
-
-void UModularMovementComponent::DrawDial(UCanvas* Canvas, FVector2D Pos, float Radius, float CurrentValue, float MaxValue)
-{
-	float Angle = CalcDialAngle(CurrentValue, MaxValue);
-	FVector2D PtEnd(Pos.X - FMath::Cos(Angle) * Radius, Pos.Y - FMath::Sin(Angle) * Radius);
-	DrawLine2D(Canvas, Pos, PtEnd, FColor::White, 3.f);
-
-	for (float I = 0; I < MaxValue; I += 1000.0f)
-	{
-		Angle = CalcDialAngle(I, MaxValue);
-		PtEnd.Set(-FMath::Cos(Angle) * Radius, -FMath::Sin(Angle) * Radius);
-		FVector2D PtStart = PtEnd * 0.8f;
-		DrawLine2D(Canvas, Pos + PtStart, Pos + PtEnd, FColor::White, 2.f);
-	}
-
-	// the last checkmark
-	Angle = CalcDialAngle(MaxValue, MaxValue);
-	PtEnd.Set(-FMath::Cos(Angle) * Radius, -FMath::Sin(Angle) * Radius);
-	const FVector2D PtStart = PtEnd * 0.8f;
-	DrawLine2D(Canvas, Pos+PtStart, Pos+PtEnd, FColor::Red, 2.f);
-
-}
-
-
-void UModularMovementComponent::DrawLine2D(UCanvas* Canvas, const FVector2D& StartPos, const FVector2D& EndPos, FColor Color, float Thickness)
-{
-	if (Canvas)
-	{
-		FCanvasLineItem LineItem(StartPos, EndPos);
-		LineItem.SetColor(Color);
-		LineItem.LineThickness = Thickness;
-		Canvas->DrawItem(LineItem);
-	}
-}
-
-
-
-
-#endif
-
-
-
-
 #undef LOCTEXT_NAMESPACE

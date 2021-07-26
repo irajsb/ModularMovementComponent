@@ -59,6 +59,12 @@ public:
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static float GetForwardSpeedCMs(UModularMovementComponent* MovementComponent);
 
+
+	//Wheels
+	//
+	//
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement",meta=(KeyWords="Wheel,Num,Ground"))
+	static int GetWheelsTouchingGround(UModularMovementComponent* MovementComponent);
 	//not only for BP but we also store common functions here
 	static float CalculateSuspensionRotationUsingPivot(UModularWheel* Wheel);
 	UFUNCTION(BlueprintCallable, Category="Collision", meta=(bIgnoreSelf="true", WorldContext="WorldContextObject", AutoCreateRefTerm="ActorsToIgnore", DisplayName = "CapsuleTraceByChannel", AdvancedDisplay="TraceColor,TraceHitColor,DrawTime", Keywords="sweep"))

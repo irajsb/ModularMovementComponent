@@ -157,20 +157,6 @@ class MODULARMOVEMENT_API UModularVehicleData : public UDataAsset
 	// The drag coefficient is a dimensionless quantity that is used to quantify the drag or resistance of an object in a fluid environment, such as air or water.
 	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
 	float AirDragCoefficient=0.3;
-	
-
-
-
-	UPROPERTY(EditAnywhere, Category=Debug)
-	bool ShowGearboxDebug;
-	UPROPERTY(EditAnywhere, Category=Debug)
-	bool ShowInputProcessingDebug;
-	UPROPERTY(EditAnywhere, Category=Debug)
-	bool AIDebug;
-
-
-
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Network)
 	TEnumAsByte<EVehicleNetworkMode> NetworkMode;
 	

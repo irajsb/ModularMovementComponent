@@ -7,9 +7,6 @@
 
 #include "GameFramework/PawnMovementComponent.h"
 #include "ModularVehicleData.h"
-#include"ModularVehicleWheelData.h"
-
-
 #include "ModularMovementComponent.generated.h"
 
 
@@ -29,7 +26,7 @@ struct FModularVehicleDebugParams
 
 
 UENUM()
-enum EAIVehicleState {/*target is in front*/Normal,/*target is in back*/TurningAround  };
+enum EAIVehicleState {/*target is in front*/Neutral,/*target is in back*/TurningAround  };
 
 USTRUCT()
 struct FRepCosmeticData
@@ -176,9 +173,11 @@ public:
 
 	void SetTargetGear(int32 GearNum, bool bImmediate);
 	bool AllowedToChangeGear();
-	//Get Number of wheels(some components are allowed to have more than one wheel that's why we just dont count components
-	UFUNCTION(BlueprintCallable)
-	int GetNumberOfWheels();
+	//Get Number of wheels
+	UFUNCTION(BlueprintCallable,BlueprintPure)
+	int GetNumberOfWheels() const;
+	UFUNCTION(BlueprintCallable,BlueprintPure)
+	int GetNumberOfDriveWheelsTouchingGround() const;
 	//Get Gear info for a certain index
 	FModularGearInfo GetGearInfo(int Index) const;
 	//We setup wheels here
@@ -250,18 +249,11 @@ public:
 	FOnGearChange OnGearChange;
 	//debug
 
-	void ShowDebugInfo(class AHUD* HUD, class UCanvas* Canvas, const class FDebugDisplayInfo& DisplayInfo, float& YL, float& YPos);
-	/** Draw 2D debug text graphs on UI for the wheels, suspension and other systems */
-	virtual void DrawDebug(UCanvas* Canvas, float& YL, float& YPos);
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	static float CalcDialAngle(float CurrentValue, float MaxValue);
-	static void DrawDial(UCanvas* Canvas, FVector2D Pos, float Radius, float CurrentValue, float MaxValue);
-	// draw 2D debug line to UI canvas
-	static void DrawLine2D(UCanvas* Canvas, const FVector2D& StartPos, const FVector2D& EndPos, FColor Color, float Thickness = 1.f);
+
 	
 	
 	
-#endif
+
 
 	
 	

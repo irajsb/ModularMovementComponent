@@ -56,6 +56,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* 
 	//logic
 	TArray<AActor*> ActorsToIgnore;
 	WheelState.WheelLoad=FVector::ZeroVector;
+	
 	ActorsToIgnore.Add(GetOwner());
 	const FTransform MeshTransform=ModularMovementComponent->GetMesh()->GetComponentTransform();
 	const FVector ComponentLocation=MeshTransform.TransformPosition(WheelState.InitialLocalLocation+WheelState.WheelSetup->TraceStartOffset) ;
@@ -73,7 +74,8 @@ void UModularWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* 
 
 	bool Debug=false;
 #if ! UE_BUILD_SHIPPING
-	Debug=WheelState.WheelSetup->ShowSuspensionDebug;
+	//TODO
+	Debug=false;
 #endif
 	
 		UKismetSystemLibrary::SphereTraceMulti(GetWorld(),ComponentLocation,TraceEnd,WheelState.WheelSetup->WheelRadius,ModularMovementComponent->GetSetup()->SuspensionTraceTypeQuery,true,ActorsToIgnore,Debug? EDrawDebugTrace::ForOneFrame:EDrawDebugTrace::None,Hits,true);
@@ -122,7 +124,6 @@ void UModularWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* 
 		
 		DampingCorrection=-1*(((SuspensionDiff)*GetWheelSetup()->DampingRebound))/DeltaTime;
 	}
-	UE_LOG(LogTemp,Log,TEXT(" Susp Diff %f Damp %f "),SuspensionDiff, DampingCorrection);
 	if(TraceResult.bBlockingHit&&ModularMovementComponent->ShouldProcessPhysics())
 	{
 			const float AngleCorrection=(	FVector::DotProduct(TraceResult.ImpactNormal,	(TraceResult.TraceStart-TraceResult.TraceEnd).GetUnsafeNormal()));
@@ -136,28 +137,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* 
 	WheelState.HitResult=TraceResult;
 
 	
-	//logic
-	//Debug
-	#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-
-	if(WheelState.WheelSetup->ShowSuspensionDebug)
-	{
-
-		const FVector Force= FVector::UpVector*Stiffness;
-		const FVector Damp= FVector::UpVector*DampingCorrection;
-		
-		DrawDebugSphere(GetWorld(),TraceResult.ImpactPoint,10,100,FColor::Red);
-		DrawDebugLine(GetWorld(),TraceResult.TraceStart+50,(TraceResult.TraceStart+50)+Damp*0.0003,FColor::Green,false,-1,0,10);
-		 FRotator WheelRot=	UKismetMathLibrary::ComposeRotators(GetForwardVector().Rotation(),FRotator(0,0,0));	
-		DrawDebugLine(GetWorld(),TraceResult.TraceStart,TraceResult.TraceStart+Force*0.0003,FColor::Red,false,-1,0,5);
-		FVector WheelLocation=(TraceResult.bBlockingHit?TraceResult.ImpactPoint+(FVector(0,0,WheelState.WheelSetup->WheelRadius)):TraceResult.TraceEnd);
-		DrawDebugCylinder(GetWorld(),WheelLocation+(UKismetMathLibrary::GetRightVector(WheelRot)*-1* WheelState.WheelSetup->WheelWidth/2),WheelLocation+(UKismetMathLibrary::GetRightVector(WheelRot)* WheelState.WheelSetup->WheelWidth/2),WheelState.WheelSetup->WheelRadius,20,TraceResult.bBlockingHit? FColor::Blue:FColor::Red,0,-1,2,0);
 	
-
-	}
-
-
-	#endif
 
 }
 
@@ -173,8 +153,9 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	const FVector  LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity);
 	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
 	WheelState.SlipAngle = FMath::Atan2(GroundVelocityVector.Y, GroundVelocityVector.X);
+	WheelState.WheelStatus=Normal;
 	FVector FinalForceVector=FVector::ZeroVector;
-
+	
 	//TODO :: Multiplier 
 	const float RollingResistance=-1*ModularMovementComponent->RollingResistanceConstant*GroundVelocityVector.X/100.0f;//CM/S to M/s 
 
@@ -183,10 +164,50 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	bool Braking= FMath::Abs(WheelState.DriveTorque) <FMath::Abs(WheelState.BrakeTorque);
 
 
+	FinalForceVector.X=WheelState.DriveTorque +RollingResistance;
 
+	//TODO more accurate weight distro 
+	const float MassPerWheel=(ModularMovementComponent-> GetMesh()->GetMass()/ModularMovementComponent->GetNumberOfWheels());
+	const float MaxFriction= MassPerWheel*WheelState.WheelSetup->TireFrictionCoefficient*GWorld->GetGravityZ()/-100.f/*Unreal Force TO SI*/;
+	const float SILongitudinalVelocity=GroundVelocityVector.X/100.0f;
+	const float SlipRatio= (WheelState.Omega*WheelState.WheelSetup->WheelRadius/100.f/*CmToM*/-SILongitudinalVelocity )/FMath::Abs(SILongitudinalVelocity);
+	const float ForceRequiredToBringToStop =FMath::Abs( MassPerWheel * WheelState.WheelSetup->TireFrictionCoefficient* (GroundVelocityVector.X)/100 / DeltaTime);
+
+	if(Braking)
+	{
+		
+		FinalForceVector.X=WheelState.BrakeTorque*-1* FMath::Sign( GroundVelocityVector.X);
+		FinalForceVector.X=FMath::Clamp(FinalForceVector.X,-ForceRequiredToBringToStop,ForceRequiredToBringToStop);
+		if(FMath::Abs(FinalForceVector.X)>MaxFriction)
+		{
+		WheelState.WheelStatus=Locked;
+		
+		}
+		
+	}
 	
-	WheelState.Omega=GroundVelocityVector.X/WheelState.WheelSetup->WheelRadius;
-	UE_LOG(LogTemp,Log,TEXT("Speed %f  radial %f"),GroundVelocityVector.X/100,WheelState.Omega );
+
+
+
+
+	if(!Braking &&FMath::Abs(FinalForceVector.X)>MaxFriction)
+	{
+		WheelState.WheelStatus=Spinning;
+		WheelState.Omega= ModularMovementComponent->VehicleState.CurrentRpm/60*2*PI*ModularMovementComponent->GetGearInfo(ModularMovementComponent->VehicleState.CurrentGear).GearRatio*ModularMovementComponent->VehicleState.VehicleData->DifferentialRatio;
+		
+	}
+	
+
+	if(WheelState.WheelStatus==EWheelStatus::Normal)
+	{
+		WheelState.Omega=GroundVelocityVector.X/WheelState.WheelSetup->WheelRadius;
+	}else if (WheelState.WheelStatus==EWheelStatus::Locked)
+	{
+		WheelState.Omega=0;
+	}
+		
+
+
 	//Radian speed is per second * Delta Time to calculate speed in this frame 
 	WheelState.AngularPosition += WheelState.Omega *DeltaTime;
 
@@ -198,19 +219,28 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	{
 		WheelState.AngularPosition += PI * 2.f;
 	}
+
+	//
+	float SlipAngleDegrees=FMath::Abs(FMath::RadiansToDegrees( WheelState.SlipAngle));
+	if(SlipAngleDegrees>90)
+		SlipAngleDegrees=180-SlipAngleDegrees;
+	FinalForceVector.Y=WheelState.WheelSetup->SlipAngle.GetRichCurve()->Eval(SlipAngleDegrees)*WheelState.WheelSetup->GraphMultiplier;
+		if (FinalForceVector.Y > FMath::Abs(ForceRequiredToBringToStop))
+    			{
+    				FinalForceVector.Y = FMath::Abs(ForceRequiredToBringToStop);
+    			}
+    			if (GroundVelocityVector.Y > 0.0f)
+    			{
+    				FinalForceVector.Y = -FinalForceVector.Y;
+    			}
+
 	
 
-
-
-
-
-
-
-	FinalForceVector.X=WheelState.DriveTorque +RollingResistance;
+	FinalForceVector.X=FMath::Clamp(FinalForceVector.X,-MaxFriction,MaxFriction);
+	FinalForceVector=SIForceToUnrealForce(FinalForceVector);
 	
-
-
-FinalForceVector=SIForceToUnrealForce(FinalForceVector);
+	
+	//Apply Forces to bodies 
 	if(	ModularMovementComponent-> ShouldProcessPhysics())
 	{
 		FVector FrictionForceLocal = FinalForceVector;
@@ -284,10 +314,7 @@ void UModularWheel::UpdateSteering(float DeltaTime, UModularMovementComponent* M
 					WheelState.TorqueTransferFactor=ModularMovementComponent->VehicleState.TrackLeft.TorqueTransfer;
 					
 				}OutSteeringAngle=0;
-				if(ModularMovementComponent-> GetSetup()->ShowInputProcessingDebug)
-				{
-					UE_LOG(LogModularVehicle,Warning,TEXT("Tank input Left %f Right %f"),ModularMovementComponent->VehicleState.TrackLeft.TorqueTransfer,ModularMovementComponent->VehicleState.TrackRight.TorqueTransfer);
-				}
+				
 				}
 			break;
 
