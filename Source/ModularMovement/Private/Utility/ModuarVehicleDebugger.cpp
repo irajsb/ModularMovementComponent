@@ -5,7 +5,9 @@
 #include "Engine.h"
 #include "ModularMovement.h"
 #include "ModularMovementComponent.h"
+#include "ModularVehicleWheelData.h"
 #include "UserWidget.h"
+#include "ModularWheel.h"
 #include "VehicleDebugWidget.h"
 #include "GameFramework/Pawn.h"
 
@@ -26,8 +28,12 @@ void UModuarVehicleDebugger::BeginPlay()
 	Super::BeginPlay();
 
 	// ...
-	MovementComponent=Cast<UModularMovementComponent>(Cast<APawn>(GetOwner())->GetMovementComponent());
-	if(Cast<APawn>(GetOwner())->GetController()->IsLocalPlayerController())
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	
+
+	MovementComponent=Cast<UModularMovementComponent>(OwnerPawn->GetMovementComponent());
+	const AController* Controller = OwnerPawn->GetController();
+	if(Controller &&Controller->IsLocalPlayerController())
 	{
 		APlayerController* PC= Cast<APlayerController>(	Cast<APawn>(GetOwner())->GetController());
 	//	ConstructorHelpers::FClassFinder<UVehicleDebugWidget> ClassFinder(TEXT("WidgetBlueprint'/ModularMovement/DebugMain.DebugMain'"));
@@ -56,6 +62,27 @@ void UModuarVehicleDebugger::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if(MovementComponent)
 	{
+		if(!MovementComponent->AllowedToChangeGear())
+		{
+			for(UModularWheel* Component: MovementComponent->Components)
+			{
+		
+				if(Component->GetWheelState()->WheelStatus==Spinning)
+				{
+					GearBoxChangeGearAllowedStatus=TEXT("Wheel Is Spinning Cannot Shift");
+				}else
+				{
+					if(Component->GetWheelState()->WheelStatus==Locked)
+					{
+						GearBoxChangeGearAllowedStatus=TEXT("Wheel Is Locked Cannot Shift");
+					}
+				}
+	
+			}
+		}else
+		{
+			GearBoxChangeGearAllowedStatus=TEXT("Can Change Gear");
+		}
 
 
 		

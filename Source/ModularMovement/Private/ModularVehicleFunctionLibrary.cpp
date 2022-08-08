@@ -25,6 +25,16 @@ int UModularVehicleFunctionLibrary::GetCurrentGear(UModularMovementComponent* Mo
 	return 	MovementComponent->VehicleState.CurrentGear;
 }
 
+int UModularVehicleFunctionLibrary::GetTargetGear(UModularMovementComponent* MovementComponent)
+{
+	return  MovementComponent->VehicleState.TargetGear;
+}
+
+float UModularVehicleFunctionLibrary::GetCurrentGearTimer(UModularMovementComponent* MovementComponent)
+{
+	return MovementComponent->VehicleState.CurrentGearChangeTime;
+}
+
 int UModularVehicleFunctionLibrary::GetIdleGear(UModularMovementComponent* MovementComponent)
 {
 	return  MovementComponent->VehicleState.IdleGear;
@@ -32,14 +42,18 @@ int UModularVehicleFunctionLibrary::GetIdleGear(UModularMovementComponent* Movem
 
 float UModularVehicleFunctionLibrary::GetCurrentGearRatio(UModularMovementComponent* MovementComponent)
 {
-return	MovementComponent->VehicleState.VehicleData->Gears[MovementComponent->VehicleState.CurrentGear].GearRatio;
+if(!MovementComponent||!MovementComponent->VehicleState.VehicleData)
+{
+	return 0.f;
+}
+return	MovementComponent->VehicleState.VehicleData->GetGears()[MovementComponent->VehicleState.CurrentGear].GearRatio;
 }
 
 float UModularVehicleFunctionLibrary::GetGearRatio(UModularMovementComponent* MovementComponent, int Index,bool& ValidIndex)
 {
-	ValidIndex=MovementComponent->VehicleState.VehicleData->Gears.IsValidIndex(Index);
+	ValidIndex=MovementComponent->VehicleState.VehicleData->GetGears().IsValidIndex(Index);
 	if(ValidIndex)
-	return	MovementComponent->VehicleState.VehicleData->Gears[Index].GearRatio;
+	return	MovementComponent->VehicleState.VehicleData->GetGears()[Index].GearRatio;
 	return 0.0f;
 }
 
@@ -209,4 +223,11 @@ void UModularVehicleFunctionLibrary::GetDebugData(UModularWheel* Wheel, float& L
 		LongitudinalFrictionRatio= Wheel->GetWheelState()->LongitudinalFrictionRatio;
 		LateralFrictionRatio= Wheel->GetWheelState()->LateralFrictionRatio;
 	}
+	
 }
+
+void UModularVehicleFunctionLibrary::DrawDebugSphereWithDepth(UObject * Context,FVector Location, float Size, int Depth)
+{
+	DrawDebugSphere(Context->GetWorld(), Location, Size,20 , FColor::White, false, -1.0f, Depth, 1.0f);
+}
+

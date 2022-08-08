@@ -31,6 +31,10 @@ public:
     static  float GetEngineRpmRatio(UModularMovementComponent* MovementComponent);
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
     static  int GetCurrentGear(UModularMovementComponent* MovementComponent);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static  int GetTargetGear(UModularMovementComponent* MovementComponent);
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static  float GetCurrentGearTimer(UModularMovementComponent* MovementComponent);
     UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
     static  int GetIdleGear(UModularMovementComponent* MovementComponent);
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
@@ -77,4 +81,8 @@ public:
 	UFUNCTION(BlueprintCallable,BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
 	static void GetDebugData(UModularWheel* Wheel,float & LateralFrictionRatio,float & LongitudinalFrictionRatio);
 
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static void DrawDebugSphereWithDepth(UObject * Context,FVector Location , float Size, int Depth);
+
+	
 };

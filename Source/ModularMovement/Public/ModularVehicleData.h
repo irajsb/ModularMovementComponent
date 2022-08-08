@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "BaseVehicleData.h"
 #include "Engine.h"
 #include "Engine/DataAsset.h"
 #include "ModularVehicleData.generated.h"
@@ -10,45 +11,9 @@
  * 
  */
  
-UENUM(BlueprintType)
-enum  EModularSteerType 
-{
-	SingleAngle,
-    AngleRatio,
-    Tank,
-};
 
-UENUM(BlueprintType)
-enum EVehicleNetworkMode
-{	ClientPredictive,
-	ServerAuthoritative,
-	ClientAuthoritative,
-	 
-};
- USTRUCT(BlueprintType)
- struct FModularGearInfo
- {
- 	GENERATED_USTRUCT_BODY()
- 	//This Gear's Ratio
- 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
- 	float GearRatio;
- 	/** Value of engineRevs/maxEngineRevs that is low enough to gear down */
- 	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0", UIMin = "0.0", ClampMax = "1.0", UIMax = "1.0"))
- 	float DownRatio;
- 
- 	/** Value of engineRevs/maxEngineRevs that is high enough to gear up */
- 	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0", UIMin = "0.0", ClampMax = "1.0", UIMax = "1.0"))
- 	float UpRatio;
- 	FModularGearInfo():GearRatio(1.0f),DownRatio(0.1),UpRatio(1.f)
- 	{
- 		
- 	};
- 	FModularGearInfo(float Ratio):GearRatio(Ratio),DownRatio(0.1),UpRatio(1.f)
- 	{
- 	}
- };
 UCLASS()
-class MODULARMOVEMENT_API UModularVehicleData : public UDataAsset
+class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 {
 	GENERATED_BODY()
 	public:
@@ -141,10 +106,10 @@ class MODULARMOVEMENT_API UModularVehicleData : public UDataAsset
 	float FullThrottleSpeed;
 	//avoidance trace length cm
 	UPROPERTY(EditAnywhere, Category=AI)
-	float TraceLength;
+	float AITraceLength;
 	//how much should we increase trace len by speed (0.1 means for speed of 100KM/h we should trace 10M in front )trace len will not be lower than TraceLength property 
 	UPROPERTY(EditAnywhere, Category=AI)
-	float TraceSpeedMultiplier;
+	float AITraceSpeedMultiplier;
 
 
 
@@ -161,5 +126,41 @@ class MODULARMOVEMENT_API UModularVehicleData : public UDataAsset
 	TEnumAsByte<EVehicleNetworkMode> NetworkMode;
 	
 
-
+//Getter Functions
+	virtual float GetIdleRPM() const override;
+	virtual float GetMaxRPM() const override;
+	virtual bool ShouldZeroRpmWhenShifting() const override;
+	virtual float GetTorqueForRPM(float RPM) const override;
+	//Trans
+	virtual TArray<FModularGearInfo> GetGears() const override;
+	virtual float GetGearChangeTime() const override;
+	virtual float GetDifferentialRatio() const override;
+	virtual float GetTransmissionEfficiency() const override;
+	//misc
+	virtual float GetAirDragConstant() const override;
+	virtual bool ShouldScaleDriveTorqueToNumberOfWheels() const override;
+	virtual bool ShouldReverseAsBrake() const override;
+	virtual float GetStopThreshold() const override;
+	virtual float GetWrongDirectionThreshold() override;
+	virtual TEnumAsByte<ETraceTypeQuery> GetSuspensionTraceTypeQuery() const override;
+	virtual float GetReverseThreshold() const override;
+	virtual float GetIdleBrakeInput() const override;
+	//Steer
+	virtual float GetSteerSpeedScaleForSpeed(float Speed)  override;
+	virtual EModularSteerType GetSteerType() const override;
+	virtual float GetSteerInputRise() const override;
+	virtual float GetSteerInputFall() const override;
+	virtual float GetSteeringAnimationSpeed() const override;
+	virtual EVehicleNetworkMode GetNetworkMode() const override;
+	//AI
+	virtual float GetAITraceLength() const override;
+	virtual float GetAITraceSpeedMultiplier() const override;
+	virtual float GetNearGoalDistance() override;
+	virtual float GetDesireSpeedNearGoal() const override;
+	virtual float GetDesireSpeedNormal() const override;
+	virtual float GetDesireSpeedTurning() const override;
+	virtual float GetDesireSpeedTurningAround() const override;
+	virtual float GetFullThrottleSpeed() const override;
+	virtual float GetAIMaxSteerMultiplier() const override;
+	virtual float GetTurnThreshold() const override;
 };

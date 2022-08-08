@@ -28,10 +28,21 @@ class MODULARMOVEMENT_API UVehicleSpringArm : public USpringArmComponent
 	UPROPERTY(EditAnywhere)
 	bool IgnorePitch=true;
 
+	UPROPERTY(EditAnywhere)
+	float MinArmLen=450;
+	UPROPERTY(EditAnywhere)
+	float MaxArmLen=550;
+	UPROPERTY(EditAnywhere)
+	float MaxAccel=10;
+	UPROPERTY(EditAnywhere)
+	float MinAccel=-10;
+	UPROPERTY(EditAnywhere)
+	float ArmLenAnimSpeed=100;
 	//Adds a cooldown in seconds  for when we need to not auto update camera to velocity 
 	UFUNCTION(BlueprintCallable)
 	void SetCooldown(float In);
 
 	private:
 	float CoolDown;
+	FVector PreviousVelocity;
 };

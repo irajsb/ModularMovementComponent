@@ -41,6 +41,7 @@ public:
 
 	 virtual void UpdateWheelState(FWheelState In) ;
 	virtual FWheelState* GetWheelState() ;
+	UFUNCTION(BlueprintCallable)
 	UModularVehicleWheelData* GetWheelSetup() const;
 
 	
@@ -66,10 +67,21 @@ public:
 	 float GetWheelCompressionValue();
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	 float GetWheelRPM();
-
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	bool IsWheelTouchingGround();
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	FVector GetWheelCenterLocation();
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	float GetDampingForce();
 
 	//Debug
 
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	 void AddDebugWidgetToWheel(TSubclassOf<UVehicleDebugWidget> Widget);
+	UFUNCTION(BlueprintCallable)
+	void ChangeTraceDebugVisbility(bool Enable);
+	private:
+	bool Debug=false;
+
+	float SlipRatio;
+	float SlipAngle;
+	
 };

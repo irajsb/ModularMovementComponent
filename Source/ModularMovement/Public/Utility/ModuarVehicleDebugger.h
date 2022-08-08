@@ -2,15 +2,19 @@
 
 #pragma once
 
+
 #include "CoreMinimal.h"
 
 #include "SlateTypes.h"
 #include "SlateWidgetStyleAsset.h"
 #include "Components/ActorComponent.h"
+
 #include "ModuarVehicleDebugger.generated.h"
 
 class UButtonWidgetStyle;
 class UModularMovementComponent;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGearboxDebugUpdate,int,Type,FString,Message);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FNotifyEngineStatus,float,EngineTorque,float,WheelTorque,float ,ThrottleInput);
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MODULARMOVEMENT_API UModuarVehicleDebugger : public UActorComponent
 {
@@ -31,6 +35,10 @@ public:
 	UPROPERTY(Transient)
 	UModularMovementComponent* MovementComponent;
 
-
-		
+	UPROPERTY(BlueprintReadOnly)
+	FString GearBoxChangeGearAllowedStatus;
+	UPROPERTY(BlueprintAssignable)
+	FOnGearboxDebugUpdate OnGearboxDebugUpdate;
+	UPROPERTY(BlueprintAssignable)
+	FNotifyEngineStatus NotifyEngineStatus;
 };

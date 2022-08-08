@@ -26,9 +26,170 @@ UModularVehicleData::UModularVehicleData()
 	DesireSpeedNearGoal=20;
 	NearGoalDistance=5000;
 	FullThrottleSpeed=40;
-	TraceLength=50;
-	TraceSpeedMultiplier=0.1;
+	AITraceLength=50;
+	AITraceSpeedMultiplier=0.1;
 	TurnThreshold=0.4;
 	DesireSpeedTurning=10;
 	AIMaxSteerMultiplier=1.2;
+}
+
+float UModularVehicleData::GetIdleRPM() const
+{
+	return  IdleRpm;
+}
+
+float UModularVehicleData::GetMaxRPM() const
+{
+	return MaxRpm;
+}
+
+bool UModularVehicleData::ShouldZeroRpmWhenShifting() const
+{
+	return  ZeroRpmWhenShifting;
+}
+
+float UModularVehicleData::GetTorqueForRPM(float RPM) const
+{
+	return EngineTorqueCurve.GetRichCurveConst()->Eval(RPM);
+}
+
+TArray<FModularGearInfo> UModularVehicleData::GetGears() const
+{
+	return Gears;
+}
+
+float UModularVehicleData::GetGearChangeTime() const
+{
+	return  GearChangeTime;
+}
+
+float UModularVehicleData::GetDifferentialRatio() const
+{
+	return DifferentialRatio;
+}
+
+float UModularVehicleData::GetTransmissionEfficiency() const
+{
+	return TransmissionEfficiency;
+}
+
+float UModularVehicleData::GetAirDragConstant() const
+{
+	return 0.5*AirDragCoefficient*VehicleFrontArea;
+}
+
+bool UModularVehicleData::ShouldScaleDriveTorqueToNumberOfWheels() const
+{
+	return  ScaleDriveTorqueToNumberOfWheels;
+}
+
+bool UModularVehicleData::ShouldReverseAsBrake() const
+{
+	return bReverseAsBrake;
+}
+
+float UModularVehicleData::GetStopThreshold() const
+{
+	return  StopThreshold;
+}
+
+float UModularVehicleData::GetWrongDirectionThreshold()
+{
+	return WrongDirectionThreshold;
+}
+
+TEnumAsByte<ETraceTypeQuery> UModularVehicleData::GetSuspensionTraceTypeQuery() const
+{
+	return SuspensionTraceTypeQuery;
+}
+
+float UModularVehicleData::GetReverseThreshold() const
+{
+	return  ReverseThreshold;
+}
+
+float UModularVehicleData::GetIdleBrakeInput() const
+{
+	return IdleBrakeInput;
+}
+
+float UModularVehicleData::GetSteerSpeedScaleForSpeed(float Speed) 
+{
+	return SteerCurve.GetRichCurve()->IsEmpty()?1:SteerCurve.GetRichCurve()->Eval(Speed);
+}
+
+EModularSteerType UModularVehicleData::GetSteerType() const
+{
+	return SteerType;
+}
+
+float UModularVehicleData::GetSteerInputRise() const
+{
+	return SteerInputRise;
+}
+
+float UModularVehicleData::GetSteerInputFall() const
+{
+	return SteerInputFall;
+}
+
+float UModularVehicleData::GetSteeringAnimationSpeed() const
+{
+	return SteeringAnimationSpeed;
+}
+
+EVehicleNetworkMode UModularVehicleData::GetNetworkMode() const
+{
+	return NetworkMode;
+}
+
+float UModularVehicleData::GetAITraceLength() const
+{
+	return AITraceLength;
+}
+
+float UModularVehicleData::GetAITraceSpeedMultiplier() const
+{
+	return AITraceSpeedMultiplier;
+}
+
+float UModularVehicleData::GetNearGoalDistance()
+{
+	return NearGoalDistance;
+}
+
+float UModularVehicleData::GetDesireSpeedNearGoal() const
+{
+	return DesireSpeedNearGoal;
+}
+
+float UModularVehicleData::GetDesireSpeedNormal() const
+{
+	return DesireSpeedNormal;
+}
+
+float UModularVehicleData::GetDesireSpeedTurning() const
+{
+	return  DesireSpeedTurning;
+}
+
+float UModularVehicleData::GetDesireSpeedTurningAround() const
+{
+	return DesireSpeedTurningAround;
+}
+
+float UModularVehicleData::GetFullThrottleSpeed() const
+{
+	return FullThrottleSpeed;
+}
+
+float UModularVehicleData::GetAIMaxSteerMultiplier() const
+{
+	return AIMaxSteerMultiplier;
+}
+
+float UModularVehicleData::GetTurnThreshold() const
+{
+	return TurnThreshold;
+	
 }

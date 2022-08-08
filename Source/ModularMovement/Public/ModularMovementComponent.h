@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "BaseVehicleData.h"
 #include "Engine.h"
 
 
@@ -12,6 +13,7 @@
 
 #define SIForceToUnrealForce(In) In*100.0f
 class UModularWheel;
+class UModuarVehicleDebugger;
 //Cosmetic delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange,int,CurrentGear,int,TargetGear,bool,Finished);
 
@@ -63,7 +65,7 @@ struct FVehicleState
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category= Setup)
-	UModularVehicleData* VehicleData;
+	UBaseVehicleData* VehicleData;
 
 	UPROPERTY(BlueprintReadWrite)
 	float CurrentRpm;
@@ -108,6 +110,10 @@ class MODULARMOVEMENT_API UModularMovementComponent : public UPawnMovementCompon
 	//Wheels
 	UPROPERTY()
 	TArray<UModularWheel*> Components;
+	public:
+	UFUNCTION(BlueprintCallable,BlueprintPure)
+	TArray<UModularWheel*> GetWheels();
+	
 	//Return Mesh
 	UMeshComponent* GetMesh()const;
 	private:
@@ -135,7 +141,8 @@ class MODULARMOVEMENT_API UModularMovementComponent : public UPawnMovementCompon
 public:
 
 
-	UModularVehicleData* GetSetup() const;
+	UFUNCTION(BlueprintCallable, BlueprintPure,Category = "Game|Components|ModularVehicleMovement")
+	FORCEINLINE UBaseVehicleData* GetSetup() const;
 	/*Set throttle Input
 	 *Range -1,1
 	 * No Need for replication
@@ -172,7 +179,10 @@ public:
 	//Engine
 
 	void SetTargetGear(int32 GearNum, bool bImmediate);
+	
 	bool AllowedToChangeGear();
+	
+	
 	//Get Number of wheels
 	UFUNCTION(BlueprintCallable,BlueprintPure)
 	int GetNumberOfWheels() const;
@@ -250,12 +260,12 @@ public:
 	//debug
 
 
-	
+	UPROPERTY()
+	UModuarVehicleDebugger* ModularVehicleDebugger;
 	
 	
 
 
-	
 	
 };
 

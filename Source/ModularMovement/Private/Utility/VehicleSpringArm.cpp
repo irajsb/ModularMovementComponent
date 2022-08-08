@@ -56,7 +56,26 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, ELevelTick TickType,
 		CoolDown-=DeltaTime;
 	}
 	
-	
+	//Arm Len
+	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+	{
+		UMeshComponent* Mesh=Cast<UMeshComponent>(GetOwner()->GetRootComponent());
+		if(Mesh)
+		{
+			const FVector Velocity= Mesh->GetPhysicsLinearVelocity();
+			const FVector SpeedDiff=	Velocity-PreviousVelocity;
+			
+			UE_LOG(LogTemp,Error,TEXT("Accel  %f"),UKismetMathLibrary::Dot_VectorVector(SpeedDiff,Mesh->GetForwardVector()) );
+
+
+
+			TargetArmLength=	UKismetMathLibrary::FInterpTo_Constant(TargetArmLength,	UKismetMathLibrary::MapRangeClamped(UKismetMathLibrary::Dot_VectorVector(SpeedDiff,Mesh->GetForwardVector()),MinAccel,MaxAccel,MinArmLen,MaxArmLen),DeltaTime,ArmLenAnimSpeed);
+
+			PreviousVelocity=Velocity;
+		}
+		
+	}
+		
 	
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
