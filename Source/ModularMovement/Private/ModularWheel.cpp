@@ -191,7 +191,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	}
 	
 
-	if(!Braking &&FMath::Abs(FinalForceVector.X)>MaxFriction)
+	/*if (!Braking && FMath::Abs(FinalForceVector.X)>MaxFriction)
 	{
 		UE_LOG(LogTemp,Log,TEXT("Drive force spin %f Max Friction %f"),FinalForceVector.X,MaxFriction)
 		FinalForceVector.X=MaxFriction*0.8;
@@ -203,7 +203,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		const float WheelRPM=ModularMovementComponent->GetSetup()->GetMaxRPM()/DriveRatio;
 		WheelState.Omega=(WheelRPM*2*PI)/60;
 		
-	}
+	}*/
 
 	if(WheelState.WheelStatus==EWheelStatus::Normal)
 	{
