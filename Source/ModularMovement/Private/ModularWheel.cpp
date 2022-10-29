@@ -113,7 +113,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* 
 	
 	
 	const float SuspensionDiff=(CurrentLen-WheelState.PreviousLen)*WheelState.WheelSetup->SuspensionLength/100;
-	WheelState.DampingForce=0;
+	
 	if(CurrentLen-WheelState.PreviousLen<0)
 	{
 		
@@ -128,7 +128,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime,UModularMovementComponent* 
 	{
 			const float AngleCorrection=(	FVector::DotProduct(TraceResult.ImpactNormal,	(TraceResult.TraceStart-TraceResult.TraceEnd).GetUnsafeNormal()));
 			WheelState.WheelLoad=((AngleCorrection*FVector::UpVector*(Stiffness+WheelState.DampingForce)));
-			ModularMovementComponent->GetMesh()->GetBodyInstance()->AddForceAtPosition(SIForceToUnrealForce(WheelState.WheelLoad),TraceResult.TraceStart,false );
+			ModularMovementComponent->GetMesh()->GetBodyInstance()->AddForceAtPosition(SIForceToUnrealForce(WheelState.WheelLoad),TraceResult.TraceStart,true );
 	}
 	
 
@@ -193,13 +193,22 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 
 	if(!Braking &&FMath::Abs(FinalForceVector.X)>MaxFriction)
 	{
-		//WheelState.WheelStatus=Spinning;
-	
+		UE_LOG(LogTemp,Log,TEXT("Drive force spin %f Max Friction %f"),FinalForceVector.X,MaxFriction)
+		FinalForceVector.X=MaxFriction*0.8;
+		//Match wheel speed to wheel speed at max rpm at current gear *Arcade method*
+		WheelState.WheelStatus=Spinning;
+		const float DriveRatio =ModularMovementComponent->GetGearInfo(ModularMovementComponent->VehicleState.CurrentGear).GearRatio*ModularMovementComponent->GetSetup()->GetDifferentialRatio();
+
+		
+		const float WheelRPM=ModularMovementComponent->GetSetup()->GetMaxRPM()/DriveRatio;
+		WheelState.Omega=(WheelRPM*2*PI)/60;
 		
 	}
 
 	if(WheelState.WheelStatus==EWheelStatus::Normal)
 	{
+		if(GetWheelSetup()->ApplyDriveForce)
+		UE_LOG(LogTemp,Log,TEXT("Wheel normal %f max friction %f"),FinalForceVector.X,MaxFriction);
 		WheelState.Omega=GroundVelocityVector.X/WheelState.WheelSetup->WheelRadius;
 	}else if (WheelState.WheelStatus==EWheelStatus::Locked)
 	{
@@ -251,7 +260,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		
 		
 	
-	ModularMovementComponent->	GetMesh()->GetBodyInstance()->AddForceAtPosition(FrictionForceVector,WheelState.HitResult.TraceStart,false);
+	ModularMovementComponent->	GetMesh()->GetBodyInstance()->AddForceAtPosition(FrictionForceVector,WheelState.HitResult.TraceStart,true);
 	}
 }
 
@@ -449,11 +458,12 @@ void UModularWheel::GetWheelAnimationData(FVector& Location,FRotator& Rotation,f
 		
 		
 		
-		const FTransform WheelTransform=GetWheelTransform();
-			
+		 FTransform WheelTransform=GetWheelTransform();
+		
 		//local
 		  FVector ContactPointPosition=		WheelTransform.InverseTransformPosition(SuspensionTraceLocation);
-		  ContactPointPosition=	ContactPointPosition=WheelTransform.GetRotation().RotateVector(ContactPointPosition);
+	
+	
 		
 
 	
@@ -464,8 +474,8 @@ void UModularWheel::GetWheelAnimationData(FVector& Location,FRotator& Rotation,f
 		FMath::SinCos(&Sin,&Cos,ContactPointAngle);
 		
 	
-	FVector	ResultPosition=FVector::ZeroVector;
-	ResultPosition.Z=ContactPointPosition.Z-((FMath::Abs(Sin))*WheelState.WheelSetup->WheelRadius/PI);
+		FVector	ResultPosition=FVector::ZeroVector;
+		ResultPosition.Z=ContactPointPosition.Z-((FMath::Abs(Sin))*WheelState.WheelSetup->WheelRadius/PI);
 	
 		
 	

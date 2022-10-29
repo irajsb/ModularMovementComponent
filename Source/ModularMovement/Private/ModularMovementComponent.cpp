@@ -160,7 +160,9 @@ void UModularMovementComponent::InitializeComponent()
 	{
 		GetMesh()->SetSimulatePhysics(false);
 	}
-	OnCalculateCustomPhysics.BindUObject(this,&UModularMovementComponent::VehicleTick);
+
+	//more advanced substepping is disabled for now since the result is already determinstic
+	//OnCalculateCustomPhysics.BindUObject(this,&UModularMovementComponent::VehicleTick);
 
 	//Calculate Constants
 	AirDragConstant=GetSetup()->GetAirDragConstant(); //0.5*GetSetup()->AirDragCoefficient*GetSetup()->VehicleFrontArea;
@@ -235,8 +237,10 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	
-	
+	VehicleTick(DeltaTime,nullptr);
+	return;
+
+	//more advanced substepping is disabled for now since the result is already deterministic with less than 1ms error 
 	if(!UPhysicsSettings::Get()->bSubstepping)
 	{
 		 VehicleTick(DeltaTime,nullptr);
@@ -404,7 +408,7 @@ void UModularMovementComponent::UpdateAirDrag() const
 {
 const FVector BodyVelocity=	GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity()/100.f;//CM/s To Meter/s
 const FVector DragForce= BodyVelocity*BodyVelocity.Size()*AirDragConstant*-1;
-GetMesh()->GetBodyInstance()->AddForceAtPosition(SIForceToUnrealForce(DragForce),GetMesh()->GetCenterOfMass());
+GetMesh()->GetBodyInstance()->AddForceAtPosition(SIForceToUnrealForce(DragForce),GetMesh()->GetCenterOfMass(),true);
 }
 
 void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)

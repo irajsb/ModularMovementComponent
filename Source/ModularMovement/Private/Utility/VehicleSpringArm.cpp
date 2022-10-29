@@ -65,7 +65,7 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, ELevelTick TickType,
 			const FVector Velocity= Mesh->GetPhysicsLinearVelocity();
 			const FVector SpeedDiff=	Velocity-PreviousVelocity;
 			
-			UE_LOG(LogTemp,Error,TEXT("Accel  %f"),UKismetMathLibrary::Dot_VectorVector(SpeedDiff,Mesh->GetForwardVector()) );
+		
 
 
 
