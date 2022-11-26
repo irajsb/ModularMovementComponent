@@ -128,10 +128,11 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		return;
 	}
 
-	//Get Speed relative to tire space
+	//Get Speed relative to tire space and gather data 
 	const FTransform WorldTransform = ModularMovementComponent->GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
 	const float SteerAngleDegrees = WheelState.SteerAngle;
 	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
+	const float WheelRadiusM=WheelState.WheelSetup->WheelRadius/100;
 	const FVector WorldMeshVelocity = ModularMovementComponent->GetMesh()->GetBodyInstance()->
 	                                                            GetUnrealWorldVelocityAtPoint(
 		                                                            WheelState.HitResult.TraceStart);
@@ -142,11 +143,12 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	WheelState.WheelStatus = Normal;
 	FVector FinalForceVector = FVector::ZeroVector;
 
+	
 	//TODO: Add engine braking
 	const float RollingResistance = -1 * ModularMovementComponent->RollingResistanceConstant * GroundVelocityVector.X /
 		100.0f; //CM/S to M/s 
 
-	WheelState.DriveTorque = WheelState.DriveTorque / (WheelState.WheelSetup->WheelRadius / 100);
+	
 
 	const bool Braking = FMath::Abs(WheelState.DriveTorque) < FMath::Abs(WheelState.BrakeTorque);
 
@@ -155,12 +157,42 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 
 	//TODO more accurate weight distro 
 	const float MassPerWheel = (ModularMovementComponent->GetMesh()->GetMass() / ModularMovementComponent->GetNumberOfWheels());
-	const float MaxFriction = MassPerWheel * WheelState.WheelSetup->TireFrictionCoefficient * GWorld->GetGravityZ() / -100.f/*Unreal Force TO SI*/;
+	
 	const float SILongitudinalVelocity = GroundVelocityVector.X / 100.0f;
 
-//SlipRatio
-	SlipRatio = (WheelState.Omega * WheelState.WheelSetup->WheelRadius / 100.f/*CmToM*/ - SILongitudinalVelocity) /
-		FMath::Abs(SILongitudinalVelocity);
+	
+	//Calculate SlipRatio
+
+	
+		//SlipRatio
+			bool IsWheelStopped=WheelState.AngularVelocity<SMALL_NUMBER;
+			float SpeedSign=IsWheelStopped?FMath::Sign((GroundVelocityVector.X)):FMath::Sign(WheelState.AngularVelocity);
+			const float WheelSpeed=WheelState.AngularVelocity*WheelState.WheelSetup->WheelRadius;
+			float MaxDenominator=10;
+			SlipRatio = (WheelSpeed - SILongitudinalVelocity)/(FMath::Max(MaxDenominator,FMath::Max(SILongitudinalVelocity,FMath::Abs(WheelSpeed))));
+			UE_LOG(LogTemp,Log,TEXT("Slip %f"),SlipRatio);
+
+			if(FMath::IsNaN(SlipRatio))
+			{
+			SlipRatio=0;
+			}
+
+	//Eval slip from curve
+	const float NormalizedSlipRatioForce=WheelState.WheelSetup->SlipRatio.GetRichCurve()->Eval(FMath::Abs(SlipRatio));
+	
+
+	//Accelerate wheel
+	const float TractionForce = WheelState.WheelSetup->TractionConstant*NormalizedSlipRatioForce*-1 * FMath::Sign(GroundVelocityVector.X);
+	const float TractionTorque = TractionForce * WheelRadiusM;
+	const float BrakeTorque=0.f;//FinalForceVector.X = WheelState.BrakeTorque * -1 * FMath::Sign(GroundVelocityVector.X);
+	const float TotalTorque =WheelState.DriveTorque +TractionTorque +BrakeTorque;
+	const float WheelInertia=(WheelState.WheelSetup->WheelWeight*(WheelRadiusM*WheelRadiusM)/2);
+	const float DeltaTimeInertia=DeltaTime*WheelInertia;
+	//WheelState.AngularVelocity=(WheelState.AngularVelocity+DeltaTimeInertia*(TotalTorque))/(1.0f + 1.f*DeltaTimeInertia);//1 is gamma todo replace
+	
+	
+	FinalForceVector.X= TotalTorque;
+	UE_LOG(LogTemp,Log,TEXT("AV %f TotalTorque %f , Velocity %s WheelInertia %f"),WheelState.AngularVelocity,TotalTorque,*WorldMeshVelocity.ToString(),WheelInertia);
 	const float ForceRequiredToBringToStop = FMath::Abs(
 		MassPerWheel * WheelState.WheelSetup->TireFrictionCoefficient * (GroundVelocityVector.X) / 100 / DeltaTime);
 
@@ -168,41 +200,17 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	{
 		FinalForceVector.X = WheelState.BrakeTorque * -1 * FMath::Sign(GroundVelocityVector.X);
 		FinalForceVector.X = FMath::Clamp(FinalForceVector.X, -ForceRequiredToBringToStop, ForceRequiredToBringToStop);
-		if (FMath::Abs(FinalForceVector.X) > MaxFriction)
-		{
-			WheelState.WheelStatus = Locked;
-		}
+	
 	}
 
 
-	/*if (!Braking && FMath::Abs(FinalForceVector.X)>MaxFriction)
-	{
-		UE_LOG(LogTemp,Log,TEXT("Drive force spin %f Max Friction %f"),FinalForceVector.X,MaxFriction)
-		FinalForceVector.X=MaxFriction*0.8;
-		//Match wheel speed to wheel speed at max rpm at current gear *Arcade method*
-		WheelState.WheelStatus=Spinning;
-		const float DriveRatio =ModularMovementComponent->GetGearInfo(ModularMovementComponent->VehicleState.CurrentGear).GearRatio*ModularMovementComponent->GetSetup()->GetDifferentialRatio();
 
-		
-		const float WheelRPM=ModularMovementComponent->GetSetup()->GetMaxRPM()/DriveRatio;
-		WheelState.Omega=(WheelRPM*2*PI)/60;
-		
-	}*/
-
-	if (WheelState.WheelStatus == Normal)
-	{
-		if (GetWheelSetup()->ApplyDriveForce)
-			UE_LOG(LogTemp, Log, TEXT("Wheel normal %f max friction %f"), FinalForceVector.X, MaxFriction);
-		WheelState.Omega = GroundVelocityVector.X / WheelState.WheelSetup->WheelRadius;
-	}
-	else if (WheelState.WheelStatus == Locked)
-	{
-		WheelState.Omega = 0;
-	}
 
 	//Radian speed is per second * Delta Time to calculate speed in this frame 
-	WheelState.AngularPosition += WheelState.Omega * DeltaTime;
-
+	WheelState.AngularPosition += WheelState.AngularVelocity * DeltaTime;
+	UE_LOG(LogTemp,Log,TEXT("Angular pos %f vel %f "),WheelState.AngularPosition,WheelState.AngularVelocity);
+	
+	/*
 	while (WheelState.AngularPosition >= PI * 2.f)
 	{
 		WheelState.AngularPosition -= PI * 2.f;
@@ -211,7 +219,9 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	{
 		WheelState.AngularPosition += PI * 2.f;
 	}
+	*/
 
+	
 	//
 	float SlipAngleDegrees = FMath::Abs(FMath::RadiansToDegrees(WheelState.SlipAngle));
 	if (SlipAngleDegrees > 90)
@@ -230,7 +240,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	}
 
 
-	FinalForceVector.X = FMath::Clamp(FinalForceVector.X, -MaxFriction, MaxFriction);
+	//TODO Clamp to max force
 	FinalForceVector = SIForceToUnrealForce(FinalForceVector);
 
 
@@ -352,7 +362,7 @@ float UModularWheel::GetFastestWheelOmegaSpeed()
 {
 	if (WheelState.WheelSetup->ApplyDriveForce)
 	{
-		return WheelState.Omega;
+		return WheelState.AngularVelocity;
 	}
 	return 0.0f;
 }
@@ -518,7 +528,7 @@ float UModularWheel::GetWheelCompressionValue()
 
 float UModularWheel::GetWheelRPM()
 {
-	return WheelState.Omega * 30.f / PI;
+	return WheelState.AngularVelocity * 30.f / PI;
 }
 
 bool UModularWheel::IsWheelTouchingGround()

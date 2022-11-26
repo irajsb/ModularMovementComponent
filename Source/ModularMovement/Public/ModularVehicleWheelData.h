@@ -34,6 +34,9 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelRadius=30;
+	//Wheel Weight needed for inertia . Heavier weights are harder to accelerate keep the value realistic 
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
+	float WheelWeight=75;
 	
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
@@ -93,6 +96,8 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Advanced)
 	FRuntimeFloatCurve SlipRatio;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Advanced)
+	float TractionConstant=5000;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Advanced)
 	float SlipGraphMultiplier=1;
@@ -127,8 +132,11 @@ struct FWheelState{
 	float Spin;
 
 	// [radians/sec] Wheel Rotation Angular Velocity
+
 	UPROPERTY()
-	float Omega;
+	float AngularVelocity=0.f;
+	UPROPERTY()
+	float AngularAcceleration=0.f;
 	UPROPERTY()
 	// [radians/sec] Wheel Rotation Angular Velocity
 	float AngularPosition;// [radians]
