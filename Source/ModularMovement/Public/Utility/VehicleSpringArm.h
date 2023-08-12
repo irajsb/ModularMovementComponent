@@ -203,13 +203,13 @@ public :
 	float MaxArmLenChange = 200;
 	//Min acceleration ( negative means  braking and shortens the arm len )
 	UPROPERTY(EditAnyWhere)
-	float MinAcceleration = -30;
+	float MinAcceleration = -1600;
 	//Max acceleration when arm reaches max len 
 	UPROPERTY(EditAnyWhere)
-	float MaxAcceleration = 20;
+	float MaxAcceleration = 1600;
 	// Smooth out arm movement 
 	UPROPERTY(EditAnyWhere)
-	float ArmLenInterpolationSpeed = 5;
+	float ArmLenInterpolationSpeed = 2;
 	//Min time airborne to play camera shake 
 	UPROPERTY(EditAnyWhere)
 	float MinAirborneTimeForCameraShake = 0.5;

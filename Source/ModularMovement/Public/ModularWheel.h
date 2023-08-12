@@ -73,6 +73,11 @@ public:
 	FVector GetWheelCenterLocation();
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	float GetDampingForce();
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	float GetTireStress();
+
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	UBaseTireModel* GetTireModel();
 
 	//Debug
 
@@ -81,7 +86,9 @@ public:
 	private:
 	bool Debug=false;
 
-	float SlipRatio;
-	float SlipAngle;
+
+
+	Chaos::FRigidBodyHandle_Internal* GetInternalHandle(UPrimitiveComponent* Component, FName BoneName);
+	void AddForceAtPosition(UPrimitiveComponent* Component, FVector Position, FVector Force, FName BoneName);
 	
 };

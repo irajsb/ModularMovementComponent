@@ -31,6 +31,32 @@ UModularVehicleData::UModularVehicleData()
 	TurnThreshold=0.4;
 	DesireSpeedTurning=10;
 	AIMaxSteerMultiplier=1.2;
+	ScaleDriveTorqueToNumberOfWheels=true;
+
+
+
+	if(EngineTorqueCurve.GetRichCurve()->IsEmpty())
+	{
+		auto Curve=EngineTorqueCurve.GetRichCurve();
+		auto Key=Curve->AddKey(0,250);
+		Curve->SetKeyInterpMode(Key,ERichCurveInterpMode::RCIM_Cubic);
+		Key=Curve->AddKey(2000,350);
+		Curve->SetKeyInterpMode(Key,ERichCurveInterpMode::RCIM_Cubic);
+		Key=Curve->AddKey(5000,150);
+		Curve->SetKeyInterpMode(Key,ERichCurveInterpMode::RCIM_Cubic);
+		Key=Curve->AddKey(6000,0);
+		Curve->SetKeyInterpMode(Key,ERichCurveInterpMode::RCIM_Cubic);
+	
+		
+	}
+	if(SteerCurve.GetRichCurve()->IsEmpty())
+	{
+		auto Curve=SteerCurve.GetRichCurve();
+		auto Key=Curve->AddKey(0,1);
+		Curve->SetKeyInterpMode(Key,ERichCurveInterpMode::RCIM_Linear);
+		Key=Curve->AddKey(1,1);
+		Curve->SetKeyInterpMode(Key,ERichCurveInterpMode::RCIM_Linear);
+	}
 }
 
 float UModularVehicleData::GetIdleRPM() const

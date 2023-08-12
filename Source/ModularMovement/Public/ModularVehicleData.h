@@ -29,7 +29,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	float IdleRpm;
 	//Max rpm 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
-	float MaxRpm=7500;
+	float MaxRpm=6000;
 	// Normalized 0-1 how much of energy is wasted in transmission  1 =ideal full efficient ?
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Transmission, Meta=( UIMin="0", UIMax="1", ClampMin="0.0", ClampMax="1.0"))
 	float TransmissionEfficiency=1;
@@ -43,7 +43,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
     TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
 
-	//Wheel divide drive torque to number of wheels touching the ground useful for switching between AWD 4WD RWD 
+	//Wheel divide drive torque to number of wheels touching the ground should be on to simulate a differential 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	bool ScaleDriveTorqueToNumberOfWheels;
 

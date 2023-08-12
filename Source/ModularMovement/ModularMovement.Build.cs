@@ -25,7 +25,7 @@ public class ModularMovement : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core",
+				"Core", "Engine",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -37,7 +37,7 @@ public class ModularMovement : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"SlateCore","UMG", "Projects",/*"PhysicsCore"*/
+				"SlateCore","UMG", "Projects",	"Chaos",/*"PhysicsCore"*/
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

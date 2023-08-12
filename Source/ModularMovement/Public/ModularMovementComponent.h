@@ -119,7 +119,8 @@ class MODULARMOVEMENT_API UModularMovementComponent : public UPawnMovementCompon
 	private:
 
 	
-	
+	UPROPERTY(Transient)
+	float ThrottleInput;
 	UPROPERTY(Transient)
 	float RawBrakeInput;
 	// What the player has the steering set to. Range -1...1
@@ -136,11 +137,11 @@ class MODULARMOVEMENT_API UModularMovementComponent : public UPawnMovementCompon
 	UPROPERTY(Transient)
 	bool HandBrakeInput;
 
+
+public:
+//ToDO:
 	float AirDragConstant;
 	float RollingResistanceConstant;
-public:
-
-
 	UFUNCTION(BlueprintCallable, BlueprintPure,Category = "Game|Components|ModularVehicleMovement")
 	FORCEINLINE UBaseVehicleData* GetSetup() const;
 	/*Set throttle Input
@@ -175,7 +176,7 @@ public:
 
 	
 
-	float CalcThrottleInput();
+	float CalcThrottleInput(float DeltaTime);
 	//Engine
 
 	void SetTargetGear(int32 GearNum, bool bImmediate);
@@ -195,10 +196,14 @@ public:
 
 	void VehicleTick(float DeltaTime,FBodyInstance* BodyInstance);
 	
-	FCalculateCustomPhysics OnCalculateCustomPhysics;
+	void PreTick(FPhysScene_Chaos* Scene, float DeltaTime);
+	void PostTick(FPhysScene_Chaos* Scene, float DeltaTime);
+	void PhysicsCallBack( float DeltaTime);
+	class FModularAsyncCallBack* AsyncCallBack;
 	
 	//Main updates happen here
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void BeginPlay() override;
 	//Captures some basic info from wheels for feature processes 
 	void CaptureState(float DeltaTime);
 	//Update gearbox
@@ -210,6 +215,7 @@ public:
 	//Update each Wheel
 	void UpdateWheels(float DeltaTime,float WheelTorque);
 	//Determine vehicle state in AI Pawns
+	
 	EAIVehicleState DetermineAIState(float ForwardFactor,float DeltaTime);
 
 
@@ -268,4 +274,6 @@ public:
 
 	
 };
+
+
 

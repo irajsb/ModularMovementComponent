@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "BaseTireModel.h"
 #include "Engine.h"
 
 
@@ -34,21 +35,21 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelRadius=30;
-	//Wheel Weight needed for inertia . Heavier weights are harder to accelerate keep the value realistic 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	float WheelWeight=75;
+
 	
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelWidth=30;
-	
+
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
+	float WheelMass=14;
 	//Offset to apply to trace start
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	FVector TraceStartOffset;
 	
 	//Force to apply for suspension N/m 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	float SpringRate=75304;
+	float SpringRate=75000;
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	bool ApplyDriveForce;
@@ -59,15 +60,17 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	float DampingCompress=5000;
 	
-	//Mu of the tire 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
-	float TireFrictionCoefficient=1;
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	float BrakeTorque=500;
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	float HandBrakeTorque=0;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
+	bool ABS=true;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
+	bool TractionControl=false;
+	
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)
 	bool SteeringWheel;
@@ -86,23 +89,10 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	//Should we interpolate wheel location (0 to disable ) and whats the speed ?
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float AnimSpeed=0;
-
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Advanced)
-	FRuntimeFloatCurve SlipAngle;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Advanced)
-	float GraphMultiplier=1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Advanced)
-	FRuntimeFloatCurve SlipRatio;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Advanced)
-	float TractionConstant=5000;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Advanced)
-	float SlipGraphMultiplier=1;
-
-
+	UPROPERTY(Instanced,EditAnywhere,BlueprintReadOnly)
+	UBaseTireModel* TireModel;
 
 };
 
@@ -111,58 +101,66 @@ USTRUCT(BlueprintType)
 struct FWheelState{
 	GENERATED_BODY()
 	//Ranges from 0-1
-	UPROPERTY()
+	UPROPERTY(Transient)
 	float PreviousLen;
-	UPROPERTY()
-	float SteerAngle=0;
-	UPROPERTY()
+	UPROPERTY(Transient)
+	float SteerAngle=0.f;
+	UPROPERTY(Transient)
 	FHitResult HitResult;
-	UPROPERTY()
+	UPROPERTY(Transient)
 	bool bIsSlipping;
 	//SuspensionForce That was applied;
-	UPROPERTY()
+	UPROPERTY(Transient)
 	FVector WheelLoad;
  	
 	UPROPERTY(EditAnywhere)
 	UModularVehicleWheelData* WheelSetup;
+	UPROPERTY(Transient)
 	float DriveTorque;
-	UPROPERTY()
+	UPROPERTY(Transient)
 	float BrakeTorque;
-	UPROPERTY()
+	UPROPERTY(Transient)
+	bool IsHandBrakeTorque;
+	UPROPERTY(Transient)
 	float Spin;
+
+	
+	float TireStress;
 
 	// [radians/sec] Wheel Rotation Angular Velocity
 
-	UPROPERTY()
+	UPROPERTY(Transient)
 	float AngularVelocity=0.f;
-	UPROPERTY()
+	UPROPERTY(Transient)
 	float AngularAcceleration=0.f;
-	UPROPERTY()
+	UPROPERTY(Transient)
 	// [radians/sec] Wheel Rotation Angular Velocity
 	float AngularPosition;// [radians]
 	
 	// Angle between wheel forwards and velocity vector
-	UPROPERTY()
+	UPROPERTY(Transient)
 	float SlipAngle;
+	UPROPERTY(Transient)
+	float SlipRatio;
 	//Location of wheel relative to body
-	UPROPERTY()
+	UPROPERTY(Transient)
 	FVector InitialLocalLocation;
-	UPROPERTY()
+	UPROPERTY(Transient)
 	FRotator InitialLocalRotation;
-	UPROPERTY()
+	UPROPERTY(Transient)
 	float TorqueTransferFactor=1;
-	UPROPERTY()
+	UPROPERTY(Transient)
 	float SuspAngle;
 
 	
 	FVector PreviousLocation;
-	UPROPERTY()
+	UPROPERTY(Transient)
 	float CurrentPivotAngle;
-	UPROPERTY()
+	UPROPERTY(Transient)
 	float PreviousYaw;
 
 
-	UPROPERTY()
+	UPROPERTY(Transient)
 	float DampingForce;
 	TEnumAsByte<EWheelStatus> WheelStatus;
 
