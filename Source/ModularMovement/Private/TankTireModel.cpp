@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 
 #include "TankTireModel.h"
@@ -14,17 +14,21 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	const float TrackInput=Wheel->WheelState.InitialLocalLocation.Y>0.f?ModularMovementComponent->VehicleState.TrackRight.TorqueTransfer
 	:ModularMovementComponent->VehicleState.TrackLeft.TorqueTransfer;
 
+	const UPrimitiveComponent* Mesh=ModularMovementComponent->GetMesh();
+	if(Wheel->ParentBodyOverride)
+	{
+		Mesh=Wheel->ParentBodyOverride;
+	}
 	//Gather necessary data 
-	const FTransform WorldTransform = ModularMovementComponent->GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
+	const FTransform WorldTransform = Mesh->GetBodyInstance()->GetUnrealWorldTransform();
 	const float SteerAngleDegrees = Wheel->WheelState.SteerAngle;
 	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
-	const FVector WorldMeshVelocity = ModularMovementComponent->GetMesh()->GetBodyInstance()->
+	const FVector WorldMeshVelocity = Mesh->GetBodyInstance()->
 																GetUnrealWorldVelocityAtPoint(
 																	Wheel->WheelState.HitResult.TraceStart);
 	const FVector LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity);
-	UE_LOG(LogTemp,Log,TEXT("Wordl Mesh velocity %s"),*LocalWheelVelocity.ToString())
 	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
-	const float MassPerWheel = (ModularMovementComponent->GetMesh()->GetMass() / ModularMovementComponent->
+	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
 		GetNumberOfWheels());
 	const float WheelRadiusM =SprocketRadius / 100.f;
 
@@ -43,9 +47,7 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 		DeltaTime);
 
 
-	const float ForceRequiredToBringToStopLateral = FMath::Abs(
-	MassPerWheel *FrictionMultiplierLongitudinal * (GroundVelocityVector.Y) / 100 /
-	DeltaTime);
+
 	const float ReverseVelocitySign=-1.f * FMath::Sign(GroundVelocityVector.X);
 
 	// are we actually touching the ground
@@ -93,7 +95,8 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 		
 	
 		
-		FinalForceVector.Y = (MassPerWheel * -FrictionMultiplierLateral * GroundVelocityVector.Y/100.f);
+		FinalForceVector.Y = (MassPerWheel * -FrictionMultiplierLateral * LocalWheelVelocity.Y/100.f);
+		
 		FinalForceVector.Y=FMath::Clamp(FinalForceVector.Y,-LateralFrictionLimit,LateralFrictionLimit);
 		FinalForceVector.Y=FMath::Clamp(FinalForceVector.Y,-ForceRequiredToBringToStop,ForceRequiredToBringToStop);
 		
@@ -117,6 +120,22 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	//ignore in low speeds
 	const float LateralStress=GroundVelocityVector.Size()>500.f? Wheel->WheelState.SlipAngle:0;
 	Wheel->WheelState.TireStress=FMath::Clamp(FMath::Max(LongitudinalStress,LateralStress),0.f,1.f);
-	
+	const FVector TireForce = (FinalForceVector / Wheel->WheelState.WheelLoad.Size());
+	TireForceNormalized = FVector2f(TireForce.X, TireForce.Y);
 
+}
+
+FString UTankTireModel::GetTireDebugData(FVector2f& SlipData)
+{
+	
+	SlipData = TireForceNormalized;
+	FString Output = "SlipRatio: " + FString::SanitizeFloat(WheelOwner->WheelState.SlipRatio) + TEXT("\n");
+	Output += "SlipAngle: " + FString::SanitizeFloat(WheelOwner->WheelState.SlipAngle) + TEXT("\n");
+	//Add Drive torque
+	Output += "DriveTorque: " + FString::SanitizeFloat(WheelOwner->WheelState.DriveTorque) + TEXT("\n");
+	//Add normalized tire force
+	Output += "NetTorque: " + FString::SanitizeFloat(WheelOwner->WheelState.DriveTorque*WheelOwner->GetWheelSetup()->WheelRadius/100- TireForceNormalized.X*WheelOwner->WheelState.WheelLoad.Z);
+	// Draw Text at wheel location
+
+	return Output;
 }

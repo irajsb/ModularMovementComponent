@@ -1,8 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 #pragma once
 
 #include "CoreMinimal.h"
+
 
 #include "Engine/DataAsset.h"
 #include "BaseVehicleData.generated.h"
@@ -11,7 +12,7 @@ UENUM(BlueprintType)
 enum  EModularSteerType 
 {
 	SingleAngle,
-	AngleRatio,
+	Ackermann,
 	Tank,
 };
 
@@ -22,34 +23,13 @@ enum EVehicleNetworkMode
 	ClientAuthoritative,
 	 
 };
-USTRUCT(BlueprintType)
-struct FModularGearInfo
-{
-	GENERATED_USTRUCT_BODY()
-	//This Gear's Ratio
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	float GearRatio;
-	/** Value of engineRevs/maxEngineRevs that is low enough to gear down */
-	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0", UIMin = "0.0", ClampMax = "1.0", UIMax = "1.0"))
-	float DownRatio;
- 
-	/** Value of engineRevs/maxEngineRevs that is high enough to gear up */
-	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0", UIMin = "0.0", ClampMax = "1.0", UIMax = "1.0"))
-	float UpRatio;
-	FModularGearInfo():GearRatio(1.0f),DownRatio(0.1),UpRatio(1.f)
-	{
- 		
-	};
-	FModularGearInfo(float Ratio):GearRatio(Ratio),DownRatio(0.1),UpRatio(1.f)
-	{
-	}
-};
+
 
 /**
  Base class for an engine model
  */
-UCLASS(Abstract)
-class MODULARMOVEMENT_API UBaseVehicleData : public UDataAsset
+UCLASS(Abstract,Blueprintable)
+class MODULARMOVEMENT_API UBaseVehicleData : public UObject
 {
 	GENERATED_BODY()
 
@@ -62,78 +42,75 @@ public:
 
 
 	//engine
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetIdleRPM()const {return 0.f;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetMaxRPM()const {return 0.f;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual bool ShouldZeroRpmWhenShifting()const{return false;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetTorqueForRPM(float RPM)const {return 0.f;};
-	
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	virtual float GetEngineInertia()const {return 0.f;};
 	//Transmission
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
-	virtual  TArray<FModularGearInfo> GetGears() const{return TArray<FModularGearInfo>();};
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	virtual class UModularGearBox* GetGearBox(){return nullptr;}
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
-	virtual float GetGearChangeTime()const{return 0.f;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
-	virtual float GetDifferentialRatio()const {return 0.f;};
-
-	UFUNCTION(BlueprintCallable,BlueprintPure)
-	virtual float GetTransmissionEfficiency()const {return 0.f;};
 
 	
 
 	//Misc
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetAirDragConstant()const {return 0.f;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual bool ShouldScaleDriveTorqueToNumberOfWheels() const {return false;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	 virtual bool ShouldReverseAsBrake()const {return false;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetStopThreshold()const {return 0.f;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetWrongDirectionThreshold() {return 0.f;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual  TEnumAsByte<ETraceTypeQuery> GetSuspensionTraceTypeQuery()const{return  ETraceTypeQuery::TraceTypeQuery1;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetReverseThreshold()const{return 0.f;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetIdleBrakeInput()const{return 0.f;};
 
 	
 	//steer
 
 	 inline virtual float GetSteerSpeedScaleForSpeed(float Speed){return 0.f;};
-
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual EModularSteerType GetSteerType()const{return EModularSteerType::SingleAngle;};
 
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetSteerInputRise()const{return 0.f;};
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetSteerInputFall()const{return 0.f;};
-	UFUNCTION(BlueprintCallable,BlueprintPure)
-	virtual float GetSteeringAnimationSpeed()const{return 0.f;};
-
-
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	virtual  void GetAckermannValues(float & WheelBase,float & TrackWidth){}
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	virtual float GetCounterSteerMultiplier()const{return 3.f;};
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	virtual bool GetScaleTireFrictionWithSurfaceAngle(){return true;}
 
 	//NetWork
-	UFUNCTION(BlueprintCallable,BlueprintPure)
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	 virtual EVehicleNetworkMode GetNetworkMode()const{return EVehicleNetworkMode::ServerAuthoritative;}
 
 	//AI

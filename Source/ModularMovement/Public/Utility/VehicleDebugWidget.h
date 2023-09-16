@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 #pragma once
 
@@ -15,6 +15,6 @@ class MODULARMOVEMENT_API UVehicleDebugWidget : public UUserWidget
 	GENERATED_BODY()
 
 	public:
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly,Category=Debug)
 	USceneComponent* OwningWheel;
 };

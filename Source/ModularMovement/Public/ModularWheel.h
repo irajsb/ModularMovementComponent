@@ -1,17 +1,19 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 #pragma once
 
 #include "CoreMinimal.h"
 
 #include "ModularVehicleWheelData.h"
+#include "TrackableComponent.h"
 #include "Components/SceneComponent.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 #include "ModularWheel.generated.h"
 
 class UVehicleDebugWidget;
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class MODULARMOVEMENT_API UModularWheel : public USceneComponent
+class MODULARMOVEMENT_API UModularWheel : public UTrackableComponent
 {
 	GENERATED_BODY()
 
@@ -26,10 +28,13 @@ protected:
 public:	
 	
 	//Some Properties are not valid in SimulatedPawn
-	UPROPERTY(EditAnywhere,BlueprintReadOnly,meta=(ShowOnlyInnerProperties ))
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,meta=(ShowOnlyInnerProperties ),Category=Setup)
 	FWheelState WheelState;
-	UPROPERTY(EditAnywhere)
-	bool AnimateChildComponent;
+
+
+	// override the parent that force is applied to
+	UPROPERTY(BlueprintReadWrite,Transient,Category=Setup)
+	UPrimitiveComponent* ParentBodyOverride;
 	virtual void SetupWheels(UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateSuspension(float DeltaTime,UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateForces(float DeltaTime, UModularMovementComponent* ModularMovementComponent) ;
@@ -41,7 +46,7 @@ public:
 
 	 virtual void UpdateWheelState(FWheelState In) ;
 	virtual FWheelState* GetWheelState() ;
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleWheel")
 	UModularVehicleWheelData* GetWheelSetup() const;
 
 	
@@ -53,9 +58,7 @@ public:
 	//Update Wheel Steering 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleWheel",meta =(KeyWords="Set Change Update "))
 	 void SetSteerOnWheel(float Angle );
-	//actual rotation does not give you acuurate steering and rotation values its has some corrections applied to it so get steering from dedicated values (additional data returned don't affect performance )
-	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	 void GetWheelAnimationData(FVector& Location,FRotator& Rotation,float DeltaTime);
+	
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	 float GetWheelRotation();
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
@@ -77,18 +80,25 @@ public:
 	float GetTireStress();
 
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	float GetTrackSpeed() const;
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	 float GetTrackOffset(float CurrentOffset,float SpeedMultiplier) const;
+	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	UBaseTireModel* GetTireModel();
 
 	//Debug
 
-	UFUNCTION(BlueprintCallable)
-	void ChangeTraceDebugVisbility(bool Enable);
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void ChangeTraceDebugVisibility(bool Enable);
 	private:
 	bool Debug=false;
 
 
-
-	Chaos::FRigidBodyHandle_Internal* GetInternalHandle(UPrimitiveComponent* Component, FName BoneName);
+	static Chaos::FRigidBodyHandle_Internal* GetInternalHandle(const UPrimitiveComponent* Component, FName BoneName);
 	void AddForceAtPosition(UPrimitiveComponent* Component, FVector Position, FVector Force, FName BoneName);
+
+
+
+
 	
 };

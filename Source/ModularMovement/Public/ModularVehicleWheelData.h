@@ -1,11 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 #pragma once
 
 #include "BaseTireModel.h"
-#include "Engine.h"
 
-
+#include "Engine/HitResult.h"
 #include "Engine/DataAsset.h"
 #include "ModularVehicleWheelData.generated.h"
 
@@ -14,14 +13,16 @@
  */
 
 UENUM(BlueprintType)
-enum EWheelStatus
+enum ESuspensionType
 {
-	Normal,
-	Locked,
-	Spinning 
+	Sphere,
+	Line,
 };
+
+
+
 class UModularMovementComponent;
-UCLASS()
+UCLASS(Blueprintable,BlueprintType)
 class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 {
 	GENERATED_BODY()
@@ -36,6 +37,8 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelRadius=30;
 
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
+	TEnumAsByte<ESuspensionType> SuspensionType;
 	
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
@@ -44,15 +47,14 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelMass=14;
 	//Offset to apply to trace start
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	FVector TraceStartOffset;
 	
 	//Force to apply for suspension N/m 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float SpringRate=75000;
 	
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	bool ApplyDriveForce;
+	
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	float DampingRebound=8000;
@@ -62,25 +64,23 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
-	float BrakeTorque=500;
+	float BrakeTorque=2000.0;
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
-	float HandBrakeTorque=0;
+	float HandBrakeTorque=2000.0;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	bool ABS=true;
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	bool TractionControl=false;
+	// Makes vehicle lose less power when going up hill . 0 is physically realistic 1 is no power loss
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
+	float SteepSurfaceAssistance=0.5;
 	
-	
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)
-	bool SteeringWheel;
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)
 	float SteeringMaxAngle=30;
 	
-	//You can set this to -1 to allow back wheel steering 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steer)
-	float SteeringMultiplier=1;
+
 
 	//Suspension pivot point (rotates suspension when dropping used for off-road vehicles https://irajsb.github.io/ModularVehicleDocs/Pivot/
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Suspension)
@@ -91,7 +91,7 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	float AnimSpeed=0;
 	
 
-	UPROPERTY(Instanced,EditAnywhere,BlueprintReadOnly)
+	UPROPERTY(EditAnywhere,BlueprintReadOnly,Instanced,Category = Friction)
 	UBaseTireModel* TireModel;
 
 };
@@ -112,9 +112,27 @@ struct FWheelState{
 	//SuspensionForce That was applied;
 	UPROPERTY(Transient)
 	FVector WheelLoad;
- 	
-	UPROPERTY(EditAnywhere)
-	UModularVehicleWheelData* WheelSetup;
+
+	//Base class to create an instance from for setup of this wheel
+	UPROPERTY(EditAnywhere,Category=Setup)
+	TSoftClassPtr<UModularVehicleWheelData> WheelSetupClass;
+	//Instanced setup which can be edited at runtime without conflicit
+	UPROPERTY(BlueprintReadOnly,Transient,Category=Setup)
+	UModularVehicleWheelData* WheelSetup=nullptr;
+	//Automatically animate child component, Used for static mesh wheels
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
+	bool AnimateChildComponent;
+	//Should this wheel apply drive force
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
+	bool ApplyDriveForce;
+	//Steering scale for wheels can be negative to allow back wheel steering or less than 1 
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
+	float SteerScale;
+	//This wheel receives hand brake 
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
+	bool AffectedByHandBrake=false;
+
+	
 	UPROPERTY(Transient)
 	float DriveTorque;
 	UPROPERTY(Transient)
@@ -152,17 +170,15 @@ struct FWheelState{
 	UPROPERTY(Transient)
 	float SuspAngle;
 
-	
-	FVector PreviousLocation;
+	UPROPERTY(Transient)
+	FVector PreviousLocation=FVector(0,0,0);
 	UPROPERTY(Transient)
 	float CurrentPivotAngle;
-	UPROPERTY(Transient)
-	float PreviousYaw;
 
 
 	UPROPERTY(Transient)
 	float DampingForce;
-	TEnumAsByte<EWheelStatus> WheelStatus;
+	
 
 	//Debug Data
 #if ! UE_BUILD_SHIPPING

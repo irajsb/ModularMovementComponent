@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 #pragma once
 
@@ -10,53 +10,56 @@
 /**
  * 
  */
+USTRUCT(BlueprintType)
+struct FPacejkaConstants
+{
+	GENERATED_BODY()
 
-#define RELAXATION2(target, prev, rate) 			\
-do {								\
-double __tmp__;						\
-__tmp__ = target;						\
-target = (prev) + (rate) * ((target) - (prev)) * 0.01;	\
-prev = __tmp__;						\
-} while (0)
+	//Stiffness
+	UPROPERTY(EditAnywhere,Category=TireModel)
+	float B=20.f;
+	//Shape
+	UPROPERTY(EditAnywhere,Category=TireModel)
+	float C=1.4f;
+	//Curvature
+	UPROPERTY(EditAnywhere,Category=TireModel)
+	float E=-0.05f;
+	//Peak Force
+	UPROPERTY(EditAnywhere,Category=TireModel)
+	float D=1.2f;
+
+	FPacejkaConstants(float InB,float InC,float InD,float InE)
+	{
+		B=InB;
+		C=InC;
+		D=InD;
+		E=InE;
+	}
+	FPacejkaConstants(){}
+
+};
+
 
 UCLASS(EditInlineNew)
 class MODULARMOVEMENT_API UPacejkaTireModel : public UBaseTireModel 
 {
 	GENERATED_BODY()
 
-	//
-	UPROPERTY(EditAnywhere)
-	float MU=1;
-	UPROPERTY(EditAnywhere)
-	float LoadFactorMin=0.8;
-	UPROPERTY(EditAnywhere)
-	float LoadFactorMax=1.6;
-	UPROPERTY(EditAnywhere)
-	float PacejkaBLong=10.f;
-	UPROPERTY(EditAnywhere)
-	float PacejkaCLong=1.9f;
-	UPROPERTY(EditAnywhere)
-	float PacejkaDLong=1.f;
-	UPROPERTY(EditAnywhere)
-	float PacejkaELong=0.97;
-	UPROPERTY(EditAnywhere)
-	float PacejkaBLat=15.2;
-	UPROPERTY(EditAnywhere)
-	float PacejkaCLat=1.6;
-	UPROPERTY(EditAnywhere)
-	float PacejkaDLat=1.f;
-	UPROPERTY(EditAnywhere)
-	float PacejkaELat=-1.6;
-	UPROPERTY(EditAnywhere)
-	float TireFrictionCoefficient=1.f;
+public:
+	UPROPERTY(EditAnywhere,Category=TireModel)
+	FPacejkaConstants Long;
+	UPROPERTY(EditAnywhere,Category=TireModel)
+	FPacejkaConstants Lat=FPacejkaConstants(10.f,1.3f,1.2f,-0.2);
+	
+
 	
 	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel) override;
 	virtual float GetTireStress() override;
-
+	virtual void SetupWheels() override;
 	FVector2f TireForceNormalized;
-	float TireStress;
+
 	virtual FString GetTireDebugData(FVector2f& SlipData) override;
 
-	float LastFn,LastFt,LastSlipX;
+	float LastFX,LastFY,Speak,SideSlipPeak ;
 	
 };

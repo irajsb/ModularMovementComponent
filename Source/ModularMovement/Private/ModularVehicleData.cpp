@@ -1,20 +1,13 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 
 #include "ModularVehicleData.h"
 
+#include "ModularGearBox.h"
+
 UModularVehicleData::UModularVehicleData()
 {
-	//reverse
-	Gears.Add(FModularGearInfo(3));
-	//idle
-	Gears.Add(FModularGearInfo(0));
-	//Forward
-	Gears.Add(FModularGearInfo(3));
-	Gears.Add(FModularGearInfo(2));
-	Gears.Add(FModularGearInfo(1.55));
-	Gears.Add(FModularGearInfo(1.33));
-	Gears.Add(FModularGearInfo(1));
+
 	
 	SuspensionTraceTypeQuery= UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility);
 	WrongDirectionThreshold=100.f;
@@ -27,13 +20,13 @@ UModularVehicleData::UModularVehicleData()
 	NearGoalDistance=5000;
 	FullThrottleSpeed=40;
 	AITraceLength=50;
-	AITraceSpeedMultiplier=0.1;
+	AITraceSpeedMultiplier=0.01;
 	TurnThreshold=0.4;
 	DesireSpeedTurning=10;
 	AIMaxSteerMultiplier=1.2;
 	ScaleDriveTorqueToNumberOfWheels=true;
 
-
+	GearBoxData=NewObject<UModularGearBox>();
 
 	if(EngineTorqueCurve.GetRichCurve()->IsEmpty())
 	{
@@ -79,25 +72,21 @@ float UModularVehicleData::GetTorqueForRPM(float RPM) const
 	return EngineTorqueCurve.GetRichCurveConst()->Eval(RPM);
 }
 
-TArray<FModularGearInfo> UModularVehicleData::GetGears() const
+float UModularVehicleData::GetEngineInertia() const
 {
-	return Gears;
+	return EngineInertia;
 }
 
-float UModularVehicleData::GetGearChangeTime() const
+UModularGearBox* UModularVehicleData::GetGearBox()
 {
-	return  GearChangeTime;
+	return GearBoxData;
 }
 
-float UModularVehicleData::GetDifferentialRatio() const
+bool UModularVehicleData::GetScaleTireFrictionWithSurfaceAngle()
 {
-	return DifferentialRatio;
+	return ScaleTireFrictionWithSurfaceAngle;
 }
 
-float UModularVehicleData::GetTransmissionEfficiency() const
-{
-	return TransmissionEfficiency;
-}
 
 float UModularVehicleData::GetAirDragConstant() const
 {
@@ -159,14 +148,23 @@ float UModularVehicleData::GetSteerInputFall() const
 	return SteerInputFall;
 }
 
-float UModularVehicleData::GetSteeringAnimationSpeed() const
-{
-	return SteeringAnimationSpeed;
-}
+
 
 EVehicleNetworkMode UModularVehicleData::GetNetworkMode() const
 {
 	return NetworkMode;
+}
+
+void UModularVehicleData::GetAckermannValues(float& OutWheelBase, float& OutTrackWidth)
+{
+	OutWheelBase=WheelBase/100.f;
+	OutTrackWidth=TrackWidth/100.f;
+}
+
+float UModularVehicleData::GetCounterSteerMultiplier() const
+{
+	
+return CounterSteerMultiplier;
 }
 
 float UModularVehicleData::GetAITraceLength() const

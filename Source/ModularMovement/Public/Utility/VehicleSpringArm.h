@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 #pragma once
 
@@ -80,7 +80,7 @@ class MODULARMOVEMENT_API UVehicleSpringArm : public USceneComponent
 	uint32 bEnableCameraRotationLag : 1;
 
 	/**
-	 * If bUseCameraLagSubstepping is true, sub-step camera damping so that it handles fluctuating frame rates well (though this comes at a cost).
+	 * If bUseCameraLag Substepping is true, sub-step camera damping so that it handles fluctuating frame rates well (though this comes at a cost).
 	 * @see CameraLagMaxTimeStep
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Lag, AdvancedDisplay)
@@ -183,38 +183,38 @@ protected:
 	//Vehicle spring arm additions
 public :
 	//When input recevied do pause auto camera movement and reduce lag
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable,Category=Behaviour)
 	void SetCooldown(float In);
 
 	//Speed when auto correct starts ( auto correct rotates camera to vehicle movement direction)
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	float AutoCorrectMinSpeedRange = 300;
 	//Speed that Auto Correct reaches its maximum effect
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	float AutoCorrectMaxSpeedRange = 3000;
 	//Ignore pitch when auto orienting camera 
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	bool IgnorePitch = true;
 	//For smoothing result
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	float AutoCorrectInterpolationStrength = 30;
 	//Maximum arm change when accelerating or braking
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	float MaxArmLenChange = 200;
 	//Min acceleration ( negative means  braking and shortens the arm len )
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	float MinAcceleration = -1600;
 	//Max acceleration when arm reaches max len 
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	float MaxAcceleration = 1600;
 	// Smooth out arm movement 
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	float ArmLenInterpolationSpeed = 2;
 	//Min time airborne to play camera shake 
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	float MinAirborneTimeForCameraShake = 0.5;
 	//Camera shake to play 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	TSubclassOf<UCameraShakeBase> CameraShake;
 
 private:

@@ -1,9 +1,8 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 #pragma once
 
-#include "Engine.h"
-#include "Modules/ModuleManager.h"
+
 
 class FModularMovementModule : public IModuleInterface
 {

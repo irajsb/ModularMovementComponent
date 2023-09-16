@@ -1,9 +1,10 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 #include "ModularMovement.h"
 
-#include "ClassIconFinder.h"
-#include "IPluginManager.h"
+
+#include "Styling/SlateStyleRegistry.h"
+#include "Interfaces/IPluginManager.h"
 
 #define LOCTEXT_NAMESPACE "FModularMovementModule"
 TSharedPtr< FSlateStyleSet > StyleSet = nullptr;

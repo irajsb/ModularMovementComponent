@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class ModularMovement : ModuleRules
+public class ModularMovementEditor : ModuleRules
 {
-	public ModularMovement(ReadOnlyTargetRules Target) : base(Target)
+	public ModularMovementEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
@@ -25,7 +25,7 @@ public class ModularMovement : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core", "Engine", "AnimGraphRuntime",
+				"Core", "Slate", "ModularMovement", "AnimGraph",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -34,10 +34,15 @@ public class ModularMovement : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				"Projects",
+				"InputCore",
+				"EditorFramework",
+				"UnrealEd",
+				"ToolMenus",
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"SlateCore","UMG", "Projects",	"Chaos", "ChaosVehiclesCore",/*"PhysicsCore"*/
+				"SlateCore", "ModularMovement","BlueprintGraph"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

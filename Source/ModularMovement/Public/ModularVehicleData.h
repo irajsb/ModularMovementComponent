@@ -1,10 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 #pragma once
 
 #include "BaseVehicleData.h"
-#include "Engine.h"
 #include "Engine/DataAsset.h"
+#include "Curves/CurveFloat.h"
 #include "ModularVehicleData.generated.h"
 
 /**
@@ -12,37 +12,37 @@
  */
  
 
-UCLASS()
+UCLASS(HideCategories="Network")
 class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 {
 	GENERATED_BODY()
 	public:
 	UModularVehicleData();
 	//Torque Curve Newton /Meter 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Essential)
 	FRuntimeFloatCurve EngineTorqueCurve;
-	//SetRPMTOZeroWhenShifting
+	//Set RPM TO Zero When Shifting
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
 	bool ZeroRpmWhenShifting;
-	//Idle RPM
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
+	//Idle RPM Can be zero 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Essential)
 	float IdleRpm;
-	//Max rpm 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
+	//Max rpm (Generally should be where torque curve reaches  0 torque  )
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Essential)
 	float MaxRpm=6000;
-	// Normalized 0-1 how much of energy is wasted in transmission  1 =ideal full efficient ?
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Transmission, Meta=( UIMin="0", UIMax="1", ClampMin="0.0", ClampMax="1.0"))
-	float TransmissionEfficiency=1;
-	/*Affects rpm calculation ,tweak if rpm is not matching your expectations*/
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Transmission)
-	float DifferentialRatio=1.0;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Transmission)
-	float GearChangeTime=0.5;
-	UPROPERTY(EditDefaultsOnly,BlueprintReadWrite,Category=Transmission)
-    TArray<FModularGearInfo> Gears;
+	//How fast engine RPM can change . Used to stabilize RPM ranges from 0-1. Heavier vehicles generally have higher inertia due to heavier internal components 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
+	float EngineInertia=0.234;
+
+	//Gearbox Data
+	UPROPERTY(Instanced,EditAnywhere,Category=Essential)
+	UModularGearBox* GearBoxData;
+	//Suspension Trace  trace 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
     TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
-
+	//Tire available grip will divided between drive wheels (Realistic value is: true)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
+	bool ScaleTireFrictionWithSurfaceAngle=true;
 	//Wheel divide drive torque to number of wheels touching the ground should be on to simulate a differential 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	bool ScaleDriveTorqueToNumberOfWheels;
@@ -50,19 +50,26 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	//steering Curve multiplies the steering value Time should be speed in KMH and Value should be Steering multiplier (ranges from 1-0)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
 	FRuntimeFloatCurve SteerCurve;
+	//Steering method
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
 	TEnumAsByte<EModularSteerType> SteerType;
+	//Lateral distance between two wheels in same axel
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering,meta=(EditConditionHides,EditCondition="SteerType==EModularSteerType::Ackermann"))
+	float TrackWidth=100.f;
+	//Distance Between Two Axles
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering,meta=(EditConditionHides,EditCondition="SteerType==EModularSteerType::Ackermann"))
+	float WheelBase=150.f;
 	//How fast input should rise  Multiplied by DeltaTime
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
-	float SteerInputRise=5;
+	float SteerInputRise=2;
 	//How fast input should fall  Multiplied by DeltaTime
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
-	float SteerInputFall=20;
-
-	//Animation speed when steering has been released
+	float SteerInputFall=4;
+	//Multiplier for input when vehicle is sliding and trying to reorient  itself
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Steering)
-	float SteeringAnimationSpeed=120;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float CounterSteerMultiplier=2.f;
+	//Brake input will put vehicle to reverse once vehicle has stopped
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = Advanced)
 	bool bReverseAsBrake=true;
 	
 
@@ -76,7 +83,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	UPROPERTY(EditAnywhere, Category=Advanced)
 	float IdleBrakeInput;
 
-	//Multiply steer limit angle by this value in order to make AI vahicles move easier
+	//Multiply steer limit angle by this value in order to make AI vehicles move easier
 	UPROPERTY(EditAnywhere, Category=AI,meta = (ClampMin = "1.0", UIMin = "1.0", ClampMax = "2.0", UIMax = "2.0"))
 	float AIMaxSteerMultiplier;
 //1 to -1 (How much should dot product  between forward vector and destination should be in order to reverse ) 
@@ -131,12 +138,12 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	virtual float GetMaxRPM() const override;
 	virtual bool ShouldZeroRpmWhenShifting() const override;
 	virtual float GetTorqueForRPM(float RPM) const override;
+	virtual float GetEngineInertia() const override;
 	//Trans
-	virtual TArray<FModularGearInfo> GetGears() const override;
-	virtual float GetGearChangeTime() const override;
-	virtual float GetDifferentialRatio() const override;
-	virtual float GetTransmissionEfficiency() const override;
+	virtual UModularGearBox* GetGearBox() override;
+	
 	//misc
+	virtual bool GetScaleTireFrictionWithSurfaceAngle() override;
 	virtual float GetAirDragConstant() const override;
 	virtual bool ShouldScaleDriveTorqueToNumberOfWheels() const override;
 	virtual bool ShouldReverseAsBrake() const override;
@@ -150,8 +157,9 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	virtual EModularSteerType GetSteerType() const override;
 	virtual float GetSteerInputRise() const override;
 	virtual float GetSteerInputFall() const override;
-	virtual float GetSteeringAnimationSpeed() const override;
 	virtual EVehicleNetworkMode GetNetworkMode() const override;
+	virtual void GetAckermannValues(float& OutWheelBase, float& OutTrackWidth) override;
+	virtual float GetCounterSteerMultiplier() const override;
 	//AI
 	virtual float GetAITraceLength() const override;
 	virtual float GetAITraceSpeedMultiplier() const override;

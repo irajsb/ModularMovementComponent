@@ -1,10 +1,11 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
-#include "VehicleSpringArm.h"
+#include "Utility/VehicleSpringArm.h"
 #include "GameFramework/Pawn.h"
 #include "CollisionQueryParams.h"
 #include "WorldCollision.h"
 #include "Engine/World.h"
+#include "Engine/HitResult.h"
 #include "DrawDebugHelpers.h"
 #include "ModularMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -16,7 +17,7 @@
 const FName UVehicleSpringArm::SocketName(TEXT("SpringEndpoint"));
 
 UVehicleSpringArm::UVehicleSpringArm(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
+	: Super(ObjectInitializer), bDrawDebugLagMarkers(0), CurrentCooldown(0), PreviousSpeed(0), CurrentArmLen(0)
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickGroup = TG_PostPhysics;
@@ -61,7 +62,7 @@ FRotator UVehicleSpringArm::GetTargetRotation() const
 
 	if (bUsePawnControlRotation)
 	{
-		if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+		if (const APawn* OwningPawn = Cast<APawn>(GetOwner()))
 		{
 			const FRotator PawnViewRotation = OwningPawn->GetViewRotation();
 			if (DesiredRot != PawnViewRotation)
@@ -250,6 +251,7 @@ void UVehicleSpringArm::OnRegister()
 	CameraLagMaxTimeStep = FMath::Max(CameraLagMaxTimeStep, 1.f / 200.f);
 	CameraLagZSpeed = FMath::Max(CameraLagZSpeed, 0.f);
 
+	CurrentArmLen = TargetArmLength;
 	// Set initial location (without lag).
 	UpdateDesiredArmLocation(false, false, false, 0.f);
 }
@@ -265,10 +267,9 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 
-	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+	if (const APawn* OwningPawn = Cast<APawn>(GetOwner()))
 	{
-		UModularMovementComponent* MC = Cast<UModularMovementComponent>(OwningPawn->GetMovementComponent());
-		if (MC)
+		if (const UModularMovementComponent* MC = Cast<UModularMovementComponent>(OwningPawn->GetMovementComponent()))
 		{
 			if (MC->GetNumberOfDriveWheelsTouchingGround() == 0)
 			{
@@ -290,8 +291,7 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 			}
 		}
 		const FRotator CurrentRot = bUsePawnControlRotation ? OwningPawn->GetViewRotation() : GetComponentRotation();
-		UMeshComponent* Mesh = Cast<UMeshComponent>(GetOwner()->GetRootComponent());
-		if (Mesh)
+		if (UMeshComponent* Mesh = Cast<UMeshComponent>(GetOwner()->GetRootComponent()))
 		{
 			const FVector Velocity = Mesh->GetPhysicsLinearVelocity() * FVector(1, 1, 0);
 
@@ -317,7 +317,13 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 					}
 					if (bUsePawnControlRotation)
 					{
-						OwningPawn->GetController()->SetControlRotation(Result);
+						if (OwningPawn->GetController())
+						{
+							if (OwningPawn->GetController()->IsLocalController())
+							{
+								OwningPawn->GetController()->SetControlRotation(Result);
+							}
+						}
 					}
 					else
 					{
@@ -346,25 +352,29 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 
 FTransform UVehicleSpringArm::GetSocketTransform(FName InSocketName, ERelativeTransformSpace TransformSpace) const
 {
-	FTransform RelativeTransform(RelativeSocketRotation, RelativeSocketLocation);
+	const FTransform RelativeTransform(RelativeSocketRotation, RelativeSocketLocation);
 
 	switch (TransformSpace)
 	{
 	case RTS_World:
 		{
 			return RelativeTransform * GetComponentTransform();
-			break;
+			
 		}
 	case RTS_Actor:
 		{
 			if (const AActor* Actor = GetOwner())
 			{
-				FTransform SocketTransform = RelativeTransform * GetComponentTransform();
+				const FTransform SocketTransform = RelativeTransform * GetComponentTransform();
 				return SocketTransform.GetRelativeTransform(Actor->GetTransform());
 			}
 			break;
 		}
 	case RTS_Component:
+		{
+			return RelativeTransform;
+		}
+	default:
 		{
 			return RelativeTransform;
 		}

@@ -19,6 +19,11 @@
 			"Name": "ModularMovement",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "ModularMovementEditor",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "Default"
 		}
 	]
 }

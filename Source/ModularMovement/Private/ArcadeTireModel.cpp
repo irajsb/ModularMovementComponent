@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 
 #include "ArcadeTireModel.h"
@@ -9,41 +9,46 @@ UArcadeTireModel::UArcadeTireModel()
 {
 	RebuildCurves(false);
 }
-
+#if WITH_EDITOR
 void UArcadeTireModel::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
 	RebuildCurves(AutoGenerateTheGraph);
 }
+#endif
 
 void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
                                         UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 {
-
 	Super::UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, Wheel);
-	//Gather necessary data 
-	const FTransform WorldTransform = ModularMovementComponent->GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
+	//Gather necessary data
+	const UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
+	if (Wheel->ParentBodyOverride)
+	{
+		Mesh = Wheel->ParentBodyOverride;
+	}
+	const FTransform WorldTransform = Mesh->GetBodyInstance()->GetUnrealWorldTransform();
 	const float SteerAngleDegrees = Wheel->WheelState.SteerAngle;
 	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
-	const FVector WorldMeshVelocity = ModularMovementComponent->GetMesh()->GetBodyInstance()->
-	                                                            GetUnrealWorldVelocityAtPoint(
-		                                                            Wheel->WheelState.HitResult.TraceStart);
+	const FVector WorldMeshVelocity = Mesh->GetBodyInstance()->
+	                                        GetUnrealWorldVelocityAtPoint(
+		                                        Wheel->WheelState.HitResult.TraceStart);
 	const FVector LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity);
 	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
-	const float MassPerWheel = (ModularMovementComponent->GetMesh()->GetMass() / ModularMovementComponent->
+	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
 		GetNumberOfWheels());
 	const float WheelRadiusM = Wheel->WheelState.WheelSetup->WheelRadius / 100.f;
 
-	
-	bool Locked=false;
-	bool Spinning=false;
+
+	bool Locked = false;
+	bool Spinning = false;
 	//Check if braking
 	const bool Braking = FMath::Abs(Wheel->WheelState.DriveTorque) < FMath::Abs(Wheel->WheelState.BrakeTorque);
 
 	//Clamp for friction 
 	const float ForceRequiredToBringToStop = FMath::Abs(
-		MassPerWheel *FrictionMultiplierLongitudinal * (GroundVelocityVector.X) / 100 /
+		MassPerWheel * FrictionMultiplierLongitudinal * (GroundVelocityVector.X) / 100 /
 		DeltaTime);
 
 	// are we actually touching the ground
@@ -58,46 +63,41 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 		if (Braking)
 		{
 			//Clamp brake torque to force required to bring to stop, helps in lower speeds
-			FinalForceVector.X = Wheel->WheelState.BrakeTorque * -1 * FMath::Sign(GroundVelocityVector.X)/WheelRadiusM;
+			FinalForceVector.X = Wheel->WheelState.BrakeTorque * -1 * FMath::Sign(GroundVelocityVector.X) /
+				WheelRadiusM;
 			FinalForceVector.X = FMath::Clamp(FinalForceVector.X, -ForceRequiredToBringToStop,
-											  ForceRequiredToBringToStop);
-			
+			                                  ForceRequiredToBringToStop);
+
 			//if ABS enabled we allow unrealistic brake torque because of arcade tire model 
-			if(!Wheel->WheelState.WheelSetup->ABS||Wheel->WheelState.IsHandBrakeTorque)
+			if (!Wheel->WheelState.WheelSetup->ABS || Wheel->WheelState.IsHandBrakeTorque)
 			{
 				Locked = FMath::Abs(FinalForceVector.X) > LongitudinalAdhesiveLimit;
 				FinalForceVector.X = FMath::Clamp(FinalForceVector.X, -LongitudinalAdhesiveLimit,
-												  LongitudinalAdhesiveLimit);
+				                                  LongitudinalAdhesiveLimit);
 			}
 			else
 			{
-				Locked=false;
+				Locked = false;
 			}
-			
 		}
 		else
 		{
-			Spinning = (FMath::Abs(Wheel->WheelState.DriveTorque)/WheelRadiusM > LongitudinalAdhesiveLimit)&&!Wheel->WheelState.WheelSetup->TractionControl;
-			FinalForceVector.X = Wheel->WheelState.DriveTorque/WheelRadiusM;
+			Spinning = (FMath::Abs(Wheel->WheelState.DriveTorque) / WheelRadiusM > LongitudinalAdhesiveLimit) && !Wheel
+				->WheelState.WheelSetup->TractionControl;
+			FinalForceVector.X = Wheel->WheelState.DriveTorque / WheelRadiusM;
 			FinalForceVector.X = FMath::Clamp(FinalForceVector.X, -LongitudinalAdhesiveLimit,
 			                                  LongitudinalAdhesiveLimit);
 		}
 
 		//Lateral friction
-		Wheel->WheelState.SlipAngle = FMath::Atan(GroundVelocityVector.Y / FMath::Abs(GroundVelocityVector.X + 5.f/*Denominator*/));
+		Wheel->WheelState.SlipAngle = FMath::Atan(
+			GroundVelocityVector.Y / FMath::Abs(GroundVelocityVector.X + 5.f/*Denominator*/));
 		//
-		FinalForceVector.Y =LateralGripCurve.GetRichCurve()->Eval(FMath::Abs(Wheel->WheelState.SlipAngle)) *
+		FinalForceVector.Y = LateralGripCurve.GetRichCurve()->Eval(FMath::Abs(Wheel->WheelState.SlipAngle)) *
 			LateralFrictionLoadMultiplier * FMath::Sign(GroundVelocityVector.Y) * -1;
 
-	
-		if (Locked||Spinning)
-		{
-			//TODO Add these params
-			FinalForceVector.Y *= 0.3;
-			FinalForceVector.X*=0.6;
-		}
 
-		
+	
 	}
 
 	//Determine wheel speed
@@ -111,30 +111,54 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 		Wheel->WheelState.AngularVelocity = (GroundOmega);
 	}
 
-	const float LongitudinalStress=static_cast<float>(Spinning||Locked);
+	const float LongitudinalStress = Spinning || Locked;
 	//ignore in low speeds
-	const float LateralStress=GroundVelocityVector.Size()>500.f? Wheel->WheelState.SlipAngle:0;
-	Wheel->WheelState.TireStress=FMath::Clamp(FMath::Max(LongitudinalStress,LateralStress),0.f,1.f);
+	const float LateralStress = GroundVelocityVector.Size() > 500.f ? Wheel->WheelState.SlipAngle : 0;
+	Wheel->WheelState.TireStress = FMath::Clamp(FMath::Max(LongitudinalStress, LateralStress), 0.f, 1.f);
+
+	//Gather Debug
+	const FVector TireForce = (FinalForceVector / Wheel->WheelState.WheelLoad.Size());
+	TireForceNormalized = FVector2f(TireForce.X, TireForce.Y);
+
+
+
 	
+
 }
 
+FString UArcadeTireModel::GetTireDebugData(FVector2f& SlipData)
+{
+	SlipData = TireForceNormalized;
+	FString Output = "SlipRatio: " + FString::SanitizeFloat(WheelOwner->WheelState.SlipRatio) + TEXT("\n");
+	Output += "SlipAngle: " + FString::SanitizeFloat(WheelOwner->WheelState.SlipAngle) + TEXT("\n");
+	//Add Drive torque
+	Output += "DriveTorque: " + FString::SanitizeFloat(WheelOwner->WheelState.DriveTorque) + TEXT("\n");
+	//Add normalized tire force
+	Output += "NetTorque: " + FString::SanitizeFloat(
+		WheelOwner->WheelState.DriveTorque * WheelOwner->GetWheelSetup()->WheelRadius / 100 - TireForceNormalized.X *
+		WheelOwner->WheelState.WheelLoad.Z);
+	// Draw Text at wheel location
+	DrawDebugString(WheelOwner->GetWorld(), WheelOwner->GetComponentLocation(), Output, nullptr, FColor::Red, 0.0f,
+	                true);
+	return Output;
+}
 
 
 void UArcadeTireModel::RebuildCurves(bool Force)
 {
-	if(LateralGripCurve.GetRichCurve()->IsEmpty()||AutoGenerateTheGraph)
+	if (LateralGripCurve.GetRichCurve()->IsEmpty() || AutoGenerateTheGraph)
 	{
-		if(LateralGripCurve.ExternalCurve)
+		if (LateralGripCurve.ExternalCurve)
 		{
 			return;
 		}
 		LateralGripCurve.GetRichCurve()->Reset();
-		const auto LateralForceCurve=LateralGripCurve.GetRichCurve();
+		const auto LateralForceCurve = LateralGripCurve.GetRichCurve();
 		auto KeyHandle = LateralForceCurve->AddKey(0, 0);
-		LateralForceCurve->SetKeyInterpMode(KeyHandle, ERichCurveInterpMode::RCIM_Cubic);
+		LateralForceCurve->SetKeyInterpMode(KeyHandle, RCIM_Cubic);
 		KeyHandle = LateralForceCurve->AddKey(0.1396263, MaxFrictionLateralForce);
-		LateralForceCurve->SetKeyInterpMode(KeyHandle, ERichCurveInterpMode::RCIM_Cubic);
+		LateralForceCurve->SetKeyInterpMode(KeyHandle, RCIM_Cubic);
 		KeyHandle = LateralForceCurve->AddKey(0.3490659, MinFrictionLateralForce);
-		LateralForceCurve->SetKeyInterpMode(KeyHandle, ERichCurveInterpMode::RCIM_Cubic);
+		LateralForceCurve->SetKeyInterpMode(KeyHandle, RCIM_Cubic);
 	}
 }

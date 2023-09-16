@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 
 #include "ModularAsyncCallBack.h"
@@ -34,3 +34,6 @@ void FModularAsyncCallBack::OnPreSimulate_Internal()
 void FModularAsyncCallBack::OnContactModification_Internal(Chaos::FCollisionContactModifier& Modifier)
 {
 }
+
+
+
