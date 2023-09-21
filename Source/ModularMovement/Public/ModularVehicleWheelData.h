@@ -3,6 +3,7 @@
 #pragma once
 
 #include "BaseTireModel.h"
+#include "DefaultTireModel.h"
 
 #include "Engine/HitResult.h"
 #include "Engine/DataAsset.h"
@@ -11,6 +12,8 @@
 /**
  * 
  */
+
+class UDefaultTireModel;
 
 UENUM(BlueprintType)
 enum ESuspensionType
@@ -26,27 +29,32 @@ UCLASS(Blueprintable,BlueprintType)
 class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 {
 	GENERATED_BODY()
+	UModularVehicleWheelData()
+	{
+		TireModel=CreateDefaultSubobject<UDefaultTireModel>("DefaultTire");
+	}
 	public:
 
 	
-	//How much can wheels drop
+	//How much can wheels drop in cm
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float SuspensionLength=50;
 	
-	//trace wheel radius
+	//trace wheel radius in cm
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelRadius=30;
 
+	// Trace channel
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	TEnumAsByte<ESuspensionType> SuspensionType;
 	
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelWidth=30;
-
+	// Wheel mass . Changes inertia and how fast the wheel speed changes. you can use this to stablizie the wheel if needed
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	float WheelMass=14;
-	//Offset to apply to trace start
+	float WheelMass=50;
+	//Offset to apply to trace start 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	FVector TraceStartOffset;
 	
@@ -55,42 +63,44 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	float SpringRate=75000;
 	
 	
-
+	//Damping for when spring is being extended from compress N.s/M
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	float DampingRebound=8000;
-	
+	//Damping for when spring is being compressed  N.s/M
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
 	float DampingCompress=5000;
 	
-	
+	//Brake torque
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
-	float BrakeTorque=2000.0;
-	
+	float BrakeTorque=4000.0;
+
+	//Hand brake torque  applied to wheels that have this enabled
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
-	float HandBrakeTorque=2000.0;
+	float HandBrakeTorque=4000.0;
+	// Prevent wheels locking while braking and try to maintain perfect grip
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	bool ABS=true;
+	//Prevent engine from spinning the wheels by reducing power and trying to keep perfect grip
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	bool TractionControl=false;
 	// Makes vehicle lose less power when going up hill . 0 is physically realistic 1 is no power loss
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	float SteepSurfaceAssistance=0.5;
 	
-	
+	//Angle in degrees
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)
 	float SteeringMaxAngle=30;
 	
-
-
-	//Suspension pivot point (rotates suspension when dropping used for off-road vehicles https://irajsb.github.io/ModularVehicleDocs/Pivot/
+	
+	//Suspension pivot point (rotates suspension when dropping used for off-road vehicles 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Suspension)
 	 float SuspensionPivot;
 	
-	//Should we interpolate wheel location (0 to disable ) and whats the speed ?
+	//Smooth the wheel location and rotation 0 for disable 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float AnimSpeed=0;
 	
-
+	//Tire model implementation
 	UPROPERTY(EditAnywhere,BlueprintReadOnly,Instanced,Category = Friction)
 	UBaseTireModel* TireModel;
 
@@ -180,11 +190,7 @@ struct FWheelState{
 	float DampingForce;
 	
 
-	//Debug Data
-#if ! UE_BUILD_SHIPPING
-float LateralFrictionRatio;
-float LongitudinalFrictionRatio;
-#endif
+
 	
 };
 

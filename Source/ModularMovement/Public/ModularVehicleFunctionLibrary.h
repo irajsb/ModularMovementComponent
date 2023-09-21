@@ -78,8 +78,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static void UpdateWheelState(UModularWheel* Wheel, FWheelState NewWheelState);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
-	static void GetDebugData(UModularWheel* Wheel, float& LateralFrictionRatio, float& LongitudinalFrictionRatio);
+
 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static void DrawDebugSphereWithDepth(UObject* Context, FVector Location, float Size, int Depth);
@@ -88,4 +87,9 @@ public:
 	//actual rotation does not give you acuurate steering and rotation values its has some corrections applied to it so get steering from dedicated values (additional data returned don't affect performance )
 	UFUNCTION(BlueprintPure, BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	static void GetWheelAnimationData(UModularWheel* Wheel, FVector& Location, FRotator& Rotation, float DeltaTime);
+
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	static void SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh,TArray<UModularWheel* >Wheels, const FString& BoneNamePrefix);
+
+	static void NotifyError(FString Error);
 };

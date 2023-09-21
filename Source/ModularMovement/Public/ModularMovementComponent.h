@@ -272,8 +272,7 @@ public:
 	FRepCosmeticData RepCosmeticData;
 
 
-	UPROPERTY()
-	class UNetworkPhysicsComponent* NetworkPhysicsComponent;
+
 	UFUNCTION()
 	void OnRep_RepCosmeticData();
 

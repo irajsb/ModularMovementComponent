@@ -56,6 +56,9 @@ void UModularWheel::SetupWheels(UModularMovementComponent* ModularMovementCompon
 		{
 			WheelState.WheelSetup->TireModel = DuplicateObject<UBaseTireModel>(WheelState.WheelSetup->TireModel, this);
 			GetTireModel()->SetupWheels();
+		}else
+		{
+			UModularVehicleFunctionLibrary::NotifyError("No tire model. Please Select a tire model in your wheel setup");
 		}
 
 		ModularMovementComponent->ActorsToIgnore.AddUnique(GetOwner());
@@ -64,6 +67,9 @@ void UModularWheel::SetupWheels(UModularMovementComponent* ModularMovementCompon
 		{
 			ModularMovementComponent->ActorsToIgnore.AddUnique(ModularMovementComponent->GetOwner());
 		}
+	}else
+	{
+		UModularVehicleFunctionLibrary::NotifyError("Wheel Setup class is missing in wheel components. Please create and assign one !");
 	}
 }
 
@@ -158,7 +164,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 
 
 		AddForceAtPosition(Mesh, TraceResult.ImpactPoint, CorrectedForce, NAME_None);
-		UE_LOG(LogTemp, Log, TEXT("Susp force %f wheel %s"), CorrectedForce.Z, *GetName())
+	
 	}
 
 	WheelState.PreviousLen = CurrentLen;
@@ -180,7 +186,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 
 	WheelState.WheelSetup->TireModel->UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, this);
 
-	UE_LOG(LogTemp,Log,TEXT("Final F vector %s "),*FinalForceVector.ToString());
+
 
 	WheelState.AngularPosition += WheelState.AngularVelocity * DeltaTime;
 
@@ -190,7 +196,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 
 
 	FinalForceVector = SIForceToUnrealForce(FinalForceVector);
-	UE_LOG(LogTemp,Log,TEXT("Final F vector after macro %s "),*FinalForceVector.ToString());
+
 
 	//Apply Forces to bodies 
 	if (ModularMovementComponent->ShouldProcessPhysics())

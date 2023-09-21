@@ -131,8 +131,7 @@ public:
 		   ESlateDrawEffect::None,
 		   FLinearColor::White
 	   );
-
- 	UE_LOG(LogTemp,Log,TEXT("Peak %s "),*PeakText)
+ 	
 	return NewLayerId;
 }
 

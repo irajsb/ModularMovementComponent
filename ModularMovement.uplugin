@@ -6,24 +6,33 @@
 	"Description": "Modular  movement component for vehicles ",
 	"Category": "Other",
 	"CreatedBy": "IrajMh",
-	"CreatedByURL": "",
-	"DocsURL": "",
-	"MarketplaceURL": "",
+	"CreatedByURL": "https://aurelion.net",
+	"DocsURL": "https://irajsb.github.io/ModularMovementDocs/",
+	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/1f5d877874e543e0971dea0d3c9da9ec",
 	"SupportURL": "",
+	"EngineVersion": "5.3.0",
 	"CanContainContent": true,
-	"IsBetaVersion": false,
-	"IsExperimentalVersion": false,
-	"Installed": false,
+	"Installed": true,
 	"Modules": [
 		{
 			"Name": "ModularMovement",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Linux",
+				"Android","IOS"
+			]
 		},
 		{
 			"Name": "ModularMovementEditor",
 			"Type": "UncookedOnly",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Linux",
+				"Android","IOS"
+			]
 		}
 	]
 }

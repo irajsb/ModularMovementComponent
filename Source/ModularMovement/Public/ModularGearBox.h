@@ -85,6 +85,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Transient,Category=Transmission)
 	float CurrentGearChangeTime=0.f;
 
+	// The current gear the vehicle is in
+	UPROPERTY(BlueprintReadOnly,Transient,Category=Transmission)
+	float GearBoxRPMRatio=0.f;
 	// Sets the target gear, either immediately or not, depending on 'bImmediate'
 	void SetTargetGear(int32 GearNum, bool bImmediate, class UModularMovementComponent* MovementComponent);
 

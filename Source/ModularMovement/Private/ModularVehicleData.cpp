@@ -26,7 +26,7 @@ UModularVehicleData::UModularVehicleData()
 	AIMaxSteerMultiplier=1.2;
 	ScaleDriveTorqueToNumberOfWheels=true;
 
-	GearBoxData=NewObject<UModularGearBox>();
+	GearBoxData=CreateDefaultSubobject<UModularGearBox>("DefaultGearBox");
 
 	if(EngineTorqueCurve.GetRichCurve()->IsEmpty())
 	{

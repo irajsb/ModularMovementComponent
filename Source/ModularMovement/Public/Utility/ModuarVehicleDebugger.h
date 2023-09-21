@@ -24,6 +24,9 @@ class MODULARMOVEMENT_API UModularVehicleDebugger : public UActorComponent
 	GENERATED_BODY()
 
 public:
+
+	UPROPERTY()
+	UClass* WidgetClass;
 	// Sets default values for this component's properties
 	UModularVehicleDebugger();
 

@@ -115,7 +115,7 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 			}
 			//Calculate RPM from vehicle speed instead of wheel because wheel can get locked or spin
 			const float CurrentRpm= (VehicleState.ForwardSpeed/100*Gears[CurrentGear].GearRatio*DifferentialRatio/DriveWheelRadius)*30/PI;
-			const float CurrentRPMRatio=UKismetMathLibrary::MapRangeClamped(CurrentRpm, MovementComponent->GetSetup()->GetIdleRPM(),
+			 GearBoxRPMRatio=UKismetMathLibrary::MapRangeClamped(CurrentRpm, MovementComponent->GetSetup()->GetIdleRPM(),
 																		   MovementComponent->GetSetup()->GetMaxRPM(), 0, 1);
 		
 			// not currently changing gear, also don't want to change up because the wheels are spinning up due to having no load
@@ -123,12 +123,12 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 			{
 				if (CurrentGearChangeTime == 0.f )
 				{
-					if (CurrentRPMRatio >= Gears[CurrentGear].UpRatio)
+					if (GearBoxRPMRatio >= Gears[CurrentGear].UpRatio)
 					{
 					
 						SetTargetGear(CurrentGear + 1, false,MovementComponent);
 					}
-					else if (CurrentRPMRatio <= Gears[CurrentGear].DownRatio && CurrentGear > IdleGear + 1) // don't change down to neutral
+					else if (GearBoxRPMRatio <= Gears[CurrentGear].DownRatio && CurrentGear > IdleGear + 1) // don't change down to neutral
 						{
 						SetTargetGear(CurrentGear - 1, true,MovementComponent);
 						}

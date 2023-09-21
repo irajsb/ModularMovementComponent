@@ -2,8 +2,9 @@
 
 
 #include "TankTrackComponent.h"
-
+#include "Components/StaticMeshComponent.h"
 #include "IdlerComponent.h"
+#include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
 
 UTankTrackComponent::UTankTrackComponent()

@@ -11,6 +11,11 @@ public:
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
+
+	void OnSettingsFix();
+	void OnSettingsDissmissed();
+
+	TWeakPtr<class SNotificationItem> Notif;
 };
 
 

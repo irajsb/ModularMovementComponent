@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "Curves/CurveFloat.h"
+#include  "PhysicalMaterials/PhysicalMaterial.h"
 #include "BaseTireModel.generated.h"
 
 

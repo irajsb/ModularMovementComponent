@@ -30,21 +30,26 @@ void UModularVehicleDebugger::BeginPlay()
 
 
 	MovementComponent = Cast<UModularMovementComponent>(OwnerPawn->GetMovementComponent());
-	const AController* Controller = OwnerPawn->GetController();
-	if (Controller && Controller->IsLocalPlayerController())
+	if(MovementComponent)
 	{
-		APlayerController* PC = Cast<APlayerController>(Cast<APawn>(GetOwner())->GetController());
-		//	ConstructorHelpers::FClassFinder<UVehicleDebugWidget> ClassFinder(TEXT("WidgetBlueprint'/ModularMovement/DebugMain.DebugMain'"));
-		const FString MyActorBpPath = "/ModularMovement/DebugMain.DebugMain_C";
+		if(MovementComponent->GetSetup()&&MovementComponent->GetSetup()->GetGearBox()){
+			const AController* Controller = OwnerPawn->GetController();
+			if (Controller && Controller->IsLocalPlayerController())
+			{
+				APlayerController* PC = Cast<APlayerController>(Cast<APawn>(GetOwner())->GetController());
+				//	ConstructorHelpers::FClassFinder<UVehicleDebugWidget> ClassFinder(TEXT("WidgetBlueprint'/ModularMovement/DebugMain.DebugMain'"));
+				const FString MyActorBpPath = "/ModularMovement/UMG/WB_Debug.WB_Debug_C";
 
-		if (UVehicleDebugWidget* VehicleDebugWidget = CreateWidget<UVehicleDebugWidget>(
-			PC, LoadClass<UVehicleDebugWidget>(GetWorld(), *MyActorBpPath)))
-		{
-			VehicleDebugWidget->AddToViewport(50);
-		}
-		else
-		{
-			UE_LOG(LogModularVehicle, Error, TEXT("Cannot init widget"));
+				if (UVehicleDebugWidget* VehicleDebugWidget = CreateWidget<UVehicleDebugWidget>(
+					PC, LoadClass<UVehicleDebugWidget>(GetWorld(), *MyActorBpPath)))
+				{
+					VehicleDebugWidget->AddToViewport(50);
+				}
+				else
+				{
+					UE_LOG(LogModularVehicle, Error, TEXT("Cannot init widget"));
+				}
+			}
 		}
 	}
 }

@@ -2,10 +2,15 @@
 
 #include "ModularMovement.h"
 
+ 	
 
+#include "Framework/Notifications/NotificationManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Styling/SlateStyle.h"
 #include "Styling/SlateStyleRegistry.h"
 #include "Interfaces/IPluginManager.h"
-
+#include "Modules/ModuleManager.h"
+#include "PhysicsEngine/PhysicsSettings.h"
 #define LOCTEXT_NAMESPACE "FModularMovementModule"
 TSharedPtr< FSlateStyleSet > StyleSet = nullptr;
 void FModularMovementModule::StartupModule()
@@ -16,16 +21,36 @@ FString Path=IPluginManager::Get().FindPlugin(TEXT("ModularMovement"))->GetBaseD
 	 StyleSet = MakeShareable(new FSlateStyleSet("ModularStyle"));
 	StyleSet->SetContentRoot(	Path);
 	StyleSet->SetCoreContentRoot(	IPluginManager::Get().FindPlugin(TEXT("ModularMovement"))->GetBaseDir() / TEXT("Resources"));
-	UE_LOG(LogTemp,Log,TEXT( " Plugin dir %s"),*	(IPluginManager::Get().FindPlugin(TEXT("ModularMovement"))->GetBaseDir() / TEXT("Resources")))
-
-
+	
 
 	StyleSet->Set("ClassIcon.ModularWheel", new FSlateImageBrush(Path/"ClassIcon.ModularWheel16.png", FVector2D(20.0f, 20.0f)));
 	StyleSet->Set("ClassIcon.ModularMovementComponent", new FSlateImageBrush(Path/"ClassIcon.ModularMovementComponent.png", FVector2D(20.0f, 20.0f)));
 	StyleSet->Set("ClassThumbnail.ModularVehicleData", new FSlateImageBrush(Path/"VehicleDA.png", FVector2D(64.0f, 64.0f)));
 	StyleSet->Set("ClassThumbnail.ModularVehicleWheelData", new FSlateImageBrush(Path/"WheelDA.png", FVector2D(64.0f, 64.0f)));
 	FSlateStyleRegistry::RegisterSlateStyle(*StyleSet.Get());
+
+
+#if WITH_EDITOR
+
+	const auto  Settings=UPhysicsSettings::Get();
+	if(!Settings->bSubstepping)
+	{
+		FNotificationInfo Info(LOCTEXT("SubStepSettings", "Modular Movement Requires Substepping"));
+		Info.ExpireDuration = 120.0f;
+		Info.bFireAndForget = false;
+		Info.bUseThrobber=false;
+		Info.Image = FCoreStyle::Get().GetBrush(TEXT("MessageLog.Warning"));
+
+		Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("MultipleLSAsPopupBeginRepair", "Enable Settings"), LOCTEXT("SubStepFixToolTip", "Apply Recommended Settings"), FSimpleDelegate::CreateRaw(this, &FModularMovementModule::OnSettingsFix)));
+		Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("MultipleLSAsPopupDismiss", "Dismiss"), LOCTEXT("SubStepFixToolTipDismiss", "Dismiss this notification"), FSimpleDelegate::CreateRaw(this, &FModularMovementModule::OnSettingsDissmissed)));
+
+		Notif= FSlateNotificationManager::Get().AddNotification(Info);
+		Notif.Pin()->SetCompletionState(SNotificationItem::CS_Pending);
+	}
 	
+	
+
+#endif
 }
 
 void FModularMovementModule::ShutdownModule()
@@ -36,6 +61,43 @@ void FModularMovementModule::ShutdownModule()
 	FSlateStyleRegistry::UnRegisterSlateStyle(*StyleSet.Get());
 	ensure(StyleSet.IsUnique());
 	StyleSet.Reset();
+}
+
+void FModularMovementModule::OnSettingsFix()
+{
+	
+	auto  Settings=UPhysicsSettings::Get();
+	Settings->bSubstepping=true;
+	Settings->bSubsteppingAsync=true;
+	Settings->MaxSubsteps=6;
+	Settings->MaxSubstepDeltaTime=0.002778;
+	Settings->SaveConfig();
+	if (Notif.IsValid())
+	{
+		TSharedPtr<SNotificationItem> NotifPopup = Notif.Pin();
+
+		NotifPopup->SetCompletionState(SNotificationItem::CS_None);
+		NotifPopup->SetExpireDuration(0.0f);
+		NotifPopup->SetFadeOutDuration(0.0f);
+		NotifPopup->ExpireAndFadeout();
+
+		Notif.Reset();
+	}
+}
+
+void FModularMovementModule::OnSettingsDissmissed()
+{
+	if (Notif.IsValid())
+	{
+		TSharedPtr<SNotificationItem> NotifPopup = Notif.Pin();
+
+		NotifPopup->SetCompletionState(SNotificationItem::CS_None);
+		NotifPopup->SetExpireDuration(0.0f);
+		NotifPopup->SetFadeOutDuration(0.0f);
+		NotifPopup->ExpireAndFadeout();
+
+		Notif.Reset();
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

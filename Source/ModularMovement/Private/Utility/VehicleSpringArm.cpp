@@ -359,7 +359,6 @@ FTransform UVehicleSpringArm::GetSocketTransform(FName InSocketName, ERelativeTr
 	case RTS_World:
 		{
 			return RelativeTransform * GetComponentTransform();
-			
 		}
 	case RTS_Actor:
 		{

@@ -6,6 +6,9 @@
 #include "ModularMovementComponent.h"
 #include "ModularMovement.h"
 #include  "ModularWheel.h"
+#include "Engine/Engine.h"
+#include "Engine/World.h"
+#include "Logging/MessageLog.h" 
 #include "Kismet/KismetMathLibrary.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 
@@ -31,7 +34,10 @@ UModularGearBox* UModularVehicleFunctionLibrary::GetGearBox(const UModularMoveme
 {
 	if (MovementComponent)
 	{
-		return MovementComponent->GetSetup()->GetGearBox();
+		if(MovementComponent->GetSetup())
+		{
+			return MovementComponent->GetSetup()->GetGearBox();
+		}
 	}
 	return nullptr;
 }
@@ -45,11 +51,7 @@ void UModularVehicleFunctionLibrary::SetThrottleInputOnModularVehicle(APawn* Paw
 		{
 			MC->SetThrottleInput(Throttle);
 		}
-		else
-		{
-			UE_LOG(LogModularVehicle, Error,
-			       TEXT("No Modular MovementComponent Attached to pawn (called from function library)"))
-		}
+		
 	}
 }
 
@@ -61,11 +63,7 @@ void UModularVehicleFunctionLibrary::SetSteerInputOnModularVehicle(APawn* Pawn, 
 		{
 			MC->SetSteeringInput(Steer);
 		}
-		else
-		{
-			UE_LOG(LogModularVehicle, Error,
-			       TEXT("No Modular MovementComponent Attached to pawn (called from function library)"))
-		}
+		
 	}
 }
 
@@ -77,11 +75,7 @@ void UModularVehicleFunctionLibrary::SetHandBrakeInputOnModularVehicle(APawn* Pa
 		{
 			MC->SetHandBrakeInput(Brake);
 		}
-		else
-		{
-			UE_LOG(LogModularVehicle, Error,
-			       TEXT("No Modular MovementComponent Attached to pawn (called from function library)"))
-		}
+		
 	}
 }
 
@@ -208,15 +202,7 @@ void UModularVehicleFunctionLibrary::UpdateWheelState(UModularWheel* Wheel, FWhe
 }
 
 
-void UModularVehicleFunctionLibrary::GetDebugData(UModularWheel* Wheel, float& LateralFrictionRatio,
-                                                  float& LongitudinalFrictionRatio)
-{
-	if (Wheel)
-	{
-		LongitudinalFrictionRatio = Wheel->GetWheelState()->LongitudinalFrictionRatio;
-		LateralFrictionRatio = Wheel->GetWheelState()->LateralFrictionRatio;
-	}
-}
+
 
 void UModularVehicleFunctionLibrary::DrawDebugSphereWithDepth(UObject* Context, FVector Location, float Size, int Depth)
 {
@@ -287,4 +273,20 @@ void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,
 			WheelState.CurrentPivotAngle = CurrentAngle;
 		}
 	}
+}
+
+void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh, TArray<UModularWheel* >Wheels,
+                                                                const FString& BoneNamePrefix)
+{
+
+	for (const auto Wheel:Wheels)
+	{
+		Wheel->SetWorldLocation(	Mesh->GetSocketLocation(FName(BoneNamePrefix+Wheel->GetName())));
+	}
+}
+
+void UModularVehicleFunctionLibrary::NotifyError(FString Error)
+{
+	FMessageLog PIELogger = FMessageLog(FName("PIE"));
+	PIELogger.Error(FText::FromString(Error));
 }
