@@ -129,8 +129,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	// The drag coefficient is a dimensionless quantity that is used to quantify the drag or resistance of an object in a fluid environment, such as air or water.
 	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
 	float AirDragCoefficient=0.3;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Network)
-	TEnumAsByte<EVehicleNetworkMode> NetworkMode;
+	
 	
 
 //Getter Functions
@@ -157,7 +156,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	virtual EModularSteerType GetSteerType() const override;
 	virtual float GetSteerInputRise() const override;
 	virtual float GetSteerInputFall() const override;
-	virtual EVehicleNetworkMode GetNetworkMode() const override;
+
 	virtual void GetAckermannValues(float& OutWheelBase, float& OutTrackWidth) override;
 	virtual float GetCounterSteerMultiplier() const override;
 	//AI

@@ -150,10 +150,7 @@ float UModularVehicleData::GetSteerInputFall() const
 
 
 
-EVehicleNetworkMode UModularVehicleData::GetNetworkMode() const
-{
-	return NetworkMode;
-}
+
 
 void UModularVehicleData::GetAckermannValues(float& OutWheelBase, float& OutTrackWidth)
 {

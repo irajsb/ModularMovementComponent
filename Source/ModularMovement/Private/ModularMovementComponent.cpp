@@ -710,17 +710,9 @@ bool UModularMovementComponent::ShouldProcessPhysics() const
 
 	
 	
-	switch (GetSetup()->GetNetworkMode())
-	{
-	case ClientAuthoritative:
-		return GetOwnerRole() == ROLE_AutonomousProxy;
-	case ServerAuthoritative:
-		return GetOwnerRole() == ROLE_Authority;
-	case ClientPredictive:
-		return GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
-	default:
-		return false;
-	}
+
+	return GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
+	
 }
 
 bool UModularMovementComponent::ShouldProcessCosmetics() const

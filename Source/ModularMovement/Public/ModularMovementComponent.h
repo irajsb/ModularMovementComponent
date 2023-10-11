@@ -29,31 +29,31 @@ struct FOldRigidBodyErrorCorrection
 	GENERATED_USTRUCT_BODY()
 
 	/** max squared position difference to perform velocity adjustment */
-	UPROPERTY()
+	UPROPERTY(EditAnywhere,Category=Network)
 	float LinearDeltaThresholdSq;
 
 	/** strength of snapping to desired linear velocity */
-	UPROPERTY()
+	UPROPERTY(EditAnywhere,Category=Network)
 	float LinearInterpAlpha;
 
 	/** inverted duration after which linear velocity adjustment will fix error */
-	UPROPERTY()
+	UPROPERTY(EditAnywhere,Category=Network)
 	float LinearRecipFixTime;
 
 	/** max squared angle difference (in radians) to perform velocity adjustment */
-	UPROPERTY()
+	UPROPERTY(EditAnywhere,Category=Network)
 	float AngularDeltaThreshold;
 
 	/** strength of snapping to desired angular velocity */
-	UPROPERTY()
+	UPROPERTY(EditAnywhere,Category=Network)
 	float AngularInterpAlpha;
 
 	/** inverted duration after which angular velocity adjustment will fix error */
-	UPROPERTY()
+	UPROPERTY(EditAnywhere,Category=Network)
 	float AngularRecipFixTime;
 
 	/** min squared body speed to perform velocity adjustment */
-	UPROPERTY()
+	UPROPERTY(EditAnywhere,Category=Network)
 	float BodySpeedThresholdSq;
 
 	FOldRigidBodyErrorCorrection()
@@ -359,6 +359,7 @@ public:
 	UModularVehicleDebugger* ModularVehicleDebugger;
 
 	/** Correction thresholds cached info */
+	UPROPERTY(EditAnywhere,Category=Network)
 	FOldRigidBodyErrorCorrection ErrorCorrection;
 	
 	bool bRestoredState;

@@ -109,9 +109,7 @@ public:
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual bool GetScaleTireFrictionWithSurfaceAngle(){return true;}
 
-	//NetWork
-	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
-	 virtual EVehicleNetworkMode GetNetworkMode()const{return EVehicleNetworkMode::ServerAuthoritative;}
+
 
 	//AI
 	virtual float GetAITraceLength()const{return 0.f;};
