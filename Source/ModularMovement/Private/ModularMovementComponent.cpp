@@ -13,6 +13,7 @@
 #include "ModularVehicleFunctionLibrary.h"
 #include "GameFramework/Pawn.h"
 #include "PBDRigidsSolver.h"
+#include "Net/UnrealNetwork.h"
 #include "Physics/Experimental/PhysScene_Chaos.h"
 
 
@@ -177,11 +178,8 @@ void UModularMovementComponent::InitializeComponent()
 	MeshComponent->BodyInstance.bUseCCD = true;
 	MeshComponent->SetGenerateOverlapEvents(true);
 	MeshComponent->SetCanEverAffectNavigation(false);
-	if (GetOwnerRole() == ROLE_SimulatedProxy)
-	{
-		GetMesh()->SetSimulatePhysics(false);
-	}
 
+	
 
 	//Calculate Constants
 	AirDragConstant = GetSetup()->GetAirDragConstant();
@@ -196,12 +194,16 @@ void UModularMovementComponent::InitializeComponent()
 
 void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* BodyInstance)
 {
+	
 	MODULAR_CYCLE_COUNTER(STAT_ModularTickComponent)
 	const float fDeltaTime = FMath::Min<float>(DeltaTime, 0.0633);
 
+	
+	
 
 	if (ShouldProcessPhysics())
 	{
+	
 		SteeringInput = CalcSteeringInput(DeltaTime);
 		ThrottleInput = CalcThrottleInput(DeltaTime);
 		BrakeInput = CalcBrakeInput();
@@ -213,12 +215,28 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* Body
 
 
 		UpdateWheels(fDeltaTime, WheelTorque);
+		
 		UpdateReplicatedCosmeticData();
-	}
-	if (ShouldProcessCosmetics())
+	}else
 	{
-		//
+		if(GetOwnerRole()<ROLE_AutonomousProxy)
+		{
+			for (UModularWheel* Component : Components)
+			{
+				if (Component->WheelState.WheelSetup)
+				{
+					Component->UpdateSteering(DeltaTime, this, SteeringInput);
+					Component->UpdateSuspension(DeltaTime, this);
+					Component->WheelState.AngularPosition +=Component-> WheelState.AngularVelocity * DeltaTime;
+
+
+					float IntegerPart;
+					Component->WheelState.AngularPosition = FMath::Modf(Component->WheelState.AngularPosition / (2 * PI), &IntegerPart) * (2 * PI);
+				}
+			}
+		}
 	}
+
 }
 
 void UModularMovementComponent::PreTick(FPhysScene_Chaos* Scene, float DeltaTime)
@@ -289,13 +307,14 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	if (ShouldProcessPhysics())
 	{
 		GetSetup()->GetGearBox()->Update(DeltaTime, this);
-		CaptureState(DeltaTime);
+		
 	}
 
 	for (UModularWheel* Component : Components)
 	{
 		Component->UpdateAnimation(DeltaTime, this);
 	}
+	CaptureState(DeltaTime);
 }
 
 void UModularMovementComponent::BeginPlay()
@@ -321,6 +340,14 @@ void UModularMovementComponent::BeginPlay()
 	}
 
 	GetSetup()->GetGearBox()->SetupGearBox();
+
+	GetMesh()->SetSimulatePhysics(true);
+
+	if(GetOwnerRole()<ROLE_AutonomousProxy)
+	{
+		GetMesh()->SetEnableGravity(false);
+	}
+
 }
 
 void UModularMovementComponent::CaptureState(float DeltaTime)
@@ -340,14 +367,7 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 	VehicleState.SideSpeed = FVector::DotProduct(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity(),
 	                                             GetMesh()->GetRightVector());
 
-	if (ShouldProcessPhysics())
-	{
-		if ((GetSetup()->GetNetworkMode() == ClientAuthoritative && GetOwnerRole() == ROLE_AutonomousProxy) || (
-			GetSetup()->GetNetworkMode() !=
-			ClientAuthoritative && GetOwnerRole() == ROLE_Authority))
-		{
-		}
-	}
+
 }
 
 
@@ -688,6 +708,8 @@ bool UModularMovementComponent::ShouldProcessPhysics() const
 		return true;
 	}
 
+	
+	
 	switch (GetSetup()->GetNetworkMode())
 	{
 	case ClientAuthoritative:
@@ -695,7 +717,7 @@ bool UModularMovementComponent::ShouldProcessPhysics() const
 	case ServerAuthoritative:
 		return GetOwnerRole() == ROLE_Authority;
 	case ClientPredictive:
-		return GetOwnerRole() == ROLE_Authority || GetOwnerRole() == ROLE_AutonomousProxy;
+		return GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
 	default:
 		return false;
 	}
@@ -719,16 +741,18 @@ bool UModularMovementComponent::ServerUpdateState_Validate(uint16 InQuantizeInpu
 
 void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuantizeInput)
 {
+	
+	
 	const int32 QThrottleInput = static_cast<int8>(InQuantizeInput & 0xFF);
 	const int32 QSteeringInput = static_cast<int8>(((InQuantizeInput >> 8) & 0x7F) << 1) / 2;
 	const int32 QHandbrakeInput = (InQuantizeInput >> 15) & 1;
 
 	SetThrottleInput(QThrottleInput / 127.f);
 	SetSteeringInput(QSteeringInput / 63.f);
-
+	
 	HandBrakeInput = QHandbrakeInput == 1 ? true : false;
 
-	//LastUserSteeringInput = QSteeringInput;
+	
 }
 
 
@@ -837,26 +861,148 @@ float UModularMovementComponent::CalcThrottleInput(float DeltaTime) const
 
 void UModularMovementComponent::UpdateReplicatedCosmeticData()
 {
+	if(GetOwnerRole()<ROLE_Authority)
+	{
+		return;
+	}
 	RepCosmeticData.EngineRPM = GetRPMRatio() * 255.f;
-
 	RepCosmeticData.CurrentGear = GetSetup()->GetGearBox()->CurrentGear;
+	RepCosmeticData.SteeringInput=SteeringInput;
+	const auto BI=GetMesh()->GetBodyInstance();
+	const auto Transform=BI->GetUnrealWorldTransform();
+	BI->GetRigidBodyState(RepCosmeticData.RigidBodyState);
+	
+	RepCosmeticData.WheelRepCosmeticDatas.Reset();
+	for (int Index=0;Index!=Components.Num();Index++)
+	{
+		
+		RepCosmeticData.WheelRepCosmeticDatas.Insert(FWheelRepCosmeticData(Components[Index]->WheelState.TireStress,Components[Index]->WheelState.AngularVelocity),Index);
+		
+	}
+	
 }
 
 void UModularMovementComponent::OnRep_RepCosmeticData()
 {
-	VehicleState.CurrentRpm = UKismetMathLibrary::MapRangeClamped(VehicleState.CurrentRpm, 0, 1,
-	                                                              GetSetup()->GetIdleRPM(), GetSetup()->GetMaxRPM());
-
-	if (const auto CurrentGear = GetSetup()->GetGearBox()->CurrentGear != RepCosmeticData.CurrentGear)
+	if(GetOwnerRole()==ROLE_SimulatedProxy)
 	{
-		OnGearChange.Broadcast(CurrentGear, RepCosmeticData.CurrentGear, true);
-		GetSetup()->GetGearBox()->SetCurrentGear(RepCosmeticData.CurrentGear);
+		VehicleState.CurrentRpm = UKismetMathLibrary::MapRangeClamped(RepCosmeticData.EngineRPM, 0, 255,
+																	  GetSetup()->GetIdleRPM(), GetSetup()->GetMaxRPM());
+
+		if (const auto CurrentGear = GetSetup()->GetGearBox()->CurrentGear != RepCosmeticData.CurrentGear)
+		{
+			OnGearChange.Broadcast(CurrentGear, RepCosmeticData.CurrentGear, true);
+			GetSetup()->GetGearBox()->SetCurrentGear(RepCosmeticData.CurrentGear);
+		
+		}
+		SteeringInput=RepCosmeticData.SteeringInput;
+
+		for (int Index=0;Index!=Components.Num();Index++)
+		{
+			if(RepCosmeticData.WheelRepCosmeticDatas.IsValidIndex(Index))
+			{
+				Components[Index]->WheelState.TireStress=	RepCosmeticData.WheelRepCosmeticDatas[Index].Slip;
+				Components[Index]->WheelState.AngularVelocity=	RepCosmeticData.WheelRepCosmeticDatas[Index].AngularVelocity;
+			}
+		}
 	}
+	
+
+	{
+	
+
+		
+		const auto BI=GetMesh()->GetBodyInstance();
+		FRigidBodyState CurrentState;
+		GetMesh()->GetRigidBodyState(CurrentState);
+		const FRigidBodyState NewState=RepCosmeticData.RigidBodyState;
+		const bool bShouldSleep = (NewState.Flags & ERigidBodyFlags::Sleeping) != 0;
+
+		/////// POSITION CORRECTION ///////
+
+		// Find out how much of a correction we are making
+		const FVector DeltaPos = NewState.Position - CurrentState.Position;
+		const float DeltaMagSq = DeltaPos.SizeSquared();
+		const float BodyLinearSpeedSq = CurrentState.LinVel.SizeSquared();
+
+		// Snap position by default (big correction, or we are moving too slowly)
+		FVector UpdatedPos = NewState.Position;
+		FVector FixLinVel = FVector::ZeroVector;
+
+		bool bNeedPositionCorrection = false;
+		// If its a small correction and velocity is above threshold, only make a partial correction,
+		// and calculate a velocity that would fix it over 'fixTime'.
+		if (DeltaMagSq < ErrorCorrection.LinearDeltaThresholdSq &&
+			BodyLinearSpeedSq >= ErrorCorrection.BodySpeedThresholdSq)
+		{
+			UpdatedPos = FMath::Lerp(CurrentState.Position, NewState.Position, ErrorCorrection.LinearInterpAlpha);
+			FixLinVel = (NewState.Position - UpdatedPos) * ErrorCorrection.LinearRecipFixTime;
+			bNeedPositionCorrection = true;
+		}
+
+		// Get the linear correction
+	
+
+		/////// ORIENTATION CORRECTION ///////
+		// Get quaternion that takes us from old to new
+		const FQuat InvCurrentQuat = CurrentState.Quaternion.Inverse();
+		const FQuat DeltaQuat = NewState.Quaternion * InvCurrentQuat;
+
+		FVector DeltaAxis(FVector::ZeroVector);
+		float DeltaAng = 0.f; // radians
+		DeltaQuat.ToAxisAndAngle(DeltaAxis, DeltaAng);
+		DeltaAng = FMath::UnwindRadians(DeltaAng);
+
+		// Snap rotation by default (big correction, or we are moving too slowly)
+		FQuat UpdatedQuat = NewState.Quaternion;
+		FVector FixAngVel = FVector::ZeroVector; // degrees per second
+
+		bool bNeedOrientationCorrection = false;
+		// If the error is small, and we are moving, try to move smoothly to it
+		if (FMath::Abs(DeltaAng) < ErrorCorrection.AngularDeltaThreshold)
+		{
+			UpdatedQuat = FMath::Lerp(CurrentState.Quaternion, NewState.Quaternion, ErrorCorrection.AngularInterpAlpha);
+			FixAngVel = DeltaAxis.GetSafeNormal() * FMath::RadiansToDegrees(DeltaAng) * (1.f - ErrorCorrection.AngularInterpAlpha) * ErrorCorrection.AngularRecipFixTime;
+			bNeedOrientationCorrection = true;
+		}
+
+		if (bNeedPositionCorrection || bNeedOrientationCorrection)
+		{
+			CorrectionBeganTime = GetWorld()->GetTimeSeconds();
+			const float CorrectionTime = FMath::Max(1.f / ErrorCorrection.LinearRecipFixTime, 1.f / ErrorCorrection.AngularRecipFixTime);
+			CorrectionEndTime = CorrectionBeganTime + CorrectionTime;
+			
+		}
+
+		/////// BODY UPDATE ///////
+		BI->SetBodyTransform(FTransform(UpdatedQuat, UpdatedPos), ETeleportType::TeleportPhysics);
+		BI->SetLinearVelocity(NewState.LinVel + FixLinVel, false);
+		BI->SetAngularVelocityInRadians(FMath::DegreesToRadians(NewState.AngVel + FixAngVel), false);
+
+		// state is restored when no velocity corrections are required
+		bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() < KINDA_SMALL_NUMBER);
+		bCorrectionInProgress = !bRestoredState;
+
+		/////// SLEEP UPDATE ///////
+		const bool bIsAwake = BI->IsInstanceAwake();
+		if (bIsAwake && (bShouldSleep && bRestoredState))
+		{
+			BI->PutInstanceToSleep();
+		}
+		else if (!bIsAwake)
+		{
+			BI->WakeInstance();
+		}
+	}
+
+	
 }
 
 
 void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(UModularMovementComponent, RepCosmeticData);
+	
 }
 #undef LOCTEXT_NAMESPACE

@@ -23,9 +23,65 @@ struct FModularVehicleDebugParams
 };
 
 
+USTRUCT()
+struct FOldRigidBodyErrorCorrection
+{
+	GENERATED_USTRUCT_BODY()
+
+	/** max squared position difference to perform velocity adjustment */
+	UPROPERTY()
+	float LinearDeltaThresholdSq;
+
+	/** strength of snapping to desired linear velocity */
+	UPROPERTY()
+	float LinearInterpAlpha;
+
+	/** inverted duration after which linear velocity adjustment will fix error */
+	UPROPERTY()
+	float LinearRecipFixTime;
+
+	/** max squared angle difference (in radians) to perform velocity adjustment */
+	UPROPERTY()
+	float AngularDeltaThreshold;
+
+	/** strength of snapping to desired angular velocity */
+	UPROPERTY()
+	float AngularInterpAlpha;
+
+	/** inverted duration after which angular velocity adjustment will fix error */
+	UPROPERTY()
+	float AngularRecipFixTime;
+
+	/** min squared body speed to perform velocity adjustment */
+	UPROPERTY()
+	float BodySpeedThresholdSq;
+
+	FOldRigidBodyErrorCorrection()
+		: LinearDeltaThresholdSq(10.0f)
+		, LinearInterpAlpha(0.1f)
+		, LinearRecipFixTime(2.0f)
+		, AngularDeltaThreshold(0.15f * PI)
+		, AngularInterpAlpha(0.1f)
+		, AngularRecipFixTime(2.0f)
+		, BodySpeedThresholdSq(0.2f)
+	{
+	}
+};
+
 UENUM()
 enum EAIVehicleState { /*target is in front*/Neutral,/*target is in back*/TurningAround };
 
+USTRUCT()
+struct FWheelRepCosmeticData
+{
+	GENERATED_USTRUCT_BODY()
+public:
+	UPROPERTY()
+	float Slip;
+	UPROPERTY()
+	float AngularVelocity;
+	
+};
 USTRUCT()
 struct FRepCosmeticData
 {
@@ -34,14 +90,20 @@ struct FRepCosmeticData
 	/** Engine RPM */
 	UPROPERTY()
 	uint8 EngineRPM;
+	UPROPERTY()
 	uint8 CurrentGear = 0;
-
-
+	UPROPERTY()
+	float SteeringInput;
+	UPROPERTY()
+	TArray<FWheelRepCosmeticData> WheelRepCosmeticDatas;
+	UPROPERTY()
+	FRigidBodyState RigidBodyState;
 	FRepCosmeticData()
 	{
 		EngineRPM = 0;
 		CurrentGear = 0;
 	}
+
 };
 
 USTRUCT()
@@ -295,4 +357,13 @@ public:
 
 	UPROPERTY()
 	UModularVehicleDebugger* ModularVehicleDebugger;
+
+	/** Correction thresholds cached info */
+	FOldRigidBodyErrorCorrection ErrorCorrection;
+	
+	bool bRestoredState;
+	bool bCorrectionInProgress;
+	
+	float CorrectionBeganTime;
+	float CorrectionEndTime;
 };

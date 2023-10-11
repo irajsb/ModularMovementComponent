@@ -20,9 +20,10 @@ void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	const FTransform WorldTransform = Mesh->GetBodyInstance()->GetUnrealWorldTransform();
 	const float SteerAngleDegrees = Wheel->WheelState.SteerAngle;
 	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
-	const FVector WorldMeshVelocity = Mesh->GetBodyInstance()->
-																GetUnrealWorldVelocityAtPoint(
-																	Wheel->WheelState.HitResult.TraceStart);
+	FVector WorldMeshVelocity = Mesh->GetBodyInstance()->
+										   GetUnrealWorldVelocityAtPoint(
+											   Wheel->WheelState.HitResult.TraceStart);
+	WorldMeshVelocity.Z = 0;
 	const FVector LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity / 100.f);
 	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
 

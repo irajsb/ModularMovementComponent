@@ -92,4 +92,6 @@ public:
 	static void SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh,TArray<UModularWheel* >Wheels, const FString& BoneNamePrefix);
 
 	static void NotifyError(FString Error);
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void ChangeCollisionOnPhysicsBody(USkeletalMeshComponent* skeletalMesh, FName boneName, ECollisionEnabled::Type CollisionType);
 };

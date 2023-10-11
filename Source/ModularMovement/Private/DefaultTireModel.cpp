@@ -37,9 +37,11 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	const FTransform WorldTransform = ModularMovementComponent->GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
 	const float SteerAngleDegrees = Wheel->WheelState.SteerAngle;
 	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
-	const FVector WorldMeshVelocity = ModularMovementComponent->GetMesh()->GetBodyInstance()->
+	 FVector WorldMeshVelocity = ModularMovementComponent->GetMesh()->GetBodyInstance()->
 	                                                            GetUnrealWorldVelocityAtPoint(
 		                                                            Wheel->WheelState.HitResult.TraceStart);
+	
+	WorldMeshVelocity.Z = 0;
 	const FVector LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity / 100.f);
 	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
 

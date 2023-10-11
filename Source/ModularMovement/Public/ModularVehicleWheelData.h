@@ -65,10 +65,10 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	
 	//Damping for when spring is being extended from compress N.s/M
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
-	float DampingRebound=8000;
+	float DampingRebound=4000;
 	//Damping for when spring is being compressed  N.s/M
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Suspension)
-	float DampingCompress=5000;
+	float DampingCompress=2500;
 	
 	//Brake torque
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
@@ -185,7 +185,7 @@ struct FWheelState{
 	UPROPERTY(Transient)
 	float CurrentPivotAngle;
 
-
+	
 	UPROPERTY(Transient)
 	float DampingForce;
 	

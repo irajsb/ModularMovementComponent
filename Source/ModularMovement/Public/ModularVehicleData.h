@@ -12,7 +12,7 @@
  */
  
 
-UCLASS(HideCategories="Network")
+UCLASS()
 class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 {
 	GENERATED_BODY()

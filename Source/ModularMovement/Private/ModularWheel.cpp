@@ -71,6 +71,18 @@ void UModularWheel::SetupWheels(UModularMovementComponent* ModularMovementCompon
 	{
 		UModularVehicleFunctionLibrary::NotifyError("Wheel Setup class is missing in wheel components. Please create and assign one !");
 	}
+
+
+	if(OptionalBoneName!=NAME_None)
+	{
+		if(auto SMesh=Cast<USkeletalMeshComponent>(ModularMovementComponent->GetMesh()))
+		{
+			
+			
+			SMesh->SetAllBodiesBelowPhysicsDisabled(OptionalBoneName,true,true);
+			
+		}
+	}
 }
 
 void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent* ModularMovementComponent)
@@ -84,6 +96,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	MODULAR_CYCLE_COUNTER(STAT_ModularSuspension)
 
 
+	
 	// Gather data for trace
 	WheelState.WheelLoad = FVector::ZeroVector;
 	UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
@@ -132,44 +145,45 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	if (!ValidHitFound)
 	{
 		// Handle the situation where no valid hits were found, such as logging a warning or taking alternative actions
-		UE_LOG(LogTemp, Warning, TEXT("No valid hits found in suspension update."));
 		WheelState.HitResult.bBlockingHit = false;
 		WheelState.HitResult.TraceEnd = TraceEnd;
 		return;
 	}
 
-	// Calculate suspension force and damping 
-	const float CurrentLen = FMath::Max<float>(0, TraceResult.Time);
-	const float Stiffness = WheelSetup->SpringRate * (1 - CurrentLen) * SuspensionLenOver100;
-	const float SuspensionDiff = (CurrentLen - WheelState.PreviousLen) * SuspensionLenOver100;
 
-	if (CurrentLen - WheelState.PreviousLen < 0)
-	{
-		WheelState.DampingForce = -1 * (((SuspensionDiff) * WheelSetup->DampingCompress)) / DeltaTime;
-	}
-	else
-	{
-		WheelState.DampingForce = -1 * (((SuspensionDiff) * WheelSetup->DampingRebound)) / DeltaTime;
-	}
+		// Calculate suspension force and damping 
+		const float CurrentLen = FMath::Clamp<float>( TraceResult.Time,0.f,1.f);
+		const float Stiffness = WheelSetup->SpringRate * (1 - CurrentLen) * SuspensionLenOver100;
+		const float SuspensionDiff = (CurrentLen - WheelState.PreviousLen) * SuspensionLenOver100;
 
-	if (TraceResult.bBlockingHit && ModularMovementComponent->ShouldProcessPhysics())
-	{
-		WheelState.WheelLoad = ((FVector::UpVector * (Stiffness + WheelState.DampingForce)));
+		if (CurrentLen - WheelState.PreviousLen < 0)
+		{
+			WheelState.DampingForce = -1 * (((SuspensionDiff) * WheelSetup->DampingCompress)) / DeltaTime;
+		}
+		else
+		{
+			WheelState.DampingForce = -1 * (((SuspensionDiff) * WheelSetup->DampingRebound)) / DeltaTime;
+		}
 
-		//Draw Debugs
+		if (TraceResult.bBlockingHit && ModularMovementComponent->ShouldProcessPhysics())
+		{
+			WheelState.WheelLoad = ((FVector::UpVector * (Stiffness + WheelState.DampingForce)));
 
-		DirectionVector = UKismetMathLibrary::VLerp(DirectionVector, FVector::UpVector,
-		                                            WheelState.WheelSetup->SteepSurfaceAssistance);
-		FVector CorrectedForce = DirectionVector * SIForceToUnrealForce(WheelState.WheelLoad.Z);
+			//Draw Debugs
+
+			DirectionVector = UKismetMathLibrary::VLerp(DirectionVector, FVector::UpVector,
+														WheelState.WheelSetup->SteepSurfaceAssistance);
+			FVector CorrectedForce = DirectionVector * SIForceToUnrealForce(WheelState.WheelLoad.Z);
 
 
-		AddForceAtPosition(Mesh, TraceResult.ImpactPoint, CorrectedForce, NAME_None);
+			AddForceAtPosition(Mesh, TraceResult.ImpactPoint, CorrectedForce, NAME_None);
 	
+		}
+
+		WheelState.PreviousLen = CurrentLen;
+		WheelState.HitResult = TraceResult;
 	}
 
-	WheelState.PreviousLen = CurrentLen;
-	WheelState.HitResult = TraceResult;
-}
 
 void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* ModularMovementComponent)
 {
@@ -354,6 +368,8 @@ void UModularWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* 
 	FRotator Rotation;
 
 	UModularVehicleFunctionLibrary::GetWheelAnimationData(this, Location, Rotation, DeltaTime);
+
+	Location=GetComponentTransform().TransformPosition(Location);
 	TArray<USceneComponent*> Components;
 	GetChildrenComponents(false, Components);
 	for (USceneComponent* Mesh : Components)
@@ -364,7 +380,8 @@ void UModularWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* 
 			Mesh->SetRelativeRotation(Rotation);
 
 
-			Mesh->SetRelativeLocation(Location);
+		
+			Mesh->SetWorldLocation(Location);
 		}
 	}
 }

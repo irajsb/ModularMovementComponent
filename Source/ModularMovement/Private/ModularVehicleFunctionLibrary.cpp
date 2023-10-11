@@ -218,6 +218,8 @@ void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,
 	{
 		return;
 	}
+
+	
 	FWheelState& WheelState = *Wheel->GetWheelState();
 	if (Wheel->GetWorld()->IsGameWorld() && WheelState.WheelSetup)
 	{
@@ -226,6 +228,7 @@ void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,
 			                                        : WheelState.HitResult.TraceEnd;
 
 
+		
 		const FTransform WheelTransform = Wheel->GetWheelTransform();
 
 
@@ -255,6 +258,7 @@ void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,
 
 
 		Location = ResultPosition;
+		
 		WheelState.PreviousLocation = ResultPosition;
 
 		const float Steer = WheelState.SteerAngle;
@@ -281,7 +285,9 @@ void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalM
 
 	for (const auto Wheel:Wheels)
 	{
-		Wheel->SetWorldLocation(	Mesh->GetSocketLocation(FName(BoneNamePrefix+Wheel->GetName())));
+		 FName BoneName=FName(BoneNamePrefix+Wheel->GetName());
+		Wheel->SetWorldLocation(	Mesh->GetSocketLocation(BoneName));
+		Wheel->OptionalBoneName=BoneName;
 	}
 }
 
@@ -289,4 +295,16 @@ void UModularVehicleFunctionLibrary::NotifyError(FString Error)
 {
 	FMessageLog PIELogger = FMessageLog(FName("PIE"));
 	PIELogger.Error(FText::FromString(Error));
+}
+
+void UModularVehicleFunctionLibrary::ChangeCollisionOnPhysicsBody(USkeletalMeshComponent* skeletalMesh, FName boneName,
+	ECollisionEnabled::Type CollisionType)
+{
+	if(skeletalMesh)
+	{
+		if(auto BI=skeletalMesh->GetBodyInstance(boneName))
+		{
+			BI->SetShapeCollisionEnabled(0, CollisionType);
+		}
+	}
 }

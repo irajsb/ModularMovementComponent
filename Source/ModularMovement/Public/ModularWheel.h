@@ -30,7 +30,8 @@ public:
 	//Some Properties are not valid in SimulatedPawn
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,meta=(ShowOnlyInnerProperties ),Category=Setup)
 	FWheelState WheelState;
-
+	UPROPERTY()
+	FName OptionalBoneName;
 
 	// override the parent that force is applied to
 	UPROPERTY(BlueprintReadWrite,Transient,Category=Setup)
@@ -93,6 +94,7 @@ public:
 	private:
 	bool Debug=false;
 
+	
 
 	static Chaos::FRigidBodyHandle_Internal* GetInternalHandle(const UPrimitiveComponent* Component, FName BoneName);
 	void AddForceAtPosition(UPrimitiveComponent* Component, FVector Position, FVector Force, FName BoneName);
