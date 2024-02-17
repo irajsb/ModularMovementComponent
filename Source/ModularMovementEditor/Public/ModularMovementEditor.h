@@ -22,7 +22,7 @@ public:
 
 
 
-
+	TSharedPtr<SWindow>EditorWindow;
 private:
 	
 };

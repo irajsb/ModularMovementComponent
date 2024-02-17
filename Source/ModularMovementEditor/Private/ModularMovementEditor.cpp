@@ -17,7 +17,13 @@ void FModularMovementEditorModule::StartupModule()
 {
 
 	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.RegisterCustomPropertyTypeLayout(FPacejkaConstants::StaticStruct()->GetFName(),FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FPacejkaDetailsCustomization::MakeInstance));
+	auto Delegate=FOnGetPropertyTypeCustomizationInstance::CreateLambda([&]()
+	{
+		
+		return FPacejkaDetailsCustomization::MakeInstance(this);
+	});
+
+	PropertyModule.RegisterCustomPropertyTypeLayout(FPacejkaConstants::StaticStruct()->GetFName(),Delegate);
 	
 }
 

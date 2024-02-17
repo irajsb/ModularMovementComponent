@@ -13,7 +13,13 @@
 void FPacejkaDetailsCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> PropertyHandle,
                                                      IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils)
 {
+	
 
+	if(MovementEditorModule->EditorWindow)
+	{
+		MovementEditorModule->EditorWindow.Get()->DestroyWindowImmediately();
+	}
+	
 	PacejkaConstantsHandle=PropertyHandle;
 	// Add original children back to the layout
 	uint32 NumChildren;
@@ -43,10 +49,15 @@ void FPacejkaDetailsCustomization::CustomizeChildren(TSharedRef<IPropertyHandle>
 				]
 			];
 }
-FReply FPacejkaDetailsCustomization::OnOpenEditorClicked() const
+FReply FPacejkaDetailsCustomization::OnOpenEditorClicked() 
 {
+
+	if(MovementEditorModule->EditorWindow)
+	{
+		MovementEditorModule->EditorWindow.Get()->DestroyWindowImmediately();
+	}
 	// Create the custom window
-	TSharedRef<SWindow> EditorWindow = SNew(SWindow)
+	TSharedRef<SWindow> EditorWindowRef = SNew(SWindow)
 		.Title(FText::FromString("Pacejka Graph Preview"))
 		.ClientSize(FVector2D(800, 600)).IsTopmostWindow(true)
 		[
@@ -64,7 +75,8 @@ FReply FPacejkaDetailsCustomization::OnOpenEditorClicked() const
 		];
 
 	// Show the window
-	FSlateApplication::Get().AddWindow(EditorWindow);
+	FSlateApplication::Get().AddWindow(EditorWindowRef);
 
+	MovementEditorModule->EditorWindow=EditorWindowRef.ToSharedPtr();
 	return FReply::Handled();
 }

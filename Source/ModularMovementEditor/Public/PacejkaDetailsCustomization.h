@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "IDetailCustomization.h"
+#include "ModularMovementEditor.h"
 #include "PacejkaTireModel.h"
 #include "Widgets/SCanvas.h"
 
@@ -74,8 +75,13 @@ public:
 	float B = 1, C = 1, D = 1, E = 1;
 	bool IsLat=false;
  	
- 	if(PacejkaConstantsHandle.IsValid())
+ 	if(PacejkaConstantsHandle)
  	{
+
+ 		if(!PacejkaConstantsHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FPacejkaConstants,B)))
+ 		{
+ 			return 0;
+ 		}
  		
  		PacejkaConstantsHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FPacejkaConstants,B))->GetValue(B);
  		PacejkaConstantsHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FPacejkaConstants,C))->GetValue(C);
@@ -142,11 +148,20 @@ private:
 class MODULARMOVEMENTEDITOR_API FPacejkaDetailsCustomization : public IPropertyTypeCustomization
 {
 public:
- static TSharedRef<IPropertyTypeCustomization> MakeInstance() { return MakeShared<FPacejkaDetailsCustomization>(); }
+
+	FPacejkaDetailsCustomization(FModularMovementEditorModule* InMovementEditorModule)
+	{
+		MovementEditorModule=InMovementEditorModule;
+	}
+ static TSharedRef<IPropertyTypeCustomization> MakeInstance(FModularMovementEditorModule* MovementEditorModule) { return MakeShared<FPacejkaDetailsCustomization>(MovementEditorModule); }
  
 virtual void CustomizeHeader(TSharedRef<IPropertyHandle> PropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& CustomizationUtils) override{};
  virtual void CustomizeChildren(TSharedRef<IPropertyHandle> PropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils) override;
- FReply OnOpenEditorClicked() const;
+
+
+ FReply OnOpenEditorClicked() ;
 
 	TSharedPtr<IPropertyHandle> PacejkaConstantsHandle;
+
+	FModularMovementEditorModule* MovementEditorModule;
 };

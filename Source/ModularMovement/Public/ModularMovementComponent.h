@@ -80,7 +80,17 @@ public:
 	float Slip;
 	UPROPERTY()
 	float AngularVelocity;
-	
+
+	FWheelRepCosmeticData(float InSlip,float InAngularVelocity)
+	{
+		Slip=InSlip;
+		AngularVelocity=InAngularVelocity;
+	}
+	FWheelRepCosmeticData()
+	{
+		Slip=0.f;
+		AngularVelocity=0.f;
+	};
 };
 USTRUCT()
 struct FRepCosmeticData
