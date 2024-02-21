@@ -29,6 +29,8 @@ class MODULARMOVEMENT_API UVehicleSpringArm : public USceneComponent
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
 	FVector TargetOffset;
 
+	
+
 	/** How big should the query probe sphere be (in unreal units) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = CameraCollision, meta = (editcondition = "bDoCollisionTest"))
 	float ProbeSize;
@@ -186,6 +188,10 @@ public :
 	UFUNCTION(BlueprintCallable,Category=Behaviour)
 	void SetCooldown(float In);
 
+
+	// Camera will face target speed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VehicleSpringArm)
+	bool AutoCorrect=true;
 	//Speed when auto correct starts ( auto correct rotates camera to vehicle movement direction)
 	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	float AutoCorrectMinSpeedRange = 300;

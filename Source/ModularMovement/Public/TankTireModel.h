@@ -22,6 +22,10 @@ class MODULARMOVEMENT_API UTankTireModel : public UBaseTireModel
 	UPROPERTY(EditAnywhere, Category = TireModel)
 	float FrictionMultiplierLateral = 1.f;
 
+	// Reduce friction laterally when steering 
+	UPROPERTY(EditAnywhere, Category = TireModel)
+	float SteeringFrictionReductionMultiplier = 0.5f;
+	
 	// Radius of the sprocket for the tire.
 	UPROPERTY(EditAnywhere, Category = TireModel)
 	float SprocketRadius = 60.f;

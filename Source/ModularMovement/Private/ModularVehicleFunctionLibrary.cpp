@@ -282,6 +282,11 @@ void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,
 void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh, TArray<UModularWheel* >Wheels,
                                                                 const FString& BoneNamePrefix)
 {
+	if(!Mesh)
+	{
+		FMessageDialog::Open(EAppMsgCategory::Error,EAppMsgType::Ok,FText::FromString(TEXT("Mesh was not found function SetupWheelLocationFromBone")));
+		return;
+	}
 
 	for (const auto Wheel:Wheels)
 	{

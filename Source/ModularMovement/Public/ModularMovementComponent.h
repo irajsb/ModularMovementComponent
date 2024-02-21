@@ -377,4 +377,6 @@ public:
 	
 	float CorrectionBeganTime;
 	float CorrectionEndTime;
+
+	static void ShowSetupError( FString Error);
 };

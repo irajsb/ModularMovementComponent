@@ -19,16 +19,17 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	{
 		Mesh=Wheel->ParentBodyOverride;
 	}
+
+	const float CalculatedLatFrictionMultiplier=FrictionMultiplierLateral* (ModularMovementComponent->SteeringInput==0?1:SteeringFrictionReductionMultiplier);
 	//Gather necessary data 
 	const FTransform WorldTransform = Mesh->GetBodyInstance()->GetUnrealWorldTransform();
-	const float SteerAngleDegrees = Wheel->WheelState.SteerAngle;
-	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
+	
 	 FVector WorldMeshVelocity = Mesh->GetBodyInstance()->
 																GetUnrealWorldVelocityAtPoint(
 																	Wheel->WheelState.HitResult.TraceStart);
 	WorldMeshVelocity.Z = 0;
 	const FVector LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity);
-	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
+	const FVector GroundVelocityVector = LocalWheelVelocity;
 	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
 		GetNumberOfWheels());
 	const float WheelRadiusM =SprocketRadius / 100.f;
@@ -47,7 +48,7 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 		MassPerWheel *FrictionMultiplierLongitudinal * (GroundVelocityVector.X) / 100 /
 		DeltaTime);
 
-
+	
 
 	const float ReverseVelocitySign=-1.f * FMath::Sign(GroundVelocityVector.X);
 
@@ -58,7 +59,7 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 		const float LongitudinalAdhesiveLimit = Wheel->WheelState.WheelLoad.Size() * Wheel->WheelState.HitResult.
 			PhysMaterial.Get()->Friction * FrictionMultiplierLongitudinal;
 		const float LateralFrictionLimit = Wheel->WheelState.WheelLoad.Size() * Wheel->WheelState.HitResult.
-			PhysMaterial.Get()->Friction*FrictionMultiplierLateral;
+			PhysMaterial.Get()->Friction*CalculatedLatFrictionMultiplier;
 
 		if (Braking)
 		{
@@ -96,7 +97,7 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 		
 	
 		
-		FinalForceVector.Y = (MassPerWheel * -FrictionMultiplierLateral * LocalWheelVelocity.Y/100.f);
+		FinalForceVector.Y = (MassPerWheel * -CalculatedLatFrictionMultiplier * LocalWheelVelocity.Y/100.f);
 		
 		FinalForceVector.Y=FMath::Clamp(FinalForceVector.Y,-LateralFrictionLimit,LateralFrictionLimit);
 		FinalForceVector.Y=FMath::Clamp(FinalForceVector.Y,-ForceRequiredToBringToStop,ForceRequiredToBringToStop);

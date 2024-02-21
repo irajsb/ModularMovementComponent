@@ -301,33 +301,36 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 			}
 			else
 			{
-				//orient camera towards the speed vector
-
-
-				if (Velocity.Size() > AutoCorrectMinSpeedRange)
+				if(AutoCorrect)
 				{
-					const float Interpolation = UKismetMathLibrary::MapRangeClamped(
-							Velocity.Size(), AutoCorrectMinSpeedRange, AutoCorrectMaxSpeedRange, 0, 1) *
-						AutoCorrectInterpolationStrength;
-					FRotator Result = UKismetMathLibrary::RInterpTo(CurrentRot, Velocity.Rotation(), DeltaTime,
-					                                                Interpolation);
-					if (IgnorePitch)
+					//orient camera towards the speed vector
+
+
+					if (Velocity.Size() > AutoCorrectMinSpeedRange)
 					{
-						Result.Pitch = CurrentRot.Pitch;
-					}
-					if (bUsePawnControlRotation)
-					{
-						if (OwningPawn->GetController())
+						const float Interpolation = UKismetMathLibrary::MapRangeClamped(
+								Velocity.Size(), AutoCorrectMinSpeedRange, AutoCorrectMaxSpeedRange, 0, 1) *
+							AutoCorrectInterpolationStrength;
+						FRotator Result = UKismetMathLibrary::RInterpTo(CurrentRot, Velocity.Rotation(), DeltaTime,
+																		Interpolation);
+						if (IgnorePitch)
 						{
-							if (OwningPawn->GetController()->IsLocalController())
+							Result.Pitch = CurrentRot.Pitch;
+						}
+						if (bUsePawnControlRotation)
+						{
+							if (OwningPawn->GetController())
 							{
-								OwningPawn->GetController()->SetControlRotation(Result);
+								if (OwningPawn->GetController()->IsLocalController())
+								{
+									OwningPawn->GetController()->SetControlRotation(Result);
+								}
 							}
 						}
-					}
-					else
-					{
-						SetWorldRotation(Result);
+						else
+						{
+							SetWorldRotation(Result);
+						}
 					}
 				}
 				//Find lag amount by acceleration

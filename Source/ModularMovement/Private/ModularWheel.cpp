@@ -176,6 +176,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 			FVector CorrectedForce = DirectionVector * SIForceToUnrealForce(WheelState.WheelLoad.Z);
 
 
+			
 			AddForceAtPosition(Mesh, TraceResult.ImpactPoint, CorrectedForce, NAME_None);
 	
 		}
@@ -218,7 +219,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		FVector FrictionForceVector=FVector(0.f,0.f,0.f);
 		FrictionForceVector += GetForwardVector() * FinalForceVector.X;
 		FrictionForceVector += GetRightVector() * FinalForceVector.Y;
-
+		
 		//Calculate direction of force
 
 		UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
@@ -226,8 +227,8 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		{
 			Mesh = ParentBodyOverride;
 		}
-
-	
+		
+		
 		if (!FrictionForceVector.ContainsNaN())
 		{
 			AddForceAtPosition(Mesh, WheelState.HitResult.TraceStart, FrictionForceVector, NAME_None);
