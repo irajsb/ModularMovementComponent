@@ -64,6 +64,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Tank Track")
 	UStaticMesh* TrackMesh;
 
+	
+
 	UPROPERTY(EditAnywhere, Category = "Tank Track")
 	FVector Scale = FVector(1, 1, 1);
 
@@ -93,7 +95,14 @@ public:
 	TArray<float> CustomFloatData;
 	UPROPERTY(BlueprintReadOnly,Category="Tank Track")
 	float TrackSpeed;
-	float CurrentOffset;
+	
 
+	// Wheel radius / sprocket radius
+	UPROPERTY(BlueprintReadOnly,Category="Tank Track")
+	float SprocketRatio;
+	UPROPERTY(BlueprintReadOnly,Category="Tank Track")
+	float SprocketRadius;
+	float CurrentOffset;
+	
 	
 };

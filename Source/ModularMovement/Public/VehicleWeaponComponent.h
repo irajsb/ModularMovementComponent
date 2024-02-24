@@ -35,83 +35,116 @@ struct FWeaponDataRow : public FTableRowBase
 {
 	GENERATED_USTRUCT_BODY()
 
+	// Setup Category
 
-	UPROPERTY(EditAnywhere)
+
+	/** Ammo count */
+	UPROPERTY(EditAnywhere, Category = "Setup")
+	int ClipSize;
+	
+	/** Ammo count */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	int AmmoCount;
-	UPROPERTY(EditAnywhere)
+
+	/** Time to reload after ammo finishes */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	float ReloadTime;
-	UPROPERTY(EditAnywhere)
+
+	/** Damage type to be registered */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	TSubclassOf<UDamageType> DamageType;
-	UPROPERTY(EditAnywhere)
+
+	/** Initial time between shots for weapons that need to speed up before shooting, such as gatling guns */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	float InitialTimeBetweenShots;
-	UPROPERTY(EditAnywhere)
+
+	/** Target time between shots when weapons have sped up */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	float TargetTimeBetweenShots;
-	UPROPERTY(EditAnywhere)
+
+	/** Interpolation for speed */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	float InterpolationSpeed;
-	UPROPERTY(EditAnywhere)
+
+	/** Infinite ammo (infinite reloads) */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	bool bInfiniteAmmo;
-	UPROPERTY(EditAnywhere)
+
+	/** Infinite current mag */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	bool bInfiniteClip;
-	UPROPERTY(EditAnywhere)
+
+	/** Speed for animating aim rotation of weapon */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	float RotInterpolationSpeed;
-	UPROPERTY(EditAnywhere)
+
+	/** Heat generated per shot */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	float HeatPerShot;
-	/*Multiplied by delatime */
-	UPROPERTY(EditAnywhere)
+
+	/** Heat reduction rate per second */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	float HeatReduce;
 
-	//AIHearing
-	UPROPERTY(EditAnywhere)
-	float Loudness;
-	//AIHearing
-	UPROPERTY(EditAnywhere)
-	float MaxRange;
-	//AIHearing
-	UPROPERTY(EditAnywhere)
-	FName Tag;
-
-	/*Increases cooldowns reloads etc!*/
-	UPROPERTY(EditAnywhere)
+	/** AITimer Multiplier */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	float AITimerMultiplier;
-	/*Negative To Disable*/
-	UPROPERTY(EditAnywhere)
+
+	/** Weapon Recoil (Negative To Disable) */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	float WeaponRecoil;
 
+	/** Flag indicating if owned by AI */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	bool IsOwnedByAI;
-	UPROPERTY(EditAnywhere)
+
+	/** Flag indicating instant rotation */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	bool InstantRotation;
-	UPROPERTY(EditAnywhere)
-	float MinPitch=-5;
-	UPROPERTY(EditAnywhere)
-	float MaxPitch=30;
-	UPROPERTY(EditAnywhere)
+
+	/** Minimum pitch for aim */
+	UPROPERTY(EditAnywhere, Category = "Setup")
+	float MinPitch;
+
+	/** Maximum pitch for aim */
+	UPROPERTY(EditAnywhere, Category = "Setup")
+	float MaxPitch;
+
+	/** Widget to be shown at where aim is */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	TSubclassOf<UUserWidget> AimWidgetClass;
-	UPROPERTY(EditAnywhere)
-	FVector2D AimWidgetSize=FVector2D(50,50);
-	UPROPERTY(EditAnywhere)
+
+	/** Size of aim widget */
+	UPROPERTY(EditAnywhere, Category = "Setup")
+	FVector2D AimWidgetSize;
+
+	/** Collision channel */
+	UPROPERTY(EditAnywhere, Category = "Setup")
 	TEnumAsByte<ECollisionChannel> Channel;
 
-	FWeaponDataRow(): HeatPerShot(0), HeatReduce(0), Loudness(0), MaxRange(0), Channel(ECC_Visibility)
+	FWeaponDataRow() : HeatPerShot(0), HeatReduce(0), Channel(ECC_Visibility)
 	{
+		ClipSize=1;
 		InterpolationSpeed = 1;
-
 		InitialTimeBetweenShots = TargetTimeBetweenShots = 1;
 		ReloadTime = 1;
 		AmmoCount = 32;
 		bInfiniteClip = false;
 		bInfiniteAmmo = true;
-
 		RotInterpolationSpeed = 20;
 		WeaponRecoil = 0;
 		IsOwnedByAI = false;
 		InstantRotation = false;
 		AITimerMultiplier = 1;
+		MinPitch = -5;
+		MaxPitch = 30;
+		AimWidgetSize = FVector2D(50, 50);
 	}
 };
 
 //////////////////
 ///class
-UCLASS( Blueprintable , meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
 class MODULARMOVEMENT_API UVehicleWeaponComponent : public USceneComponent
 {
 	GENERATED_BODY()
@@ -119,100 +152,25 @@ class MODULARMOVEMENT_API UVehicleWeaponComponent : public USceneComponent
 public:
 	// Sets default values for this component's properties
 	UVehicleWeaponComponent();
-	FTimerHandle TimerHandle_HandleFiring;
-	FTimerHandle TimerHandle_StopReload;
-	FTimerHandle TimerHandle_ReloadWeapon;
 
-	///////////////////////////////////////////
-	/** [local + server] start weapon fire */
-	UFUNCTION(BlueprintCallable)
-	virtual void StartFire(bool bAutoFire);
+	//-----------------------
+	//-----Props------------
+	//--------------------
 
-	/** [local + server] stop weapon fire */
-	UFUNCTION(BlueprintCallable)
-	virtual void StopFire(bool bAutoFire);
-	/** [local + server] firing started */
-	virtual void OnBurstStarted();
-	/** [local + server] handle weapon refire, compensating for slack time if the timer can't sample fast enough */
-	void HandleReFiring();
+	
+	/*IsAnimPlaying*/
+	UPROPERTY(BlueprintReadOnly,Category=State)
+	bool bPlayingFireAnim;
+
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly,Category=Setup)
+	FWeaponDataRow WeaponConfig;
+	UPROPERTY(EditAnywhere, Category=Setup)
+	FVector2D AimLocationOnScreen = FVector2D(2, 3);
 
 	/** Whether to allow automatic weapons to catch up with shorter refire cycles */
 	UPROPERTY(Config)
 	bool bAllowAutomaticWeaponCatchup = true;
-	/** get current ammo amount (total) */
-	int32 GetCurrentAmmo() const;
 
-	/** [local + server] firing finished */
-	virtual void OnBurstFinished();
-	/** [local + server] interrupt weapon reload */
-	virtual void StopReload();
-	/** [server] performs actual reload */
-	virtual void ReloadWeapon();
-	UFUNCTION(reliable, server, WithValidation)
-	void ServerStartReload();
-	UFUNCTION(reliable, server, WithValidation)
-	void ServerHandleFiring();
-
-	float CurrentTimeBetweenShots;
-	/** Called in network play to do the cosmetic fx for firing */
-	virtual void SimulateWeaponFire();
-	
-
-
-	/*IsAnimPlaying*/
-	UPROPERTY(BlueprintReadOnly)
-	bool bPlayingFireAnim;
-
-
-	/** Called in network play to stop cosmetic fx (e.g. for a looping shot). */
-	virtual void StopSimulatingWeaponFire();
-
-	/** [local] weapon specific fire implementation */
-	virtual void FireWeapon() PURE_VIRTUAL(UWeaponComponent::FireWeapon,);
-	
-	/** consume a bullet */
-	void UseAmmo();
-	
-	UPROPERTY()
-	APlayerController* PlayerController;
-
-	/*Anim Notifier*/
-	UPROPERTY(BlueprintAssignable)
-	FOnFireAnimationStateChanged FireStateChange;
-	UPROPERTY(BlueprintAssignable)
-	FOnReloadAnimationStateChanged ReloadStateChange;
-	UPROPERTY(BlueprintAssignable)
-	FOnReload OnReload;
-	UPROPERTY(BlueprintAssignable)
-	FNotifyAmmo NotifyAmmo;
-	UPROPERTY(BlueprintAssignable)
-	FOnFire OnFire;
-	UFUNCTION(reliable, server, WithValidation)
-	void ServerStartFire();
-
-	UFUNCTION(reliable, server, WithValidation)
-	void ServerStopFire();
-	/** check if weapon can fire */
-	bool CanFire() const;
-
-	/** check if weapon can be reloaded */
-	bool CanReload() const;
-	/** [local + server] handle weapon fire */
-	void HandleFiring();
-	/** check if weapon has infinite ammo (include owner's cheats) */
-	bool HasInfiniteAmmo() const;
-
-	/** check if weapon has infinite clip (include owner's cheats) */
-	bool HasInfiniteClip() const;
-	/** [all] start weapon reload */
-	virtual void StartReload(bool bFromReplication = false);
-
-
-	/** update weapon state */
-	void SetWeaponState(EWeaponState::Type NewState);
-
-	/** determine current weapon state */
-	void DetermineWeaponState();
 	/** is weapon fire active? */
 	uint32 bWantsToFire : 1;
 	/** is reload animation playing? */
@@ -223,14 +181,18 @@ public:
 
 	/** current weapon state */
 	EWeaponState::Type CurrentState;
+	
 	/** time of last successful weapon fire */
 	float LastFireTime;
+	
 	/** burst counter, used for replicating fire events to remote clients */
 	UPROPERTY(Transient, ReplicatedUsing=OnRep_BurstCounter)
 	int32 BurstCounter;
+	
 	/** Adjustment to handle frame rate affecting actual timer interval. */
 	UPROPERTY(Transient)
 	float TimerIntervalAdjustment;
+	
 	/** current total ammo */
 	UPROPERTY(Transient, Replicated)
 	int32 CurrentAmmo;
@@ -238,41 +200,23 @@ public:
 	/** current ammo - inside clip */
 	UPROPERTY(Transient, Replicated)
 	int32 CurrentAmmoInClip;
-
-	/** get the originating location for camera damage */
-	FVector GetCameraDamageStartLocation(const FVector& AimDir) const;
-	/** Get the aim of the weapon, allowing for adjustments to be made by the weapon */
 	
+	bool bIsAIAllowedToFire;
 	
+	UPROPERTY(BlueprintReadOnly)
+	float CurrentHeat;
+	
+	//did we increase timers(Reload ETC)?
+	bool TimersUpdated = false;
 
-public:
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	FWeaponDataRow WeaponConfig;
-	UFUNCTION(BlueprintCallable)
-	virtual void UpdateAnim(float DeltaTime);
+	//Weapon rotation for animating
 	UPROPERTY(BlueprintReadOnly)
 	FRotator CurrentWeaponRotation;
-
-
+	//Weapon rotation for animating
+	UPROPERTY(BlueprintReadOnly)
+	FRotator CurrentWeaponRotationWorldSpace;
+	
 	FVector TargetLocation;
-
-	FRotator TargetCosmeticRotation;
-	UFUNCTION()
-	void OnRep_BurstCounter();
-
-	UFUNCTION()
-	void OnRep_Reload();
-
-
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
-	                           FActorComponentTickFunction* ThisTickFunction) override;
-	virtual void BeginPlay() override;
-
-	FHitResult WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const;
-
-	//fx
-	/*Disables Pooling And Spawns Particle in world*/
 
 	/** FX for muzzle flash */
 	UPROPERTY(EditDefaultsOnly, Category=Effects)
@@ -284,14 +228,8 @@ public:
 	UPROPERTY(Transient)
 	UParticleSystemComponent* MuzzlePSC;
 
+	
 
-	/** camera shake on firing */
-	//UPROPERTY(EditDefaultsOnly, Category=Effects)
-	//TSubclassOf<UCameraShakeBase> FireCameraShake;
-
-	/** force feedback effect to play when the weapon is fired */
-	UPROPERTY(EditDefaultsOnly, Category=Effects)
-	UForceFeedbackEffect* FireForceFeedback;
 
 	/** single fire sound (bLoopedFireSound not set) */
 	UPROPERTY(EditDefaultsOnly, Category=Sound)
@@ -319,9 +257,109 @@ public:
 	/** is fire sound looped? */
 	UPROPERTY(EditDefaultsOnly, Category=Sound)
 	uint32 bLoopedFireSound : 1;
+	
+	//-----------------------
+	//-----Funcs------------
+	//--------------------
+
+	
+	/** [local + server] start weapon fire auto fire is for weapons that are not controlled by user and want to shoot on proximity */
+	UFUNCTION(BlueprintCallable)
+	virtual void StartFire(bool bAutoFire);
+
+	/** [local + server] stop weapon fire */
+	UFUNCTION(BlueprintCallable)
+	virtual void StopFire(bool bAutoFire);
+	
+	/** [local + server] firing started */
+	virtual void OnBurstStarted();
+	
+	/** [local + server] handle weapon refire, compensating for slack time if the timer can't sample fast enough */
+	void HandleReFiring();
+
+	
+	/** get current ammo amount (total) */
+	int32 GetCurrentAmmo() const;
+
+	/** [local + server] firing finished */
+	virtual void OnBurstFinished();
+	
+	/** [local + server] interrupt weapon reload */
+	virtual void StopReload();
+	
+	/** [server] performs actual reload */
+	virtual void ReloadWeapon();
+	
+	UFUNCTION(reliable, server, WithValidation)
+	void ServerStartReload();
+	
+	UFUNCTION(reliable, server, WithValidation)
+	void ServerHandleFiring();
+
+	/** Called in network play to stop cosmetic fx (e.g. for a looping shot). */
+	virtual void StopSimulatingWeaponFire();
+	
+	/** Called in network play to do the cosmetic fx for firing */
+	virtual void SimulateWeaponFire();
+
+	
+
+	/** consume a bullet */
+	void UseAmmo();
+
+	
+
+	
+	UFUNCTION(reliable, server, WithValidation)
+	void ServerStartFire();
+
+	UFUNCTION(reliable, server, WithValidation)
+	void ServerStopFire();
+	/** check if weapon can fire */
+	bool CanFire() const;
+
+	/** check if weapon can be reloaded */
+	bool CanReload() const;
+	/** [local + server] handle weapon fire */
+	void HandleFiring();
+	/** check if weapon has infinite ammo (include owner's cheats) */
+	bool HasInfiniteAmmo() const;
+
+	/** check if weapon has infinite clip (include owner's cheats) */
+	bool HasInfiniteClip() const;
+	/** [all] start weapon reload */
+	virtual void StartReload(bool bFromReplication = false);
+
+
+	/** update weapon state */
+	void SetWeaponState(EWeaponState::Type NewState);
+
+	/** determine current weapon state */
+	void DetermineWeaponState();
+	
+	UFUNCTION(BlueprintCallable)
+	virtual void UpdateAnim(float DeltaTime);
+	
+	UFUNCTION()
+	void OnRep_BurstCounter();
+
+	UFUNCTION()
+	void OnRep_Reload();
+
+
+	// Called every frame
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction) override;
+	
+	virtual void BeginPlay() override;
+
+	FHitResult WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const;
+
+
+	
+
+	
 	/** firing audio (bLoopedFireSound set) */
-	UPROPERTY(Transient)
-	UAudioComponent* FireAC;
+
 
 	/** play weapon sounds */
 	UAudioComponent* PlayWeaponSound(USoundCue* Sound);
@@ -336,41 +374,60 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void UpdateMainWeaponHUD(bool bIsReloading = false);
-	/*for auto fire*/
-	bool bStableAim;
-	bool bAutoShooting;
-	bool bManualShooting;
 	
 
 
 	//AI
 	//Called by AI WeaponManager
 public:
-	bool bIsAIAllowedToFire;
+
 	void UpdateAI();
-	//did we increase timers(Reload ETC)?
-	bool TimersUpdated = false;
+	
 	void RegisterIsOwnedByAI();
 
-	
+
 	APawn* GetOwningPawn();
 	UMeshComponent* GetMesh();
-	UPROPERTY(BlueprintReadOnly)
-	float CurrentHeat;
+	
 
-	UPROPERTY(EditAnywhere,Category=Setup)
-	FVector2D AimLocationOnScreen=FVector2D(2,3);
+
 	FVector CalculateAimDirection() const;
-
 	UPROPERTY(Replicated)
 	FVector AimDirection;
-
-	
 	void SetAimDirection(FVector In);
-	UFUNCTION(Server,Reliable)
+	UFUNCTION(Server, Reliable)
 	void ServerSetAimDirection(FVector In);
+
+	//-----------------------
+	//      Events
+	//-----------------------
+	/*Anim Notifier*/
+	UPROPERTY(BlueprintAssignable)
+	FOnFireAnimationStateChanged FireStateChange;
+	UPROPERTY(BlueprintAssignable)
+	FOnReloadAnimationStateChanged ReloadStateChange;
+	UPROPERTY(BlueprintAssignable)
+	FOnReload OnReload;
+	UPROPERTY(BlueprintAssignable)
+	FNotifyAmmo NotifyAmmo;
+	UPROPERTY(BlueprintAssignable)
+	FOnFire HandleFire;
+
 
 private:
 	UPROPERTY()
 	UWidgetComponent* WidgetComponent;
+	FTimerHandle TimerHandle_HandleFiring;
+	FTimerHandle TimerHandle_StopReload;
+	FTimerHandle TimerHandle_ReloadWeapon;
+	float CurrentTimeBetweenShots;
+	UPROPERTY()
+	APlayerController* PlayerController;
+	UPROPERTY(Transient)
+	UAudioComponent* FireAC;
+
+	/*for auto fire*/
+	bool bStableAim;
+	bool bAutoShooting;
+	bool bManualShooting;
 };

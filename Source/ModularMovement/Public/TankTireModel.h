@@ -13,7 +13,7 @@ UCLASS(EditInlineNew)
 class MODULARMOVEMENT_API UTankTireModel : public UBaseTireModel
 {
 	// Tire model properties.
-
+public:
 	// Longitudinal friction multiplier for the tire.
 	UPROPERTY(EditAnywhere, Category = TireModel)
 	float FrictionMultiplierLongitudinal = 1.f;

@@ -1,0 +1,104 @@
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
+
+
+#include "AnimeNode_AnimateIdler.h"
+
+#include "TankTrackComponent.h"
+#include "Animation/AnimTrace.h"
+
+
+FAnimNode_AnimateIdler::FAnimNode_AnimateIdler(): TrackComponent(nullptr), AnimRot(0)
+{
+}
+
+
+void FAnimNode_AnimateIdler::GatherDebugData(FNodeDebugData& DebugData)
+{
+	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(GatherDebugData)
+	FString DebugLine = DebugData.GetNodeName(this);
+	
+	DebugLine += "(";
+	AddDebugNodeData(DebugLine);
+	DebugLine += FString::Printf(TEXT("  Dst: %s)"), *TargetBone.BoneName.ToString());
+	DebugData.AddDebugItem(DebugLine);
+
+	ComponentPose.GatherDebugData(DebugData);
+}
+
+void FAnimNode_AnimateIdler::UpdateComponentPose_AnyThread(const FAnimationUpdateContext& Context)
+{
+	FAnimNode_SkeletalControlBase::UpdateComponentPose_AnyThread(Context);
+
+	if(!TrackComponent)
+	{
+		return;
+	}
+
+
+	AnimRot += TrackComponent->TrackSpeed/Radius*	Context.GetDeltaTime();
+
+
+	float IntegerPart = 0.f;
+	AnimRot= FMath::Modf(AnimRot / (2 * PI), &IntegerPart) * (2 * PI);
+	
+}
+
+void FAnimNode_AnimateIdler::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output,
+                                                               TArray<FBoneTransform>& OutBoneTransforms)
+{
+	if(!TrackComponent)
+	{
+		return;
+	}
+
+	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(EvaluateSkeletalControl_AnyThread)
+	ANIM_MT_SCOPE_CYCLE_COUNTER_VERBOSE(CopyBone, !IsInGameThread());
+
+	check(OutBoneTransforms.Num() == 0);
+
+
+
+	// Get component space transform for source and current bone.
+	const FBoneContainer& BoneContainer = Output.Pose.GetPose().GetBoneContainer();
+	
+	FCompactPoseBoneIndex TargetBoneIndex = TargetBone.GetCompactPoseIndex(BoneContainer);
+
+	
+	FTransform CurrentBoneTM = Output.Pose.GetComponentSpaceTransform(TargetBoneIndex);
+
+	
+		
+		FRotator Rotation = FRotator(FMath::RadiansToDegrees(-1 * AnimRot), 0, 0);
+	
+	
+		CurrentBoneTM.SetRotation(Rotation.Quaternion() );
+	
+
+	
+
+	// Output new transform for current bone.
+	OutBoneTransforms.Add(FBoneTransform(TargetBoneIndex, CurrentBoneTM));
+
+
+	TRACE_ANIM_NODE_VALUE(Output, TEXT("Target Bone"), TargetBone.BoneName);
+}
+
+bool FAnimNode_AnimateIdler::IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones)
+{
+	
+	
+		return  (TargetBone.IsValidToEvaluate()&&TrackComponent);
+	
+	
+}
+
+void FAnimNode_AnimateIdler::InitializeBoneReferences(const FBoneContainer& RequiredBones)
+{
+
+	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(InitializeBoneReferences)
+
+	TargetBone.Initialize(RequiredBones);
+	
+}
+
+

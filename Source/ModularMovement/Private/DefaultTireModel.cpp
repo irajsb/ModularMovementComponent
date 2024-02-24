@@ -200,7 +200,7 @@ void UDefaultTireModel::SetupWheels()
 {
 	Super::SetupWheels();
 
-	Super::SetupWheels();
+
 
 	float MaxForceX = 0.0f;
 	float MaxForceY = 0.0f;

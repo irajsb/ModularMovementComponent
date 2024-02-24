@@ -4,6 +4,7 @@
 #include "TankTrackComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "IdlerComponent.h"
+#include "TankTireModel.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
 
@@ -69,9 +70,18 @@ void UTankTrackComponent::RebuildSplines(float DeltaTime)
 						Radius = Cast<UModularVehicleWheelData>(Obj)->WheelRadius;
 					}
 				}
+				
 				if (TrackSpeed == 0)
 				{
-					TrackSpeed = Wheel->WheelState.AngularVelocity * Radius;
+					if(Wheel->WheelState.WheelSetup)
+					{
+						if(auto TireModel=Cast<UTankTireModel>(Wheel->WheelState.WheelSetup->TireModel))
+						{
+							SprocketRadius=TireModel->SprocketRadius;
+							TrackSpeed = Wheel->WheelState.AngularVelocity * SprocketRadius ;
+						}
+					}
+					SprocketRatio=Radius/SprocketRadius;
 				}
 			}
 		}

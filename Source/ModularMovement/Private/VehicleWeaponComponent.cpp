@@ -48,8 +48,8 @@ void UVehicleWeaponComponent::BeginPlay()
 	CurrentTimeBetweenShots = WeaponConfig.InitialTimeBetweenShots;
 
 
-	CurrentAmmoInClip = WeaponConfig.AmmoCount;
-	CurrentAmmo = WeaponConfig.AmmoCount * WeaponConfig.AmmoCount;
+	CurrentAmmoInClip = WeaponConfig.ClipSize;
+	CurrentAmmo = WeaponConfig.AmmoCount ;
 
 	if (WeaponConfig.AimWidgetClass)
 	{
@@ -97,12 +97,12 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 
 
 			UpdateAnim(DeltaTime);
-			const FRotator WeaponSpaceRotation = GetOwner()->GetActorRotation().RotateVector(
+		CurrentWeaponRotationWorldSpace = GetOwner()->GetActorRotation().RotateVector(
 				CurrentWeaponRotation.Quaternion().Vector()).Rotation();
 
 			const FVector ComponentLoc = GetComponentLocation();
 			GetWorld()->LineTraceSingleByChannel(HitResult, ComponentLoc,
-			                                     ComponentLoc + WeaponSpaceRotation.Vector() * 1000000.0,
+			                                     ComponentLoc + CurrentWeaponRotationWorldSpace.Vector() * 1000000.0,
 			                                     WeaponConfig.Channel, Params);
 			TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
 
@@ -287,7 +287,7 @@ void UVehicleWeaponComponent::OnBurstFinished()
 
 void UVehicleWeaponComponent::HandleFiring()
 {
-	if ((CurrentAmmoInClip > 0 || HasInfiniteClip() || HasInfiniteAmmo()) && CanFire())
+	if ((CurrentAmmoInClip > 0 || HasInfiniteClip() ) && CanFire())
 	{
 		if (GetNetMode() != NM_DedicatedServer)
 		{
@@ -296,13 +296,14 @@ void UVehicleWeaponComponent::HandleFiring()
 
 		if (GetOwner() && GetOwningPawn()->IsLocallyControlled())
 		{
-			FireWeapon();
-			OnFire.Broadcast();
+			
+			HandleFire.Broadcast();
 
 			if (WeaponConfig.WeaponRecoil > 0)
 			{
+				FVector ImpulseVector=::UKismetMathLibrary::Vector_SlerpVectorToDirection(	CurrentWeaponRotationWorldSpace.Vector(),FVector::DownVector,0.5);
 				GetMesh()->AddImpulseAtLocation(
-					CurrentWeaponRotation.Vector() * -1 * WeaponConfig.WeaponRecoil, GetComponentLocation());
+				 ImpulseVector* -1 * WeaponConfig.WeaponRecoil, GetComponentLocation());
 			}
 			UseAmmo();
 			CurrentTimeBetweenShots = UKismetMathLibrary::FInterpTo_Constant(
@@ -312,7 +313,7 @@ void UVehicleWeaponComponent::HandleFiring()
 			BurstCounter++;
 		}
 	}
-	if (CanReload() && CurrentAmmoInClip < 1 && !HasInfiniteAmmo() && !HasInfiniteClip())
+	if (CanReload() && CurrentAmmoInClip < 1 && !HasInfiniteClip())
 	{
 		StartReload();
 	}
@@ -479,31 +480,20 @@ void UVehicleWeaponComponent::StopSimulatingWeaponFire()
 
 void UVehicleWeaponComponent::UseAmmo()
 {
-	if (!HasInfiniteAmmo())
+	
+		
+	
+
+	if (!HasInfiniteAmmo() && HasInfiniteClip())
+	{
+		CurrentAmmo--;
+	}else
 	{
 		CurrentAmmoInClip--;
 	}
 
-	if (!HasInfiniteAmmo() && !HasInfiniteClip())
-	{
-		CurrentAmmo--;
-	}
 
-
-	if (PlayerController)
-	{
-		// AShooterPlayerState* PlayerState = Cast<AShooterPlayerState>(PlayerController->PlayerState);
-		// switch (GetAmmoType())
-		// {
-		// 	case EAmmoType::ERocket:
-		// 		PlayerState->AddRocketsFired(1);
-		// 		break;
-		// 	case EAmmoType::EBullet:
-		// 	default:
-		// 		PlayerState->AddBulletsFired(1);
-		// 		break;			
-		// }
-	}
+	
 
 	UpdateMainWeaponHUD();
 }
@@ -511,6 +501,7 @@ void UVehicleWeaponComponent::UseAmmo()
 
 void UVehicleWeaponComponent::StartReload(bool bFromReplication)
 {
+	UE_LOG(LogTemp,Log,TEXT("Weapon Reloading"));
 	if (!bFromReplication && GetOwner()->GetLocalRole() < ROLE_Authority)
 	{
 		ServerStartReload();
@@ -556,10 +547,9 @@ void UVehicleWeaponComponent::StopReload()
 
 void UVehicleWeaponComponent::ReloadWeapon()
 {
-	//TODO Fix Clip and ammo
-
-
-	CurrentAmmoInClip = WeaponConfig.AmmoCount;
+	
+	CurrentAmmoInClip = WeaponConfig.ClipSize;
+	CurrentAmmo-=WeaponConfig.ClipSize;
 }
 
 
@@ -771,12 +761,12 @@ void UVehicleWeaponComponent::UpdateMainWeaponHUD(bool bIsReloading)
 
 		if (!WeaponConfig.bInfiniteAmmo)
 		{
-			NotifyAmmo.Broadcast(CurrentAmmoInClip, WeaponConfig.AmmoCount);
+			NotifyAmmo.Broadcast(CurrentAmmoInClip, WeaponConfig.ClipSize);
 		}
 		else
 		{
-			//We Design UI to show Unlimited sign if ammo is bigger than Mag
-			NotifyAmmo.Broadcast(2, 0);
+			
+			NotifyAmmo.Broadcast(CurrentAmmoInClip, 0);
 		}
 	}
 }
