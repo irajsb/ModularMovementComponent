@@ -10,7 +10,11 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
                                       UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 {
 	Super::UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, Wheel);
-	
+
+	if(!Wheel||!ModularMovementComponent)
+	{
+		return;
+	}
 	const float TrackInput=Wheel->WheelState.InitialLocalLocation.Y>0.f?ModularMovementComponent->VehicleState.TrackRight.TorqueTransfer
 	:ModularMovementComponent->VehicleState.TrackLeft.TorqueTransfer;
 

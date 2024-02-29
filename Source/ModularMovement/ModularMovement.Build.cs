@@ -37,7 +37,7 @@ public class ModularMovement : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"SlateCore","UMG", "Projects",	"Chaos", "ChaosVehiclesCore",/*"PhysicsCore"*/
+				"SlateCore","UMG", "Projects",	"Chaos", "ChaosVehiclesCore","PhysicsCore"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

@@ -28,42 +28,32 @@ struct FOldRigidBodyErrorCorrection
 {
 	GENERATED_USTRUCT_BODY()
 
-	/** max squared position difference to perform velocity adjustment */
-	UPROPERTY(EditAnywhere,Category=Network)
-	float LinearDeltaThresholdSq;
 
-	/** strength of snapping to desired linear velocity */
-	UPROPERTY(EditAnywhere,Category=Network)
-	float LinearInterpAlpha;
+	//
 
-	/** inverted duration after which linear velocity adjustment will fix error */
-	UPROPERTY(EditAnywhere,Category=Network)
-	float LinearRecipFixTime;
 
-	/** max squared angle difference (in radians) to perform velocity adjustment */
 	UPROPERTY(EditAnywhere,Category=Network)
-	float AngularDeltaThreshold;
-
-	/** strength of snapping to desired angular velocity */
+	float MaxAlpha;
 	UPROPERTY(EditAnywhere,Category=Network)
-	float AngularInterpAlpha;
-
-	/** inverted duration after which angular velocity adjustment will fix error */
+	float MinDistanceToFix;
 	UPROPERTY(EditAnywhere,Category=Network)
-	float AngularRecipFixTime;
-
-	/** min squared body speed to perform velocity adjustment */
+	float MaxDistanceToFix;
 	UPROPERTY(EditAnywhere,Category=Network)
-	float BodySpeedThresholdSq;
+	float SpeedFactor;
+	
+	UPROPERTY(EditAnywhere,Category=Network)
+	float MaxAngularAlpha;
+	UPROPERTY(EditAnywhere,Category=Network)
+	float MinAngleToFix;
+	UPROPERTY(EditAnywhere,Category=Network)
+	float MaxAngleToFix;
 
-	FOldRigidBodyErrorCorrection()
-		: LinearDeltaThresholdSq(10.0f)
-		, LinearInterpAlpha(0.1f)
-		, LinearRecipFixTime(2.0f)
-		, AngularDeltaThreshold(0.15f * PI)
-		, AngularInterpAlpha(0.1f)
-		, AngularRecipFixTime(2.0f)
-		, BodySpeedThresholdSq(0.2f)
+
+
+	FOldRigidBodyErrorCorrection(): MaxAlpha(0.5), MinDistanceToFix(0), MaxDistanceToFix(2000), SpeedFactor(0.001),
+	                                MaxAngularAlpha(0.1),
+	                                MinAngleToFix(0),
+	                                MaxAngleToFix(1.1775)
 	{
 	}
 };
@@ -372,11 +362,12 @@ public:
 	UPROPERTY(EditAnywhere,Category=Network)
 	FOldRigidBodyErrorCorrection ErrorCorrection;
 	
-	bool bRestoredState;
-	bool bCorrectionInProgress;
 	
-	float CorrectionBeganTime;
-	float CorrectionEndTime;
+	
 
 	static void ShowSetupError( FString Error);
+
+	FRigidBodyState NewestBodyInstance;
+	
+	void ApplyBodyInstanceData();
 };

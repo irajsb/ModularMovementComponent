@@ -200,9 +200,11 @@ void UModularMovementComponent::InitializeComponent()
 
 void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* BodyInstance)
 {
+
+	
 	MODULAR_CYCLE_COUNTER(STAT_ModularTickComponent)
 	const float fDeltaTime = FMath::Min<float>(DeltaTime, 0.0633);
-
+	
 
 	if (ShouldProcessPhysics())
 	{
@@ -317,6 +319,14 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		Component->UpdateAnimation(DeltaTime, this);
 	}
 	CaptureState(DeltaTime);
+
+
+	// Check if we are in the process of body's state correction
+	if (GetOwnerRole()<ROLE_Authority)
+	{
+
+		ApplyBodyInstanceData();
+	}
 }
 
 void UModularMovementComponent::BeginPlay()
@@ -854,7 +864,7 @@ void UModularMovementComponent::UpdateReplicatedCosmeticData()
 	RepCosmeticData.CurrentGear = GetSetup()->GetGearBox()->CurrentGear;
 	RepCosmeticData.SteeringInput = SteeringInput;
 	const auto BI = GetMesh()->GetBodyInstance();
-	const auto Transform = BI->GetUnrealWorldTransform();
+	
 	BI->GetRigidBodyState(RepCosmeticData.RigidBodyState);
 
 	RepCosmeticData.WheelRepCosmeticDatas.Reset();
@@ -892,43 +902,69 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 		}
 	}
 
+	NewestBodyInstance=RepCosmeticData.RigidBodyState;
+	ApplyBodyInstanceData();
+	
+}
 
+void UModularMovementComponent::ShowSetupError(FString Error)
+{
+	UE_LOG(LogModularVehicle, Error, TEXT("%s"), *Error)
+	FMessageDialog::Open(EAppMsgCategory::Error, EAppMsgType::Ok, FText::FromString(Error));
+}
+
+void UModularMovementComponent::ApplyBodyInstanceData()
+{
+	
+
+	if (GetMesh() == nullptr)
 	{
-		const auto BI = GetMesh()->GetBodyInstance();
+		return ;
+	}
+
+
+	FBodyInstance* BI = GetMesh()->GetBodyInstance();
+	if (BI && BI->IsInstanceSimulatingPhysics())
+	{
+		bool bRestoredState = true;
+
 		FRigidBodyState CurrentState;
 		GetMesh()->GetRigidBodyState(CurrentState);
-		const FRigidBodyState NewState = RepCosmeticData.RigidBodyState;
-		const bool bShouldSleep = (NewState.Flags & ERigidBodyFlags::Sleeping) != 0;
+		
+		const bool bShouldSleep = false;
 
 		/////// POSITION CORRECTION ///////
 
 		// Find out how much of a correction we are making
-		const FVector DeltaPos = NewState.Position - CurrentState.Position;
-		const float DeltaMagSq = DeltaPos.SizeSquared();
-		const float BodyLinearSpeedSq = CurrentState.LinVel.SizeSquared();
+		const FVector DeltaPos = NewestBodyInstance.Position - CurrentState.Position;
+		const float DeltaSize=DeltaPos.Size();
+	
 
 		// Snap position by default (big correction, or we are moving too slowly)
-		FVector UpdatedPos = NewState.Position;
+		FVector UpdatedPos = CurrentState.Position;
 		FVector FixLinVel = FVector::ZeroVector;
 
-		bool bNeedPositionCorrection = false;
+		
 		// If its a small correction and velocity is above threshold, only make a partial correction,
 		// and calculate a velocity that would fix it over 'fixTime'.
-		if (DeltaMagSq < ErrorCorrection.LinearDeltaThresholdSq &&
-			BodyLinearSpeedSq >= ErrorCorrection.BodySpeedThresholdSq)
+		if (ErrorCorrection.MinDistanceToFix<DeltaSize&&DeltaSize<ErrorCorrection.MaxDistanceToFix)
 		{
-			UpdatedPos = FMath::Lerp(CurrentState.Position, NewState.Position, ErrorCorrection.LinearInterpAlpha);
-			FixLinVel = (NewState.Position - UpdatedPos) * ErrorCorrection.LinearRecipFixTime;
-			bNeedPositionCorrection = true;
+			const float LerpAlpha=UKismetMathLibrary::MapRangeClamped(DeltaSize,ErrorCorrection.MinDistanceToFix,ErrorCorrection.MaxDistanceToFix,0,ErrorCorrection.MaxAlpha);
+			UpdatedPos = FMath::Lerp(CurrentState.Position, NewestBodyInstance.Position, LerpAlpha);
+			FixLinVel = (NewestBodyInstance.Position - UpdatedPos) * ErrorCorrection.SpeedFactor;
+			FixLinVel=FixLinVel.GetClampedToMaxSize(CurrentState.LinVel.Size());
+			
+		}else if(DeltaSize > ErrorCorrection.MaxDistanceToFix)
+		{
+			UpdatedPos=NewestBodyInstance.Position;
 		}
 
-		// Get the linear correction
-
+		
 
 		/////// ORIENTATION CORRECTION ///////
 		// Get quaternion that takes us from old to new
 		const FQuat InvCurrentQuat = CurrentState.Quaternion.Inverse();
-		const FQuat DeltaQuat = NewState.Quaternion * InvCurrentQuat;
+		const FQuat DeltaQuat = NewestBodyInstance.Quaternion * InvCurrentQuat;
 
 		FVector DeltaAxis(FVector::ZeroVector);
 		float DeltaAng = 0.f; // radians
@@ -936,36 +972,32 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 		DeltaAng = FMath::UnwindRadians(DeltaAng);
 
 		// Snap rotation by default (big correction, or we are moving too slowly)
-		FQuat UpdatedQuat = NewState.Quaternion;
+		FQuat UpdatedQuat = CurrentState.Quaternion;
 		FVector FixAngVel = FVector::ZeroVector; // degrees per second
 
-		bool bNeedOrientationCorrection = false;
+	
 		// If the error is small, and we are moving, try to move smoothly to it
-		if (FMath::Abs(DeltaAng) < ErrorCorrection.AngularDeltaThreshold)
+		if (ErrorCorrection.MinAngleToFix<FMath::Abs(DeltaAng)  &&FMath::Abs(DeltaAng) < ErrorCorrection.MaxAngleToFix)
 		{
-			UpdatedQuat = FMath::Lerp(CurrentState.Quaternion, NewState.Quaternion, ErrorCorrection.AngularInterpAlpha);
-			FixAngVel = DeltaAxis.GetSafeNormal() * FMath::RadiansToDegrees(DeltaAng) * (1.f - ErrorCorrection.
-				AngularInterpAlpha) * ErrorCorrection.AngularRecipFixTime;
-			bNeedOrientationCorrection = true;
+			const float LerpAlpha=UKismetMathLibrary::MapRangeClamped(FMath::Abs(DeltaAng),ErrorCorrection.MinAngleToFix,ErrorCorrection.MaxAngleToFix,0,ErrorCorrection.MaxAngularAlpha);
+			UpdatedQuat = FMath::Lerp(CurrentState.Quaternion, NewestBodyInstance.Quaternion,LerpAlpha);
+			FixAngVel = DeltaAxis.GetSafeNormal() * FMath::RadiansToDegrees(DeltaAng) * (1.f - LerpAlpha);
+		
+		}else if(FMath::Abs(DeltaAng) > ErrorCorrection.MaxAngleToFix)
+		{
+			UpdatedQuat=NewestBodyInstance.Quaternion;
 		}
 
-		if (bNeedPositionCorrection || bNeedOrientationCorrection)
-		{
-			CorrectionBeganTime = GetWorld()->GetTimeSeconds();
-			const float CorrectionTime = FMath::Max(1.f / ErrorCorrection.LinearRecipFixTime,
-			                                        1.f / ErrorCorrection.AngularRecipFixTime);
-			CorrectionEndTime = CorrectionBeganTime + CorrectionTime;
-		}
+	
 
 		/////// BODY UPDATE ///////
 		BI->SetBodyTransform(FTransform(UpdatedQuat, UpdatedPos), ETeleportType::TeleportPhysics);
-		BI->SetLinearVelocity(NewState.LinVel + FixLinVel, false);
-		BI->SetAngularVelocityInRadians(FMath::DegreesToRadians(NewState.AngVel + FixAngVel), false);
+		BI->SetLinearVelocity(CurrentState.LinVel + FixLinVel, false);
+	//	BI->SetAngularVelocityInRadians(FMath::DegreesToRadians(UpdatedQuat.Vector()), false);
 
 		// state is restored when no velocity corrections are required
-		bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() <
-			KINDA_SMALL_NUMBER);
-		bCorrectionInProgress = !bRestoredState;
+		bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() < KINDA_SMALL_NUMBER);
+	
 
 		/////// SLEEP UPDATE ///////
 		const bool bIsAwake = BI->IsInstanceAwake();
@@ -978,12 +1010,8 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 			BI->WakeInstance();
 		}
 	}
-}
 
-void UModularMovementComponent::ShowSetupError(FString Error)
-{
-	UE_LOG(LogModularVehicle, Error, TEXT("%s"), *Error)
-	FMessageDialog::Open(EAppMsgCategory::Error, EAppMsgType::Ok, FText::FromString(Error));
+
 }
 
 

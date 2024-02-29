@@ -6,6 +6,7 @@
 #include "Engine/DataTable.h"
 #include "VehicleWeaponComponent.generated.h"
 
+class UCameraComponent;
 class UWidgetComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFireAnimationStateChanged, bool, bPlay);
 
@@ -99,7 +100,7 @@ struct FWeaponDataRow : public FTableRowBase
 	bool IsOwnedByAI;
 
 	/** Flag indicating instant rotation */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	bool InstantRotation;
 
 	/** Minimum pitch for aim */
@@ -224,6 +225,8 @@ public:
 	/** FX for muzzle flash in world space*/
 	UPROPERTY(EditDefaultsOnly, Category=Effects)
 	UParticleSystem* MuzzleWorldSpaceFX;
+	UPROPERTY(EditAnywhere, Category=Effects)
+	FVector WorldSpaceParticleScale=FVector(1);
 	/** spawned component for muzzle FX */
 	UPROPERTY(Transient)
 	UParticleSystemComponent* MuzzlePSC;
@@ -277,6 +280,8 @@ public:
 	/** [local + server] handle weapon refire, compensating for slack time if the timer can't sample fast enough */
 	void HandleReFiring();
 
+	UFUNCTION(BlueprintCallable)
+	void SetInstantRotation(bool Input);
 	
 	/** get current ammo amount (total) */
 	int32 GetCurrentAmmo() const;
@@ -391,7 +396,7 @@ public:
 	
 
 
-	FVector CalculateAimDirection() const;
+	FVector CalculateAimDirection(APlayerController* PC) const;
 	UPROPERTY(Replicated)
 	FVector AimDirection;
 	void SetAimDirection(FVector In);
@@ -412,7 +417,7 @@ public:
 	FNotifyAmmo NotifyAmmo;
 	UPROPERTY(BlueprintAssignable)
 	FOnFire HandleFire;
-
+	
 
 private:
 	UPROPERTY()
@@ -421,13 +426,17 @@ private:
 	FTimerHandle TimerHandle_StopReload;
 	FTimerHandle TimerHandle_ReloadWeapon;
 	float CurrentTimeBetweenShots;
-	UPROPERTY()
-	APlayerController* PlayerController;
+	
 	UPROPERTY(Transient)
 	UAudioComponent* FireAC;
-
+	
 	/*for auto fire*/
 	bool bStableAim;
 	bool bAutoShooting;
 	bool bManualShooting;
+
+public:
+	//Custom camera for aiming
+	UPROPERTY(BlueprintReadWrite)
+	UCameraComponent* OverrideAimCamera;
 };

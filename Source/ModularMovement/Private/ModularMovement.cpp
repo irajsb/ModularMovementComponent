@@ -68,9 +68,9 @@ void FModularMovementModule::OnSettingsFix()
 	
 	auto  Settings=UPhysicsSettings::Get();
 	Settings->bSubstepping=true;
-	Settings->bSubsteppingAsync=true;
-	Settings->MaxSubsteps=6;
-	Settings->MaxSubstepDeltaTime=0.002778;
+	Settings->bSubsteppingAsync=false;
+	Settings->MaxSubsteps=16;
+	Settings->MaxSubstepDeltaTime=0.004167;
 	Settings->SaveConfig();
 	if (Notif.IsValid())
 	{
