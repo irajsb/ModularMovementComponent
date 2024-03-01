@@ -39,6 +39,21 @@ UVehicleWeaponComponent::UVehicleWeaponComponent()
 	SetIsReplicatedByDefault(true);
 }
 
+void UVehicleWeaponComponent::SetAimLocationOnScreen(FVector2D In)
+{
+	AimLocationOnScreen=In;
+
+	if(GetOwnerRole()<ROLE_Authority)
+	{
+		ServerSetAimLocationOnScreen(In);
+	}
+}
+
+void UVehicleWeaponComponent::ServerSetAimLocationOnScreen_Implementation(FVector2D In)
+{
+	SetAimLocationOnScreen(In);
+}
+
 
 // Called when the game starts
 void UVehicleWeaponComponent::BeginPlay()
@@ -84,9 +99,9 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 		{
 			if (GetNetMode() == NM_Standalone || GetOwnerRole() < ROLE_Authority)
 			{
-				SetAimDirection(CalculateAimDirection(PC));
+				ServerSetControlRotation(GetWorld()->GetFirstPlayerController()->GetControlRotation().Vector());
 			}
-
+			SetAimDirection(CalculateAimDirection(PC));
 
 			FHitResult HitResult;
 			const FVector CamLoc = OverrideAimCamera
@@ -116,6 +131,11 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 			}
 		}
 	}
+	else
+	{
+		CurrentWeaponRotationWorldSpace = GetOwner()->GetActorRotation().RotateVector(
+			CurrentWeaponRotation.Quaternion().Vector()).Rotation();
+	}
 }
 
 FHitResult UVehicleWeaponComponent::WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const
@@ -132,11 +152,7 @@ FHitResult UVehicleWeaponComponent::WeaponTrace(const FVector& TraceFrom, const 
 
 void UVehicleWeaponComponent::StartFire(bool bAutoFire)
 {
-	if (bAutoFire && !bStableAim)
-	{
-		return;
-	}
-	if (GetOwner()->GetLocalRole() < ROLE_Authority)
+	if (GetOwnerRole() < ROLE_Authority)
 	{
 		ServerStartFire();
 	}
@@ -145,14 +161,6 @@ void UVehicleWeaponComponent::StartFire(bool bAutoFire)
 	{
 		bWantsToFire = true;
 		DetermineWeaponState();
-	}
-	if (bAutoFire && !bManualShooting)
-	{
-		bAutoShooting = true;
-	}
-	if (bAutoFire == false && !bAutoShooting)
-	{
-		bManualShooting = true;
 	}
 }
 
@@ -219,6 +227,7 @@ void UVehicleWeaponComponent::DetermineWeaponState()
 		NewState = EWeaponState::Firing;
 	}
 
+
 	SetWeaponState(NewState);
 }
 
@@ -251,21 +260,17 @@ void UVehicleWeaponComponent::SetWeaponState(EWeaponState::Type NewState)
 
 void UVehicleWeaponComponent::OnBurstStarted()
 {
-	// start firing, can be delayed to satisfy TimeBetweenShots
-
+	/// start firing, can be delayed to satisfy TimeBetweenShots
 	const float GameTime = GetWorld()->GetTimeSeconds();
-
-	CurrentTimeBetweenShots = UKismetMathLibrary::FInterpTo_Constant(CurrentTimeBetweenShots,
-	                                                                 WeaponConfig.InitialTimeBetweenShots,
-	                                                                 GameTime - LastFireTime,
-	                                                                 WeaponConfig.InterpolationSpeed);
-	if (LastFireTime > 0 && CurrentTimeBetweenShots > 0.0f && LastFireTime + CurrentTimeBetweenShots > GameTime)
+	if (LastFireTime > 0 && WeaponConfig.InitialTimeBetweenShots > 0.0f &&
+		LastFireTime + WeaponConfig.InitialTimeBetweenShots > GameTime)
 	{
 		GetWorld()->GetTimerManager().SetTimer(TimerHandle_HandleFiring, this, &UVehicleWeaponComponent::HandleFiring,
-		                                       LastFireTime + CurrentTimeBetweenShots - GameTime, false);
+		                                       LastFireTime + WeaponConfig.InitialTimeBetweenShots - GameTime, false);
 	}
 	else
 	{
+	
 		HandleFiring();
 	}
 }
@@ -291,33 +296,27 @@ void UVehicleWeaponComponent::OnBurstFinished()
 
 void UVehicleWeaponComponent::HandleFiring()
 {
-	if ((CurrentAmmoInClip > 0 || HasInfiniteClip()) && CanFire())
+	if ((CurrentAmmoInClip > 0 || HasInfiniteClip() || HasInfiniteAmmo()) && CanFire())
 	{
 		if (GetNetMode() != NM_DedicatedServer)
 		{
 			SimulateWeaponFire();
 		}
 
-		if (GetOwner() && GetOwningPawn()->IsLocallyControlled())
+		if (GetOwner())
 		{
 			HandleFire.Broadcast();
-
-			if (WeaponConfig.WeaponRecoil > 0)
+			if(  GetOwningPawn()->IsLocallyControlled())
 			{
-				FVector ImpulseVector = UKismetMathLibrary::Vector_SlerpVectorToDirection(
-					CurrentWeaponRotationWorldSpace.Vector(), FVector::DownVector, 0.5);
-				GetMesh()->AddImpulseAtLocation(
-					ImpulseVector * -1 * WeaponConfig.WeaponRecoil, GetComponentLocation());
+				ApplyRecoil();
+				UseAmmo();
 			}
-			UseAmmo();
-			CurrentTimeBetweenShots = UKismetMathLibrary::FInterpTo_Constant(
-				CurrentTimeBetweenShots, WeaponConfig.TargetTimeBetweenShots, CurrentTimeBetweenShots,
-				WeaponConfig.InterpolationSpeed);
+			
 			// update firing FX on remote clients if function was called on server
 			BurstCounter++;
 		}
 	}
-	if (CanReload() && CurrentAmmoInClip < 1 && !HasInfiniteClip())
+	else if (CanReload())
 	{
 		StartReload();
 	}
@@ -354,13 +353,11 @@ void UVehicleWeaponComponent::HandleFiring()
 		}
 
 		// setup refire timer
-		bRefiring = (CurrentState == EWeaponState::Firing && CurrentTimeBetweenShots > 0.0f);
+		
+		bRefiring = (CurrentState == EWeaponState::Firing && WeaponConfig.InitialTimeBetweenShots > 0.0f);
 		if (bRefiring)
 		{
-			GetWorld()->GetTimerManager().SetTimer(TimerHandle_HandleFiring, this,
-			                                       &UVehicleWeaponComponent::HandleReFiring,
-			                                       FMath::Max<float>(CurrentTimeBetweenShots + TimerIntervalAdjustment,
-			                                                         SMALL_NUMBER), false);
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle_HandleFiring, this, &UVehicleWeaponComponent::HandleReFiring, FMath::Max<float>(WeaponConfig.InitialTimeBetweenShots + TimerIntervalAdjustment, SMALL_NUMBER), false);
 			TimerIntervalAdjustment = 0.f;
 		}
 	}
@@ -480,23 +477,24 @@ void UVehicleWeaponComponent::StopSimulatingWeaponFire()
 
 void UVehicleWeaponComponent::UseAmmo()
 {
-	if (!HasInfiniteAmmo() && HasInfiniteClip())
-	{
-		CurrentAmmo--;
-	}
-	else
+	if (!HasInfiniteAmmo())
 	{
 		CurrentAmmoInClip--;
 	}
 
+	if (!HasInfiniteAmmo() && !HasInfiniteClip())
+	{
+		CurrentAmmo--;
+	}
 
+	
 	UpdateMainWeaponHUD();
 }
 
 
 void UVehicleWeaponComponent::StartReload(bool bFromReplication)
 {
-	UE_LOG(LogTemp, Log, TEXT("Weapon Reloading"));
+	
 	if (!bFromReplication && GetOwner()->GetLocalRole() < ROLE_Authority)
 	{
 		ServerStartReload();
@@ -564,9 +562,9 @@ bool UVehicleWeaponComponent::ServerHandleFiring_Validate()
 
 void UVehicleWeaponComponent::ServerHandleFiring_Implementation()
 {
-	const bool bShouldUpdateAmmo = (CurrentAmmoInClip > 0 && CanFire());
-
-	HandleFiring();
+	const bool bShouldUpdateAmmo = (CurrentAmmoInClip > 0 && CanFire() || WeaponConfig.bInfiniteClip);
+	
+	//HandleFiring();
 
 	if (bShouldUpdateAmmo)
 	{
@@ -590,13 +588,13 @@ void UVehicleWeaponComponent::HandleReFiring()
 	{
 		TimerIntervalAdjustment -= SlackTimeThisFrame;
 	}
-
+	
 	HandleFiring();
 }
 
 void UVehicleWeaponComponent::SetInstantRotation(bool Input)
 {
-	WeaponConfig.InstantRotation=Input;
+	WeaponConfig.InstantRotation = Input;
 }
 
 int32 UVehicleWeaponComponent::GetCurrentAmmo() const
@@ -637,6 +635,7 @@ void UVehicleWeaponComponent::UpdateAnim(float DeltaTime)
 
 void UVehicleWeaponComponent::OnRep_BurstCounter()
 {
+	
 	if (BurstCounter > 0)
 	{
 		SimulateWeaponFire();
@@ -670,7 +669,7 @@ void UVehicleWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, CurrentAmmoInClip, COND_OwnerOnly);
 
 	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, BurstCounter, COND_SkipOwner);
-	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, AimDirection, COND_SkipOwner);
+	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, CurrentWeaponRotation, COND_SkipOwner);
 	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, bPendingReload, COND_SkipOwner);
 }
 
@@ -798,8 +797,19 @@ void UVehicleWeaponComponent::RegisterIsOwnedByAI()
 	{
 		WeaponConfig.ReloadTime = WeaponConfig.ReloadTime * WeaponConfig.AITimerMultiplier;
 		WeaponConfig.InitialTimeBetweenShots = WeaponConfig.InitialTimeBetweenShots * WeaponConfig.AITimerMultiplier;
-		WeaponConfig.TargetTimeBetweenShots = WeaponConfig.TargetTimeBetweenShots * WeaponConfig.AITimerMultiplier;
+		WeaponConfig.InitialTimeBetweenShots = WeaponConfig.AITimerMultiplier;
 		TimersUpdated = true;
+	}
+}
+
+void UVehicleWeaponComponent::ApplyRecoil()
+{
+	if (WeaponConfig.WeaponRecoil > 0)
+	{
+		const FVector ImpulseVector = UKismetMathLibrary::Vector_SlerpVectorToDirection(
+			CurrentWeaponRotationWorldSpace.Vector(), FVector::DownVector, 0.5);
+		GetMesh()->AddImpulseAtLocation(
+			ImpulseVector * -1 * WeaponConfig.WeaponRecoil, GetComponentLocation());
 	}
 }
 
@@ -816,28 +826,37 @@ UMeshComponent* UVehicleWeaponComponent::GetMesh()
 
 FVector UVehicleWeaponComponent::CalculateAimDirection(APlayerController* PC) const
 {
-	
 	FVector WorldDirection;
-	if(OverrideAimCamera)
+	if (OverrideAimCamera)
 	{
-		WorldDirection=OverrideAimCamera->GetForwardVector();
-	}else
+	
+	
+		WorldDirection = OverrideAimCamera->GetForwardVector();
+	}
+	else
 	{
-		WorldDirection =PC->PlayerCameraManager->GetCameraRotation().Vector();
+		FVector WorldPos;
+		
+		UGameplayStatics::DeprojectScreenToWorld(PC,UWidgetLayoutLibrary::GetViewportSize(GetWorld())/AimLocationOnScreen,WorldPos,WorldDirection);
+		
 	}
 	return WorldDirection;
 }
 
 void UVehicleWeaponComponent::SetAimDirection(FVector In)
 {
-	if ((GetOwner()->GetLocalRole() < ROLE_Authority) && GetOwner() && GetOwningPawn()->IsLocallyControlled())
-	{
-		ServerSetAimDirection(In);
-	}
 	AimDirection = In;
 }
 
-void UVehicleWeaponComponent::ServerSetAimDirection_Implementation(FVector In)
+
+
+void UVehicleWeaponComponent::ServerSetControlRotation_Implementation(FVector In)
 {
-	AimDirection = In;
+	if (GetOwningPawn())
+	{
+		if (APlayerController* PC = Cast<APlayerController>(GetOwningPawn()->GetController()))
+		{
+			PC->SetControlRotation(In.Rotation());
+		}
+	}
 }

@@ -59,10 +59,7 @@ struct FWeaponDataRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, Category = "Setup")
 	float InitialTimeBetweenShots;
 
-	/** Target time between shots when weapons have sped up */
-	UPROPERTY(EditAnywhere, Category = "Setup")
-	float TargetTimeBetweenShots;
-
+	
 	/** Interpolation for speed */
 	UPROPERTY(EditAnywhere, Category = "Setup")
 	float InterpolationSpeed;
@@ -127,7 +124,7 @@ struct FWeaponDataRow : public FTableRowBase
 	{
 		ClipSize=1;
 		InterpolationSpeed = 1;
-		InitialTimeBetweenShots = TargetTimeBetweenShots = 1;
+		InitialTimeBetweenShots ;
 		ReloadTime = 1;
 		AmmoCount = 32;
 		bInfiniteClip = false;
@@ -168,6 +165,10 @@ public:
 	UPROPERTY(EditAnywhere, Category=Setup)
 	FVector2D AimLocationOnScreen = FVector2D(2, 3);
 
+	UFUNCTION(BlueprintCallable)
+	void SetAimLocationOnScreen(FVector2D In);
+	UFUNCTION(Server ,Reliable)
+	void ServerSetAimLocationOnScreen(FVector2D In);
 	/** Whether to allow automatic weapons to catch up with shorter refire cycles */
 	UPROPERTY(Config)
 	bool bAllowAutomaticWeaponCatchup = true;
@@ -189,6 +190,7 @@ public:
 	/** burst counter, used for replicating fire events to remote clients */
 	UPROPERTY(Transient, ReplicatedUsing=OnRep_BurstCounter)
 	int32 BurstCounter;
+
 	
 	/** Adjustment to handle frame rate affecting actual timer interval. */
 	UPROPERTY(Transient)
@@ -211,7 +213,7 @@ public:
 	bool TimersUpdated = false;
 
 	//Weapon rotation for animating
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly,Replicated)
 	FRotator CurrentWeaponRotation;
 	//Weapon rotation for animating
 	UPROPERTY(BlueprintReadOnly)
@@ -389,7 +391,7 @@ public:
 	void UpdateAI();
 	
 	void RegisterIsOwnedByAI();
-
+	void ApplyRecoil();
 
 	APawn* GetOwningPawn();
 	UMeshComponent* GetMesh();
@@ -397,11 +399,11 @@ public:
 
 
 	FVector CalculateAimDirection(APlayerController* PC) const;
-	UPROPERTY(Replicated)
+	UPROPERTY()
 	FVector AimDirection;
 	void SetAimDirection(FVector In);
 	UFUNCTION(Server, Reliable)
-	void ServerSetAimDirection(FVector In);
+	void ServerSetControlRotation(FVector In);
 
 	//-----------------------
 	//      Events
@@ -434,9 +436,12 @@ private:
 	bool bStableAim;
 	bool bAutoShooting;
 	bool bManualShooting;
+	
 
 public:
 	//Custom camera for aiming
 	UPROPERTY(BlueprintReadWrite)
-	UCameraComponent* OverrideAimCamera;
+	UCameraComponent* OverrideAimCamera=nullptr;
+	UPROPERTY(EditAnywhere,Category=Weapon)
+	bool ReplicateControlRotation=false;
 };
