@@ -4,7 +4,6 @@
 #include "ModularVehicleFunctionLibrary.h"
 
 #include "ModularMovementComponent.h"
-#include "ModularMovement.h"
 #include  "ModularWheel.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -279,7 +278,7 @@ void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,
 	}
 }
 
-void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh, TArray<UModularWheel* >Wheels,
+void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh, TArray<UTrackableComponent* >Wheels,
                                                                 const FString& BoneNamePrefix)
 {
 	if(!Mesh)
@@ -290,9 +289,13 @@ void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalM
 
 	for (const auto Wheel:Wheels)
 	{
-		 FName BoneName=FName(BoneNamePrefix+Wheel->GetName());
+		const FName BoneName=FName(BoneNamePrefix+Wheel->GetName());
 		Wheel->SetWorldLocation(	Mesh->GetSocketLocation(BoneName));
-		Wheel->OptionalBoneName=BoneName;
+
+		if(const auto WheelCast=Cast<UModularWheel>(Wheel))
+		{
+			WheelCast->OptionalBoneName=BoneName;
+		}
 	}
 }
 

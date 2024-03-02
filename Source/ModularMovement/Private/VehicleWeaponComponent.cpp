@@ -1,9 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 
 #include "VehicleWeaponComponent.h"
 
-// Fill out your copyright notice in the Description page of Project Settings.
+
 
 
 #include "Blueprint/WidgetLayoutLibrary.h"
@@ -236,7 +236,7 @@ bool UVehicleWeaponComponent::CanReload() const
 	return CurrentState != EWeaponState::Reloading;
 }
 
-bool UVehicleWeaponComponent::CanFire() const
+bool UVehicleWeaponComponent::CanFire()
 {
 	return true;
 }
@@ -427,21 +427,14 @@ void UVehicleWeaponComponent::SimulateWeaponFire()
 	}
 
 
-	/*if (PlayerController != nullptr && PlayerController->IsLocalController())
+	//Play camera shake
+
+	if (APlayerController* PC = Cast<APlayerController>(GetOwningPawn()->GetController()))
 	{
-		//	if (FireCameraShake != NULL)
-		//{
-
-
-		//PlayerController->ClientStartCameraShake(FireCameraShake);
-		//}
-		// if (FireForceFeedback != NULL && PlayerController->IsVibrationEnabled())
-		// {
-		// 	FForceFeedbackParameters FFParams;
-		// 	FFParams.Tag = "Weapon";
-		// 	PlayerController->ClientPlayForceFeedback(FireForceFeedback, FFParams);
-		// }
-	}*/
+		PC->ClientStartCameraShake(Shake);
+		
+	}
+	
 }
 
 void UVehicleWeaponComponent::StopSimulatingWeaponFire()
@@ -562,11 +555,9 @@ bool UVehicleWeaponComponent::ServerHandleFiring_Validate()
 
 void UVehicleWeaponComponent::ServerHandleFiring_Implementation()
 {
-	const bool bShouldUpdateAmmo = (CurrentAmmoInClip > 0 && CanFire() || WeaponConfig.bInfiniteClip);
-	
 	//HandleFiring();
 
-	if (bShouldUpdateAmmo)
+	if ((CurrentAmmoInClip > 0 && CanFire() || WeaponConfig.bInfiniteClip))
 	{
 		// update ammo
 		UseAmmo();
@@ -687,8 +678,7 @@ UAudioComponent* UVehicleWeaponComponent::PlayWeaponSound(USoundCue* Sound)
 
 		return AC;
 	}
-	UAudioComponent* AC = UGameplayStatics::SpawnSoundAttached(Sound, this);
-	if (AC)
+	if (UAudioComponent* AC = UGameplayStatics::SpawnSoundAttached(Sound, this))
 	{
 		AC->SetWorldLocation(GetComponentLocation());
 	}
@@ -715,7 +705,7 @@ UAudioComponent* UVehicleWeaponComponent::PlayWeaponSound(USoundCue* Sound, UAud
 	return ACin;
 }
 
-bool UVehicleWeaponComponent::ShouldDealDamage(AActor* InActor) const
+bool UVehicleWeaponComponent::ShouldDealDamage(const AActor* InActor) const
 {
 	//TODO Implement Gamemode DealDamage check
 	// if we're an actor on the server, or the actor's role is authoritative, we should register damage
@@ -737,7 +727,7 @@ bool UVehicleWeaponComponent::ShouldDealDamage(AActor* InActor) const
 }
 
 
-bool UVehicleWeaponComponent::ClientShouldDealDamage(AActor* InActor) const
+bool UVehicleWeaponComponent::ClientShouldDealDamage(const AActor* InActor) const
 {
 	if (InActor == GetOwner())
 	{
@@ -802,7 +792,7 @@ void UVehicleWeaponComponent::RegisterIsOwnedByAI()
 	}
 }
 
-void UVehicleWeaponComponent::ApplyRecoil()
+void UVehicleWeaponComponent::ApplyRecoil() const
 {
 	if (WeaponConfig.WeaponRecoil > 0)
 	{
@@ -813,18 +803,18 @@ void UVehicleWeaponComponent::ApplyRecoil()
 	}
 }
 
-APawn* UVehicleWeaponComponent::GetOwningPawn()
+APawn* UVehicleWeaponComponent::GetOwningPawn() const
 {
 	APawn* Result = Cast<APawn>(GetOwner());
 	return Result;
 }
 
-UMeshComponent* UVehicleWeaponComponent::GetMesh()
+UMeshComponent* UVehicleWeaponComponent::GetMesh() const
 {
 	return Cast<UMeshComponent>(GetOwner()->GetRootComponent());
 }
 
-FVector UVehicleWeaponComponent::CalculateAimDirection(APlayerController* PC) const
+FVector UVehicleWeaponComponent::CalculateAimDirection(const APlayerController* PC) const
 {
 	FVector WorldDirection;
 	if (OverrideAimCamera)
@@ -843,7 +833,7 @@ FVector UVehicleWeaponComponent::CalculateAimDirection(APlayerController* PC) co
 	return WorldDirection;
 }
 
-void UVehicleWeaponComponent::SetAimDirection(FVector In)
+void UVehicleWeaponComponent::SetAimDirection(const FVector& In)
 {
 	AimDirection = In;
 }

@@ -342,6 +342,9 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 						TargetArmLength + MaxArmLenChange);
 					CurrentArmLen = UKismetMathLibrary::FInterpTo(CurrentArmLen, InterpolationTarget, DeltaTime,
 					                                              ArmLenInterpolationSpeed);
+				}else
+				{
+					CurrentArmLen=TargetArmLength;
 				}
 			}
 

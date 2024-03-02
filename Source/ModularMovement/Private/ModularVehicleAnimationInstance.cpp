@@ -25,6 +25,7 @@
 
 	void UModularVehicleAnimationInstance::NativeInitializeAnimation()
 	{
+		Super::NativeInitializeAnimation();
 		// Find a wheeled movement component
 		if (AActor* Actor = GetOwningActor())
 		{
@@ -75,9 +76,17 @@
 	{
 		Super::PreUpdate(InAnimInstance, DeltaSeconds);
 
+		
+		
 		const UModularVehicleAnimationInstance* VehicleAnimInstance = CastChecked<UModularVehicleAnimationInstance>(InAnimInstance);
-		if (const UModularMovementComponent* ModularMovementComponent = VehicleAnimInstance->GetWheeledVehicleComponent())
+		const UModularMovementComponent* ModularMovementComponent=VehicleAnimInstance->GetWheeledVehicleComponent();
+		if(!VehicleAnimInstance->GetWheeledVehicleComponent())
 		{
+			ModularMovementComponent= Cast<UModularMovementComponent>(VehicleAnimInstance->GetOwningActor()->GetComponentByClass(UModularMovementComponent::StaticClass()));
+		}
+		if ( ModularMovementComponent )
+		{
+			UE_LOG(LogTemp,Log,TEXT("GotModularMovement  offset "))
 			if(ModularMovementComponent->Components.Num()!=WheelInstances.Num())
 			{
 				SetWheeledVehicleComponent(ModularMovementComponent);
@@ -93,6 +102,7 @@
 				UModularVehicleFunctionLibrary::	GetWheelAnimationData(Wheel,Location, Rotation,DeltaSeconds);
 				WheelInstance.LocOffset=Location;
 				WheelInstance.RotOffset=Rotation;
+				UE_LOG(LogTemp,Log,TEXT("Rot offset %s"),*Rotation.ToString())
 				WheelInstance.BoneName=Wheel->GetFName();
 			}
 		}

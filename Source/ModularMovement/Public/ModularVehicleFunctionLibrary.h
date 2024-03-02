@@ -89,7 +89,7 @@ public:
 	static void GetWheelAnimationData(UModularWheel* Wheel, FVector& Location, FRotator& Rotation, float DeltaTime);
 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static void SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh,TArray<UModularWheel* >Wheels, const FString& BoneNamePrefix);
+	static void SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh,TArray<UTrackableComponent* >Wheels, const FString& BoneNamePrefix);
 
 	static void NotifyError(FString Error);
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
