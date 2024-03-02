@@ -910,7 +910,10 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 void UModularMovementComponent::ShowSetupError(FString Error)
 {
 	UE_LOG(LogModularVehicle, Error, TEXT("%s"), *Error)
+#if WITH_EDITOR
 	FMessageDialog::Open(EAppMsgCategory::Error, EAppMsgType::Ok, FText::FromString(Error));
+#endif
+	
 }
 
 void UModularMovementComponent::ApplyBodyInstanceData()

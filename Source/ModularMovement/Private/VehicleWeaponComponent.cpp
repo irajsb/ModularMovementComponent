@@ -16,7 +16,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Sound/SoundCue.h"
-
+#include "TimerManager.h"
 
 // Sets default values for this component's properties
 UVehicleWeaponComponent::UVehicleWeaponComponent()

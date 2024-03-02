@@ -283,7 +283,10 @@ void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalM
 {
 	if(!Mesh)
 	{
+#if WITH_EDITOR
 		FMessageDialog::Open(EAppMsgCategory::Error,EAppMsgType::Ok,FText::FromString(TEXT("Mesh was not found function SetupWheelLocationFromBone")));
+#endif
+		
 		return;
 	}
 
