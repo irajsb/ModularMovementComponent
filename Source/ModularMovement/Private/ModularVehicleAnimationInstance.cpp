@@ -86,7 +86,7 @@
 		}
 		if ( ModularMovementComponent )
 		{
-			UE_LOG(LogTemp,Log,TEXT("GotModularMovement  offset "))
+			
 			if(ModularMovementComponent->Components.Num()!=WheelInstances.Num())
 			{
 				SetWheeledVehicleComponent(ModularMovementComponent);
@@ -102,7 +102,6 @@
 				UModularVehicleFunctionLibrary::	GetWheelAnimationData(Wheel,Location, Rotation,DeltaSeconds);
 				WheelInstance.LocOffset=Location;
 				WheelInstance.RotOffset=Rotation;
-				UE_LOG(LogTemp,Log,TEXT("Rot offset %s"),*Rotation.ToString())
 				WheelInstance.BoneName=Wheel->GetFName();
 			}
 		}
