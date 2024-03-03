@@ -3,9 +3,9 @@
 #pragma once
 
 
-#include "Engine/DataTable.h"
-#include "VehicleWeaponComponent.generated.h"
 
+#include "VehicleWeaponComponent.generated.h"
+class USoundCue;
 class UCameraComponent;
 class UWidgetComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFireAnimationStateChanged, bool, bPlay);
@@ -32,7 +32,7 @@ namespace EWeaponState
 
 
 USTRUCT(BlueprintType)
-struct FWeaponDataRow : public FTableRowBase
+struct FWeaponDataRow 
 {
 	GENERATED_USTRUCT_BODY()
 
