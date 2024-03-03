@@ -69,15 +69,18 @@ void UVehicleWeaponComponent::BeginPlay()
 
 	if (WeaponConfig.AimWidgetClass)
 	{
-		if (GetNetMode() == NM_Standalone || GetOwnerRole() == ROLE_AutonomousProxy)
+		if(GetOwningPawn()->GetController()->IsPlayerController())
 		{
-			if (const auto Comp = GetOwner()->AddComponentByClass(UWidgetComponent::StaticClass(), false, FTransform(),
-			                                                      false))
+			if (GetNetMode() == NM_Standalone || GetOwnerRole() == ROLE_AutonomousProxy)
 			{
-				WidgetComponent = Cast<UWidgetComponent>(Comp);
-				WidgetComponent->SetWidgetClass(WeaponConfig.AimWidgetClass);
-				WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
-				WidgetComponent->SetDrawSize(WeaponConfig.AimWidgetSize);
+				if (const auto Comp = GetOwner()->AddComponentByClass(UWidgetComponent::StaticClass(), false, FTransform(),
+																	  false))
+				{
+					WidgetComponent = Cast<UWidgetComponent>(Comp);
+					WidgetComponent->SetWidgetClass(WeaponConfig.AimWidgetClass);
+					WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+					WidgetComponent->SetDrawSize(WeaponConfig.AimWidgetSize);
+				}
 			}
 		}
 	}

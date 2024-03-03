@@ -112,16 +112,16 @@ struct FWheelState{
 	GENERATED_BODY()
 	//Ranges from 0-1
 	UPROPERTY(Transient)
-	float PreviousLen;
+	float PreviousLen=0.f;
 	UPROPERTY(Transient)
 	float SteerAngle=0.f;
 	UPROPERTY(Transient)
-	FHitResult HitResult;
+	FHitResult HitResult=FHitResult();
 	UPROPERTY(Transient)
-	bool bIsSlipping;
+	bool bIsSlipping=false;
 	//SuspensionForce That was applied;
 	UPROPERTY(Transient)
-	FVector WheelLoad;
+	FVector WheelLoad=FVector::ZeroVector;
 
 	//Base class to create an instance from for setup of this wheel
 	UPROPERTY(EditAnywhere,Category=Setup)
@@ -131,29 +131,29 @@ struct FWheelState{
 	UModularVehicleWheelData* WheelSetup=nullptr;
 	//Automatically animate child component, Used for static mesh wheels
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
-	bool AnimateChildComponent;
+	bool AnimateChildComponent=false;
 	//Should this wheel apply drive force
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
-	bool ApplyDriveForce;
+	bool ApplyDriveForce=true;
 	//Steering scale for wheels can be negative to allow back wheel steering or less than 1 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
-	float SteerScale;
+	float SteerScale=0.f;
 	//This wheel receives hand brake 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
 	bool AffectedByHandBrake=false;
 
 	
 	UPROPERTY(Transient)
-	float DriveTorque;
+	float DriveTorque=0.f;
 	UPROPERTY(Transient)
-	float BrakeTorque;
+	float BrakeTorque=0.f;
 	UPROPERTY(Transient)
-	bool IsHandBrakeTorque;
+	bool IsHandBrakeTorque=false;
 	UPROPERTY(Transient)
-	float Spin;
+	float Spin=0.f;
 
 	
-	float TireStress;
+	float TireStress=0.f;
 
 	// [radians/sec] Wheel Rotation Angular Velocity
 
@@ -163,31 +163,31 @@ struct FWheelState{
 	float AngularAcceleration=0.f;
 	UPROPERTY(Transient)
 	// [radians/sec] Wheel Rotation Angular Velocity
-	float AngularPosition;// [radians]
+	float AngularPosition=0.f;// [radians]
 	
 	// Angle between wheel forwards and velocity vector
 	UPROPERTY(Transient)
-	float SlipAngle;
+	float SlipAngle=0.f;
 	UPROPERTY(Transient)
-	float SlipRatio;
+	float SlipRatio=0.f;
 	//Location of wheel relative to body
 	UPROPERTY(Transient)
-	FVector InitialLocalLocation;
+	FVector InitialLocalLocation=FVector::ZeroVector;
 	UPROPERTY(Transient)
-	FRotator InitialLocalRotation;
+	FRotator InitialLocalRotation=FRotator::ZeroRotator;
 	UPROPERTY(Transient)
-	float TorqueTransferFactor=1;
+	float TorqueTransferFactor=1.f;
 	UPROPERTY(Transient)
-	float SuspAngle;
+	float SuspAngle=0.f;
 
 	UPROPERTY(Transient)
 	FVector PreviousLocation=FVector(0,0,0);
 	UPROPERTY(Transient)
-	float CurrentPivotAngle;
+	float CurrentPivotAngle=0.f;
 
 	
 	UPROPERTY(Transient)
-	float DampingForce;
+	float DampingForce=0.f;
 	
 
 

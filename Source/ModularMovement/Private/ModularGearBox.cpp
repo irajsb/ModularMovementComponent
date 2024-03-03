@@ -147,6 +147,10 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 			MovementComponent->OnGearChange.Broadcast(CurrentGear, TargetGear, true);
 			CurrentGear = TargetGear;
 		}
+	}else
+	{
+		//Handle cases where immediate shift happens 
+		CurrentGearChangeTime=0.f;
 	}
 }
 

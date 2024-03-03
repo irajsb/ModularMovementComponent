@@ -67,9 +67,9 @@ struct FWheelRepCosmeticData
 	GENERATED_USTRUCT_BODY()
 public:
 	UPROPERTY()
-	float Slip;
+	float Slip=0.f;
 	UPROPERTY()
-	float AngularVelocity;
+	float AngularVelocity=0.f;
 
 	FWheelRepCosmeticData(float InSlip,float InAngularVelocity)
 	{
@@ -89,11 +89,11 @@ struct FRepCosmeticData
 
 	/** Engine RPM */
 	UPROPERTY()
-	uint8 EngineRPM;
+	uint8 EngineRPM=0.f;
 	UPROPERTY()
 	uint8 CurrentGear = 0;
 	UPROPERTY()
-	float SteeringInput;
+	float SteeringInput=0.f;
 	UPROPERTY()
 	TArray<FWheelRepCosmeticData> WheelRepCosmeticDatas;
 	UPROPERTY()
@@ -130,33 +130,33 @@ struct FVehicleState
 
 	// Current RPM (Revolutions Per Minute) of the vehicle's engine
 	UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
-	float CurrentRpm;
+	float CurrentRpm=0.f;
 
 	// Forward speed of the vehicle
 	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	float ForwardSpeed;
+	float ForwardSpeed=0.f;
 
 	// Side speed of the vehicle
 	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	float SideSpeed;
+	float SideSpeed=0.f;
 
 	// Desired speed for the vehicle
-	float DesiredSpeed;
+	float DesiredSpeed=0.f;
 
 	// Previous throttle input for AI control
-	float AIPreviousThrottle;
+	float AIPreviousThrottle=0.f;
 
 	// State of the AI-controlled vehicle
 	EAIVehicleState AIState;
 
 	// Flag indicating whether the vehicle is controlled by AI
-	bool IsAIVehicle;
+	bool IsAIVehicle=false;
 
 	// Delta for locking the current state
-	float LockCurrentStateDelta;
+	float LockCurrentStateDelta=0.f;
 
 	// Number of drive wheels on the ground
-	int DriveWheelsOnGround;
+	int DriveWheelsOnGround=0;
 
 	// Information about the left track of the vehicle
 	FModularTrackInfo TrackLeft;
@@ -165,7 +165,7 @@ struct FVehicleState
 	FModularTrackInfo TrackRight;
 
 	// Engine revolutions per second
-	float EngineRads;
+	float EngineRads=0.f;
 };
 
 
@@ -223,7 +223,7 @@ public:
 	float BrakeInput;
 
 	// Transient raw throttle input value (-1 for release, 0 for neutral, 1 for full throttle)
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category=Input)
 	float RawThrottleInput;
 
 	// Transient handbrake input status (true if engaged)
