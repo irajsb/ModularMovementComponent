@@ -110,14 +110,19 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 			const FVector CamLoc = OverrideAimCamera
 				                       ? OverrideAimCamera->GetComponentLocation()
 				                       : PC->PlayerCameraManager->GetCameraLocation();
+			
 			FCollisionQueryParams Params;
 			Params.AddIgnoredActor(GetOwner());
+			
+			 FRotator  AimDirAngle = GetOwner()->GetActorRotation().UnrotateVector(AimDirection).Rotation();
+			AimDirAngle.Pitch = FMath::ClampAngle(AimDirAngle.Pitch, WeaponConfig.MinPitch, WeaponConfig.MaxPitch);
+			AimDirection=GetOwner()->GetActorRotation().RotateVector(AimDirAngle.Vector());
 			GetWorld()->LineTraceSingleByChannel(HitResult, CamLoc, CamLoc + AimDirection * 1000000.0,
 			                                     WeaponConfig.Channel, Params);
 			//Camera aim loc
 			TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
-
-
+		
+	
 			UpdateAnim(DeltaTime);
 			CurrentWeaponRotationWorldSpace = GetOwner()->GetActorRotation().RotateVector(
 				CurrentWeaponRotation.Quaternion().Vector()).Rotation();
@@ -127,7 +132,8 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 			                                     ComponentLoc + CurrentWeaponRotationWorldSpace.Vector() * 1000000.0,
 			                                     WeaponConfig.Channel, Params);
 			TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
-
+		
+			
 			if (WidgetComponent)
 			{
 				WidgetComponent->SetWorldLocation(TargetLocation);
@@ -602,10 +608,11 @@ void UVehicleWeaponComponent::UpdateAnim(float DeltaTime)
 	{
 		return;
 	}
-
+	
 	FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(GetComponentLocation(), TargetLocation);
 	TargetRotation = GetOwner()->GetActorRotation().UnrotateVector(TargetRotation.Vector()).Rotation();
 	TargetRotation.Pitch = FMath::ClampAngle(TargetRotation.Pitch, WeaponConfig.MinPitch, WeaponConfig.MaxPitch);
+	
 
 	if (WeaponConfig.InstantRotation)
 	{
@@ -614,8 +621,14 @@ void UVehicleWeaponComponent::UpdateAnim(float DeltaTime)
 	}
 	else
 	{
-		CurrentWeaponRotation = UKismetMathLibrary::RInterpTo_Constant(CurrentWeaponRotation, TargetRotation, DeltaTime,
-		                                                               WeaponConfig.RotInterpolationSpeed);
+	
+			CurrentWeaponRotation = UKismetMathLibrary::RInterpTo_Constant(CurrentWeaponRotation, TargetRotation, DeltaTime,
+																	   WeaponConfig.RotInterpolationSpeed);
+
+		
+	
+		
+		
 		if (UKismetMathLibrary::EqualEqual_RotatorRotator(TargetRotation, CurrentWeaponRotation, 1))
 		{
 			bStableAim = true;

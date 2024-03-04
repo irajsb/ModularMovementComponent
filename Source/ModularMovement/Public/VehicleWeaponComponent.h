@@ -76,6 +76,9 @@ struct FWeaponDataRow
 	UPROPERTY(EditAnywhere, Category = "Setup")
 	float RotInterpolationSpeed;
 
+
+
+
 	/** Heat generated per shot */
 	UPROPERTY(EditAnywhere, Category = "Setup")
 	float HeatPerShot;
@@ -134,7 +137,7 @@ struct FWeaponDataRow
 		IsOwnedByAI = false;
 		InstantRotation = false;
 		AITimerMultiplier = 1;
-		MinPitch = -5;
+		MinPitch = -10;
 		MaxPitch = 30;
 		AimWidgetSize = FVector2D(50, 50);
 	}
@@ -434,4 +437,8 @@ public:
 	UCameraComponent* OverrideAimCamera = nullptr;
 	UPROPERTY(EditAnywhere, Category=Setup)
 	bool ReplicateControlRotation = false;
+
+	float LastDirectionChange;
+	
+	FRotator LastTargetRotation;
 };
