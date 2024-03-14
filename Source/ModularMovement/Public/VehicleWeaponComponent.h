@@ -115,9 +115,13 @@ struct FWeaponDataRow
 	UPROPERTY(EditAnywhere, Category = "Setup")
 	TSubclassOf<UUserWidget> AimWidgetClass;
 
+	UPROPERTY(EditAnywhere, Category = "Setup")
+	bool AimDirectlyForward=false;
 	/** Size of aim widget */
 	UPROPERTY(EditAnywhere, Category = "Setup")
 	FVector2D AimWidgetSize;
+
+	
 
 	/** Collision channel */
 	UPROPERTY(EditAnywhere, Category = "Setup")

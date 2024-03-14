@@ -69,17 +69,19 @@ void UVehicleWeaponComponent::BeginPlay()
 
 	if (WeaponConfig.AimWidgetClass)
 	{
-		if(GetOwningPawn()->GetController()->IsPlayerController())
-		{
-			if (GetNetMode() == NM_Standalone || GetOwnerRole() == ROLE_AutonomousProxy)
+		if(GetOwningPawn()->GetController()){
+			if(GetOwningPawn()->GetController()->IsPlayerController())
 			{
-				if (const auto Comp = GetOwner()->AddComponentByClass(UWidgetComponent::StaticClass(), false, FTransform(),
-																	  false))
+				if (GetNetMode() == NM_Standalone || GetOwnerRole() == ROLE_AutonomousProxy)
 				{
-					WidgetComponent = Cast<UWidgetComponent>(Comp);
-					WidgetComponent->SetWidgetClass(WeaponConfig.AimWidgetClass);
-					WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
-					WidgetComponent->SetDrawSize(WeaponConfig.AimWidgetSize);
+					if (const auto Comp = GetOwner()->AddComponentByClass(UWidgetComponent::StaticClass(), false, FTransform(),
+																		  false))
+					{
+						WidgetComponent = Cast<UWidgetComponent>(Comp);
+						WidgetComponent->SetWidgetClass(WeaponConfig.AimWidgetClass);
+						WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+						WidgetComponent->SetDrawSize(WeaponConfig.AimWidgetSize);
+					}
 				}
 			}
 		}
@@ -95,55 +97,63 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 
 	CurrentHeat = FMath::Clamp<float>(CurrentHeat - WeaponConfig.HeatReduce * DeltaTime, 0, 1);
 
-	// Calculate direction from the world
-	if ((GetOwner()->GetLocalRole() == ROLE_Authority) || GetOwningPawn()->IsLocallyControlled())
+	if(!WeaponConfig.AimDirectlyForward)
 	{
-		if (const auto PC = Cast<APlayerController>(GetOwningPawn()->GetController()))
+		// Calculate direction from the world
+		if ((GetOwner()->GetLocalRole() == ROLE_Authority) || GetOwningPawn()->IsLocallyControlled())
 		{
-			if (GetNetMode() == NM_Standalone || GetOwnerRole() < ROLE_Authority)
+			if (const auto PC = Cast<APlayerController>(GetOwningPawn()->GetController()))
 			{
-				ServerSetControlRotation(GetWorld()->GetFirstPlayerController()->GetControlRotation().Vector());
-			}
-			SetAimDirection(CalculateAimDirection(PC));
+				if (GetNetMode() == NM_Standalone || GetOwnerRole() < ROLE_Authority)
+				{
+				
+					ServerSetControlRotation(GetWorld()->GetFirstPlayerController()->GetControlRotation().Vector());
+				
+				}
+				SetAimDirection(CalculateAimDirection(PC));
 
-			FHitResult HitResult;
-			const FVector CamLoc = OverrideAimCamera
-				                       ? OverrideAimCamera->GetComponentLocation()
-				                       : PC->PlayerCameraManager->GetCameraLocation();
+				FHitResult HitResult;
+				const FVector CamLoc = OverrideAimCamera
+										   ? OverrideAimCamera->GetComponentLocation()
+										   : PC->PlayerCameraManager->GetCameraLocation();
 			
-			FCollisionQueryParams Params;
-			Params.AddIgnoredActor(GetOwner());
+				FCollisionQueryParams Params;
+				Params.AddIgnoredActor(GetOwner());
 			
-			 FRotator  AimDirAngle = GetOwner()->GetActorRotation().UnrotateVector(AimDirection).Rotation();
-			AimDirAngle.Pitch = FMath::ClampAngle(AimDirAngle.Pitch, WeaponConfig.MinPitch, WeaponConfig.MaxPitch);
-			AimDirection=GetOwner()->GetActorRotation().RotateVector(AimDirAngle.Vector());
-			GetWorld()->LineTraceSingleByChannel(HitResult, CamLoc, CamLoc + AimDirection * 1000000.0,
-			                                     WeaponConfig.Channel, Params);
-			//Camera aim loc
-			TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
+				FRotator  AimDirAngle = GetOwner()->GetActorRotation().UnrotateVector(AimDirection).Rotation();
+				AimDirAngle.Pitch = FMath::ClampAngle(AimDirAngle.Pitch, WeaponConfig.MinPitch, WeaponConfig.MaxPitch);
+				AimDirection=GetOwner()->GetActorRotation().RotateVector(AimDirAngle.Vector());
+				GetWorld()->LineTraceSingleByChannel(HitResult, CamLoc, CamLoc + AimDirection * 1000000.0,
+													 WeaponConfig.Channel, Params);
+				//Camera aim loc
+				TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
 		
 	
-			UpdateAnim(DeltaTime);
-			CurrentWeaponRotationWorldSpace = GetOwner()->GetActorRotation().RotateVector(
-				CurrentWeaponRotation.Quaternion().Vector()).Rotation();
+				UpdateAnim(DeltaTime);
+				CurrentWeaponRotationWorldSpace = GetOwner()->GetActorRotation().RotateVector(
+					CurrentWeaponRotation.Quaternion().Vector()).Rotation();
 
-			const FVector ComponentLoc = GetComponentLocation();
-			GetWorld()->LineTraceSingleByChannel(HitResult, ComponentLoc,
-			                                     ComponentLoc + CurrentWeaponRotationWorldSpace.Vector() * 1000000.0,
-			                                     WeaponConfig.Channel, Params);
-			TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
+				const FVector ComponentLoc = GetComponentLocation();
+				GetWorld()->LineTraceSingleByChannel(HitResult, ComponentLoc,
+													 ComponentLoc + CurrentWeaponRotationWorldSpace.Vector() * 1000000.0,
+													 WeaponConfig.Channel, Params);
+				TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
 		
 			
-			if (WidgetComponent)
-			{
-				WidgetComponent->SetWorldLocation(TargetLocation);
+				if (WidgetComponent)
+				{
+					WidgetComponent->SetWorldLocation(TargetLocation);
+				}
 			}
 		}
-	}
-	else
+		else
+		{
+			CurrentWeaponRotationWorldSpace = GetOwner()->GetActorRotation().RotateVector(
+				CurrentWeaponRotation.Quaternion().Vector()).Rotation();
+		}
+	}else
 	{
-		CurrentWeaponRotationWorldSpace = GetOwner()->GetActorRotation().RotateVector(
-			CurrentWeaponRotation.Quaternion().Vector()).Rotation();
+		CurrentWeaponRotationWorldSpace=GetComponentRotation();
 	}
 }
 
@@ -484,10 +494,7 @@ void UVehicleWeaponComponent::UseAmmo()
 		CurrentAmmoInClip--;
 	}
 
-	if (!HasInfiniteAmmo() && !HasInfiniteClip())
-	{
-		CurrentAmmo--;
-	}
+	
 
 	
 	UpdateMainWeaponHUD();
@@ -542,8 +549,11 @@ void UVehicleWeaponComponent::StopReload()
 
 void UVehicleWeaponComponent::ReloadWeapon()
 {
-	CurrentAmmoInClip = WeaponConfig.ClipSize;
-	CurrentAmmo -= WeaponConfig.ClipSize;
+	if(CurrentAmmo>0)
+	{
+		CurrentAmmoInClip = WeaponConfig.ClipSize;
+		CurrentAmmo -= WeaponConfig.ClipSize;
+	}
 }
 
 
@@ -568,8 +578,9 @@ void UVehicleWeaponComponent::ServerHandleFiring_Implementation()
 
 	if ((CurrentAmmoInClip > 0 && CanFire() || WeaponConfig.bInfiniteClip))
 	{
-		// update ammo
-		UseAmmo();
+		
+			UseAmmo();
+		
 
 		// update firing FX on remote clients
 		BurstCounter++;
@@ -766,11 +777,11 @@ void UVehicleWeaponComponent::UpdateMainWeaponHUD(bool bIsReloading)
 
 		if (!WeaponConfig.bInfiniteAmmo)
 		{
-			NotifyAmmo.Broadcast(CurrentAmmoInClip, WeaponConfig.ClipSize);
+			NotifyAmmo.Broadcast(CurrentAmmoInClip, CurrentAmmo);
 		}
 		else
 		{
-			NotifyAmmo.Broadcast(CurrentAmmoInClip, 0);
+			NotifyAmmo.Broadcast(CurrentAmmoInClip, CurrentAmmo);
 		}
 	}
 }
