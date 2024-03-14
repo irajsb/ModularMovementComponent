@@ -30,6 +30,10 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			const float NewLoad=((FMath::Abs(MC->ThrottleInput)/2)+(RPMChange > 0) )? 0.5f : 0.0f;
 			Load=UKismetMathLibrary::FInterpTo_Constant(Load,NewLoad,DeltaTime,LoadInterpolationSpeed);
 			SetFloatParameter("Load",Load*LoadMultiplier);
+
+			
+			CurrentTurbo=UKismetMathLibrary::FInterpTo_Constant(CurrentTurbo,RPMRatio,DeltaTime,TurboInterpolationSpeed);
+			SetFloatParameter("Turbo",CurrentTurbo*TurboMultiplier);
 		}
 	}
 }
