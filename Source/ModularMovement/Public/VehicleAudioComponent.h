@@ -23,8 +23,15 @@ class MODULARMOVEMENT_API UVehicleAudioComponent : public UAudioComponent
 	float LoadInterpolationSpeed=1;
 	UPROPERTY(EditAnywhere,Category="EngineSound")
 	float LoadMultiplier=1;
+	
+	UPROPERTY(EditAnywhere,Category="EngineSound")
+    float TurboInterpolationSpeed=0.25;
+    UPROPERTY(EditAnywhere,Category="EngineSound")
+    float TurboMultiplier=1;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+private:
 	float RPM=0.f;
 	float Load;
+	float CurrentTurbo;
 };
