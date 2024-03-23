@@ -37,10 +37,12 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 	WorldMeshVelocity.Z = 0;
 	const FVector LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity);
 	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
-	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
-		GetNumberOfWheels());
+	
 	const float WheelRadiusM = Wheel->WheelState.WheelSetup->WheelRadius / 100.f;
 
+	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
+		GetNumberOfWheels());
+	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*100.f:Wheel->WheelState.WheelLoad.Size() ;
 
 	bool Locked = false;
 	bool Spinning = false;
@@ -56,9 +58,9 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 	if (Wheel->WheelState.HitResult.bBlockingHit)
 	{
 		//Friction of phys mat is default 0.7
-		const float LongitudinalAdhesiveLimit = Wheel->WheelState.WheelLoad.Size() * Wheel->WheelState.HitResult.
+		const float LongitudinalAdhesiveLimit = WheelLoad * Wheel->WheelState.HitResult.
 			PhysMaterial.Get()->Friction * FrictionMultiplierLongitudinal;
-		const float LateralFrictionLoadMultiplier = Wheel->WheelState.WheelLoad.Size() * Wheel->WheelState.HitResult.
+		const float LateralFrictionLoadMultiplier = WheelLoad * Wheel->WheelState.HitResult.
 			PhysMaterial.Get()->Friction;
 
 		if (Braking)
@@ -118,7 +120,7 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 	Wheel->WheelState.TireStress = FMath::Clamp(FMath::Max(LongitudinalStress, LateralStress), 0.f, 1.f);
 
 	//Gather Debug
-	const FVector TireForce = (FinalForceVector / Wheel->WheelState.WheelLoad.Size());
+	const FVector TireForce = (FinalForceVector / WheelLoad);
 	TireForceNormalized = FVector2f(TireForce.X, TireForce.Y);
 
 

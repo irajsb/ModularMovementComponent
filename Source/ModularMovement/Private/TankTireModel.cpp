@@ -15,10 +15,16 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	{
 		return;
 	}
+	
+	const UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
+	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
+		GetNumberOfWheels());
+	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*100.f:Wheel->WheelState.WheelLoad.Size() ;
+	
 	const float TrackInput=Wheel->WheelState.InitialLocalLocation.Y>0.f?ModularMovementComponent->VehicleState.TrackRight.TorqueTransfer
 	:ModularMovementComponent->VehicleState.TrackLeft.TorqueTransfer;
 
-	const UPrimitiveComponent* Mesh=ModularMovementComponent->GetMesh();
+	
 	if(Wheel->ParentBodyOverride)
 	{
 		Mesh=Wheel->ParentBodyOverride;
@@ -34,8 +40,6 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	WorldMeshVelocity.Z = 0;
 	const FVector LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity);
 	const FVector GroundVelocityVector = LocalWheelVelocity;
-	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
-		GetNumberOfWheels());
 	const float WheelRadiusM =SprocketRadius / 100.f;
 
 	
@@ -60,9 +64,9 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	if (Wheel->WheelState.HitResult.bBlockingHit)
 	{
 		//Friction of phys mat is default 0.7
-		const float LongitudinalAdhesiveLimit = Wheel->WheelState.WheelLoad.Size() * Wheel->WheelState.HitResult.
+		const float LongitudinalAdhesiveLimit = WheelLoad * Wheel->WheelState.HitResult.
 			PhysMaterial.Get()->Friction * FrictionMultiplierLongitudinal;
-		const float LateralFrictionLimit = Wheel->WheelState.WheelLoad.Size() * Wheel->WheelState.HitResult.
+		const float LateralFrictionLimit = WheelLoad * Wheel->WheelState.HitResult.
 			PhysMaterial.Get()->Friction*CalculatedLatFrictionMultiplier;
 
 		if (Braking)
@@ -126,7 +130,7 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	//ignore in low speeds
 	const float LateralStress=GroundVelocityVector.Size()>500.f? Wheel->WheelState.SlipAngle:0;
 	Wheel->WheelState.TireStress=FMath::Clamp(FMath::Max(LongitudinalStress,LateralStress),0.f,1.f);
-	const FVector TireForce = (FinalForceVector / Wheel->WheelState.WheelLoad.Size());
+	const FVector TireForce = (FinalForceVector / WheelLoad);
 	TireForceNormalized = FVector2f(TireForce.X, TireForce.Y);
 
 }

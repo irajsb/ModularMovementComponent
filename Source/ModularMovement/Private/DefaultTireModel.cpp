@@ -49,6 +49,11 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	const float WheelRadius = Wheel->WheelState.WheelSetup->WheelRadius / 100;
 	const float WheelVelocity = Wheel->WheelState.AngularVelocity * WheelRadius;
 
+	const bool Combine=UseCombinedFriction||(Wheel->WheelState.IsHandBrakeTorque&&UseCombinedFrictionWhenHandBraking);
+	const UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
+	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
+		GetNumberOfWheels());
+	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*100.f:Wheel->WheelState.WheelLoad.Size() ;
 
 	float SlipForward, SlipLateral;
 	// Check if we are actually touching the ground
@@ -99,20 +104,28 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	}
 	if(TotalSlip>0.00001)
 	{
-		const float Sx_normalized = FMath::Abs( SlipForward )/ Speak;
-		const float alpha_normalized =FMath::Abs( Wheel->WheelState.SlipAngle) / SideSlipPeak;
+		if(Combine)
+		{
+			const float Sx_normalized = FMath::Abs( SlipForward )/ Speak;
+			const float alpha_normalized =FMath::Abs( Wheel->WheelState.SlipAngle) / SideSlipPeak;
 
-		float S_star = FMath::Sqrt(FMath::Square(Sx_normalized) + FMath::Square(alpha_normalized));
+			float S_star = FMath::Sqrt(FMath::Square(Sx_normalized) + FMath::Square(alpha_normalized));
 
-		// Step 4: Modified Slip Ratio and Slip Angle
-		float Sx_modified = S_star * Speak;
-		float alpha_modified = S_star * SideSlipPeak;
+			// Step 4: Modified Slip Ratio and Slip Angle
+			float Sx_modified = S_star * Speak;
+			float alpha_modified = S_star * SideSlipPeak;
 
-		FinalForceVector.X = LongitudinalGripCurve.GetRichCurve()->Eval(FMath::Abs(Sx_modified))*FMath::Sign(SlipForward);
-		FinalForceVector.Y =LateralGripCurve.GetRichCurve()->Eval(alpha_modified)*FMath::Sign(Wheel->WheelState.SlipAngle);
+		
+			FinalForceVector.X = LongitudinalGripCurve.GetRichCurve()->Eval(FMath::Abs(Sx_modified))*FMath::Sign(SlipForward);
+			FinalForceVector.Y =LateralGripCurve.GetRichCurve()->Eval(alpha_modified)*FMath::Sign(Wheel->WheelState.SlipAngle);
 
-		FinalForceVector.X = FinalForceVector.X * (Sx_normalized / S_star);
-		FinalForceVector.Y = FinalForceVector.Y * (alpha_normalized / S_star);
+			FinalForceVector.X = FinalForceVector.X * (Sx_normalized / S_star);
+			FinalForceVector.Y = FinalForceVector.Y * (alpha_normalized / S_star);
+		}else
+		{
+			FinalForceVector.X = LongitudinalGripCurve.GetRichCurve()->Eval(FMath::Abs(SlipForward))*FMath::Sign(SlipForward);
+			FinalForceVector.Y =LateralGripCurve.GetRichCurve()->Eval(Wheel->WheelState.SlipAngle)*FMath::Sign(Wheel->WheelState.SlipAngle);
+		}
 	
 	}
 
@@ -124,8 +137,8 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 		SurfaceFriction = Wheel->WheelState.HitResult.PhysMaterial->Friction;
 	}
 
-	FinalForceVector.X *= Wheel->WheelState.WheelLoad.Z * SurfaceFriction;
-	FinalForceVector.Y *= Wheel->WheelState.WheelLoad.Z * SurfaceFriction;
+	FinalForceVector.X *= WheelLoad * SurfaceFriction;
+	FinalForceVector.Y *= WheelLoad* SurfaceFriction;
 
 	RELAXATION2(FinalForceVector.X, LastFX, 50.0f);
 	RELAXATION2(FinalForceVector.Y, LastFY, 50.0f);
@@ -175,7 +188,7 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 
 
 	//Gather Debug
-	const FVector TireForce = (FinalForceVector / Wheel->WheelState.WheelLoad.Size());
+	const FVector TireForce = (FinalForceVector / WheelLoad);
 	
 	TireForceNormalized = FVector2f(TireForce.X, TireForce.Y);
 	

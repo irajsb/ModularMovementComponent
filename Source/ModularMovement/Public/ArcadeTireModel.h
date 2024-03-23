@@ -13,7 +13,7 @@ class UModularMovementComponent;
 /**
  * 
  */
-UCLASS(EditInlineNew)
+UCLASS(EditInlineNew,HideCategories=AdvancedTire)
 class MODULARMOVEMENT_API UArcadeTireModel : public UBaseTireModel
 {
 	GENERATED_BODY()
