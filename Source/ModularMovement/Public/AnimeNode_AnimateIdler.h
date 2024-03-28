@@ -27,6 +27,9 @@ struct MODULARMOVEMENT_API FAnimNode_AnimateIdler : public FAnimNode_SkeletalCon
 	UTankTrackComponent* TrackComponent;
 	UPROPERTY(EditAnywhere, Category=Data,meta = (PinShownByDefault))
 	float Radius=30;
+	 
+	UPROPERTY(EditAnywhere, Category=Data,meta = (PinShownByDefault))
+	int OptionalTeethCount=-1;
 	FAnimNode_AnimateIdler();
 
 	float AnimRot;

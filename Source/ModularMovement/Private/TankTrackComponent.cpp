@@ -60,6 +60,7 @@ void UTankTrackComponent::RebuildSplines(float DeltaTime)
 				// If it's a Wheel, get the radius from WheelSetup or WheelSetupClass
 				if (Cast<UModularWheel>(Trackable)->WheelState.WheelSetup)
 				{
+				
 					Radius = Wheel->WheelState.WheelSetup->WheelRadius;
 					ZOffset = Wheel->WheelState.PreviousLocation.Z;
 				}
@@ -92,9 +93,22 @@ void UTankTrackComponent::RebuildSplines(float DeltaTime)
 			Radius = Idler->Radius;
 		}
 
-		for (auto ContactPoint : Trackable->ContactPoints)
+		for (int ContactIndex=0;ContactIndex!=   Trackable->ContactPoints.Num();++ContactIndex)
 		{
 			// Calculate the position and tangent on the wheel or idler's surface
+			const auto ContactPoint=Trackable->ContactPoints[ContactIndex];
+			bool HasCustomTangent=false;
+			FCustomTrackTangent CustomTangent;
+
+			for(const auto CustomTangents:Trackable->CustomTangentArray)
+			{
+				if(CustomTangents.ContactPointIndex==ContactIndex)
+				{
+					HasCustomTangent=true;
+					CustomTangent=CustomTangents;
+				}
+			}
+			
 			const FVector2D RelativePosition = ContactPoint * Radius;
 			const FVector Position = Trackable->GetRelativeLocation();
 			const FVector ContactPointVector = FVector(RelativePosition.X, 0, RelativePosition.Y + ZOffset) / GetOwner()
@@ -107,6 +121,18 @@ void UTankTrackComponent::RebuildSplines(float DeltaTime)
 
 			//Find angle between contact point and up
 
+			if(HasCustomTangent)
+			{
+					
+				SetRotationAtSplinePoint(GetNumberOfSplinePoints() - 1, FRotator(CustomTangent.Angle, 0, 0),
+									 ESplineCoordinateSpace::Local, false);
+				SetTangentAtSplinePoint(GetNumberOfSplinePoints() - 1, CustomTangent.Tangent,
+													ESplineCoordinateSpace::Local, false);
+				
+			}
+			else
+			{
+			
 			const float Angle = FMath::Sign(ContactPoint.X + 0.00001) * FMath::RadiansToDegrees(
 				FMath::Acos(FVector2D::DotProduct(ContactPoint, FVector2D(0, -1))));
 
@@ -114,7 +140,9 @@ void UTankTrackComponent::RebuildSplines(float DeltaTime)
 			                         ESplineCoordinateSpace::Local, false);
 			SetTangentAtSplinePoint(GetNumberOfSplinePoints() - 1, FRotator(Angle, 0, 0).Vector() * Radius,
 			                        ESplineCoordinateSpace::Local, false);
+			
 		}
+			}
 	}
 
 	UpdateSpline();
@@ -141,7 +169,7 @@ void UTankTrackComponent::UpdateMeshes(float DeltaTime)
 
 	for (int32 Index = 0; Index < NumOfMeshesInTrack; Index++)
 	{
-		float SplineTime = (Index / static_cast<float>(NumOfMeshesInTrack) - CurrentOffset);
+		float SplineTime = (Index / static_cast<float>(NumOfMeshesInTrack) - CurrentOffset+ConstantOffset);
 		if (SplineTime < 0.f)
 		{
 			SplineTime += 1.f;

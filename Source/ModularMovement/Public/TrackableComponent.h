@@ -9,6 +9,24 @@
 /*
  * A component that can be used to build a Tank track
  */
+
+
+USTRUCT()
+struct FCustomTrackTangent
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere,Category=Track)
+	int ContactPointIndex;
+
+	UPROPERTY(EditAnywhere,Category=Track)
+	FVector Tangent;
+
+	UPROPERTY(EditAnywhere,Category=Track)
+	float Angle=0.f;
+};
+
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MODULARMOVEMENT_API UTrackableComponent : public USceneComponent
 {
@@ -31,6 +49,11 @@ public:
 	//Contact points relative to radius. for example a contact point of (0,1) is top of the wheel and (1,0) is right side of the wheel and (0,-1) is down side of the wheel)
 	UPROPERTY(EditAnywhere,Category="Track")
 	TArray<FVector2D>ContactPoints;
+
+	//Contact points relative to radius. for example a contact point of (0,1) is top of the wheel and (1,0) is right side of the wheel and (0,-1) is down side of the wheel)
+	UPROPERTY(EditAnywhere,Category="Track")
+	TArray<FCustomTrackTangent>CustomTangentArray;
+	
 	
 	
 };
