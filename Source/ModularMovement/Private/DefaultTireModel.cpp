@@ -53,7 +53,7 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	const UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
 	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
 		GetNumberOfWheels());
-	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*100.f:Wheel->WheelState.WheelLoad.Size() ;
+	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*10.f:Wheel->WheelState.WheelLoad.Size() ;
 
 	float SlipForward, SlipLateral;
 	// Check if we are actually touching the ground

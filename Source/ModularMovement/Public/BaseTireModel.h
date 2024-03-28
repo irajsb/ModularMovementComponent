@@ -29,9 +29,22 @@ class MODULARMOVEMENT_API UBaseTireModel : public UObject
 	GENERATED_BODY()
 
 public:
+	//Use constant wheel load instead of real one. makes vehicle more arcade style and easier to control
+	UPROPERTY(EditAnywhere,Category=AdvancedTire)
+	bool UseConstantWheelLoad=true;
 
 
-	
+	/**
+	Friction limit is combined
+	For example when burning out or handbraking tire reaches it limit both laterally and longitudinally,
+	allowing it to slide sideways.
+	Disabling this allows for easier manoeuvrability in corners and more arcade feel  )
+	 */
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=AdvancedTire)
+	bool UseCombinedFriction=true;
+	//Enable UseCombinedFriction When handbraking
+	UPROPERTY(EditAnywhere,Category=AdvancedTire)
+	bool UseCombinedFrictionWhenHandBraking=true;
 	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
 	                              UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 	{

@@ -42,7 +42,7 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 
 	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
 		GetNumberOfWheels());
-	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*100.f:Wheel->WheelState.WheelLoad.Size() ;
+	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*10.f:Wheel->WheelState.WheelLoad.Size() ;
 
 	bool Locked = false;
 	bool Spinning = false;
@@ -53,6 +53,7 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 	const float ForceRequiredToBringToStop = FMath::Abs(
 		MassPerWheel * FrictionMultiplierLongitudinal * (GroundVelocityVector.X) / 100 /
 		DeltaTime);
+
 
 	// are we actually touching the ground
 	if (Wheel->WheelState.HitResult.bBlockingHit)
@@ -95,10 +96,12 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 		//Lateral friction
 		Wheel->WheelState.SlipAngle = FMath::Atan(
 			GroundVelocityVector.Y / FMath::Abs(GroundVelocityVector.X + 5.f/*Denominator*/));
-		//
-		FinalForceVector.Y = LateralGripCurve.GetRichCurve()->Eval(FMath::Abs(Wheel->WheelState.SlipAngle)) *
-			LateralFrictionLoadMultiplier * FMath::Sign(GroundVelocityVector.Y) * -1;
-
+	
+		const float LatMultiplier=LateralGripCurve.GetRichCurve()->Eval(FMath::Abs(Wheel->WheelState.SlipAngle));
+		const float ForceRequiredToBringToStopLateral = FMath::Abs(MassPerWheel * LatMultiplier * (GroundVelocityVector.Y) / 100 /DeltaTime);
+		
+		FinalForceVector.Y = LatMultiplier *LateralFrictionLoadMultiplier * FMath::Sign(GroundVelocityVector.Y) * -1;
+		FinalForceVector.Y=FMath::Clamp(FinalForceVector.Y,-ForceRequiredToBringToStopLateral,ForceRequiredToBringToStopLateral);
 
 	
 	}
