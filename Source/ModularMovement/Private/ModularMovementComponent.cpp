@@ -5,6 +5,8 @@
 
 #include "ModularWheel.h"
 #include "ModularMovement.h"
+#include "Misc/MessageDialog.h"
+#include "GenericPlatform/GenericPlatformMisc.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Utility/ModuarVehicleDebugger.h"
@@ -911,7 +913,7 @@ void UModularMovementComponent::ShowSetupError(FString Error)
 {
 	UE_LOG(LogModularVehicle, Error, TEXT("%s"), *Error)
 #if WITH_EDITOR
-	FMessageDialog::Open(EAppMsgCategory::Error, EAppMsgType::Ok, FText::FromString(Error));
+	FMessageDialog::Open( EAppMsgType::Ok, FText::FromString(Error));
 #endif
 	
 }

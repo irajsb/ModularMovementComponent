@@ -6,7 +6,10 @@
 #include "ModularMovementComponent.h"
 #include  "ModularWheel.h"
 #include "Engine/Engine.h"
+#include "Misc/MessageDialog.h"
+#include "GenericPlatform/GenericPlatformMisc.h"
 #include "Engine/World.h"
+
 #include "Logging/MessageLog.h" 
 #include "Kismet/KismetMathLibrary.h"
 #include "PhysicsEngine/PhysicsSettings.h"
@@ -284,7 +287,7 @@ void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalM
 	if(!Mesh)
 	{
 #if WITH_EDITOR
-		FMessageDialog::Open(EAppMsgCategory::Error,EAppMsgType::Ok,FText::FromString(TEXT("Mesh was not found function SetupWheelLocationFromBone")));
+		FMessageDialog::Open(EAppMsgType::Ok,FText::FromString(TEXT("Mesh was not found function SetupWheelLocationFromBone")));
 #endif
 		
 		return;

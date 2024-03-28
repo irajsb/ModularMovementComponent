@@ -51,8 +51,8 @@ void FAnimNode_AnimateIdler::EvaluateSkeletalControl_AnyThread(FComponentSpacePo
 		return;
 	}
 
-	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(EvaluateSkeletalControl_AnyThread)
-	ANIM_MT_SCOPE_CYCLE_COUNTER_VERBOSE(CopyBone, !IsInGameThread());
+
+
 
 	check(OutBoneTransforms.Num() == 0);
 

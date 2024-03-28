@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Widgets/SWindow.h"
 #include "Modules/ModuleManager.h"
 
 class FToolBarBuilder;

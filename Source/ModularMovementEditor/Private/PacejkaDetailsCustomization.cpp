@@ -77,6 +77,6 @@ FReply FPacejkaDetailsCustomization::OnOpenEditorClicked()
 	// Show the window
 	FSlateApplication::Get().AddWindow(EditorWindowRef);
 
-	MovementEditorModule->EditorWindow=EditorWindowRef.ToSharedPtr();
+	MovementEditorModule->EditorWindow= TSharedPtr<SWindow>( EditorWindowRef);
 	return FReply::Handled();
 }

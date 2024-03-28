@@ -157,16 +157,6 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 	}
 }
 
-FHitResult UVehicleWeaponComponent::WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const
-{
-	FCollisionQueryParams TraceParams(TEXT("WeaponTrace"), true, GetOwner());
-	TraceParams.bReturnPhysicalMaterial = true;
-
-	FHitResult Hit(ForceInit);
-	GetWorld()->LineTraceSingleByChannel(Hit, TraceFrom, TraceTo, ECC_Visibility, TraceParams);
-
-	return Hit;
-}
 
 
 void UVehicleWeaponComponent::StartFire(bool bAutoFire)
@@ -823,8 +813,9 @@ void UVehicleWeaponComponent::ApplyRecoil() const
 {
 	if (WeaponConfig.WeaponRecoil > 0)
 	{
-		const FVector ImpulseVector = UKismetMathLibrary::Vector_SlerpVectorToDirection(
-			CurrentWeaponRotationWorldSpace.Vector(), FVector::DownVector, 0.5);
+		FVector CurrentRot=CurrentWeaponRotationWorldSpace.Vector();
+		const FVector ImpulseVector=FQuat::Slerp(CurrentWeaponRotationWorldSpace.Quaternion(),FVector::DownVector.ToOrientationQuat(),0.5).Vector();
+		
 		GetMesh()->AddImpulseAtLocation(
 			ImpulseVector * -1 * WeaponConfig.WeaponRecoil, GetComponentLocation());
 	}

@@ -2,10 +2,25 @@
 
 #pragma once
 
+#include "CoreMinimal.h"
+#include "Components/ActorComponent.h"
+#include "GameFramework/DamageType.h"
+#include "Blueprint/UserWidget.h"
+#include "Engine/EngineTypes.h"
+#include "Engine/EngineBaseTypes.h"
+#include "Components/SceneComponent.h"
+#if  ENGINE_MINOR_VERSION >1
+#include "Engine/TimerHandle.h"
+#endif
 
 
+#include "GameFramework/Actor.h"
+#include  "Sound/SoundCue.h"
+#include "Sound/SoundConcurrency.h"
+#include "Components/MeshComponent.h"
+#include "Camera/CameraShakeBase.h"
+#include  "Components/AudioComponent.h"
 #include "VehicleWeaponComponent.generated.h"
-class USoundCue;
 class UCameraComponent;
 class UWidgetComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFireAnimationStateChanged, bool, bPlay);
@@ -265,7 +280,7 @@ public:
 	uint32 bLoopedMuzzleFX : 1;
 
 	UPROPERTY(EditDefaultsOnly, Category=Effects)
-	TSubclassOf<class UCameraShakeBase> Shake;
+	TSubclassOf< UCameraShakeBase> Shake;
 	/** is fire sound looped? */
 	UPROPERTY(EditDefaultsOnly, Category=Sound)
 	uint32 bLoopedFireSound : 1;
@@ -364,7 +379,7 @@ public:
 
 	virtual void BeginPlay() override;
 
-	FHitResult WeaponTrace(const FVector& TraceFrom, const FVector& TraceTo) const;
+
 
 
 	/** firing audio (bLoopedFireSound set) */
