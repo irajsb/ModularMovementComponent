@@ -29,6 +29,9 @@ class MODULARMOVEMENT_API UBaseTireModel : public UObject
 	GENERATED_BODY()
 
 public:
+
+
+	
 	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
 	                              UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 	{

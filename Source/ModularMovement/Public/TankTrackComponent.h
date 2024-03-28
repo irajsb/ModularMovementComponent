@@ -79,6 +79,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Tank Track")
 	FVector IdlerOffset;
 
+	//Track offset to allign to sprocket teeth
+	UPROPERTY(EditAnywhere, Category = "Tank Track")
+	float ConstantOffset;
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void BeginPlay() override;
 
