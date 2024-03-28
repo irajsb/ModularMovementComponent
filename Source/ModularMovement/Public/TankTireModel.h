@@ -9,7 +9,7 @@
 /**
  * Represents a tank tire model.
  */
-UCLASS(EditInlineNew)
+UCLASS(EditInlineNew,HideCategories=AdvancedTire)
 class MODULARMOVEMENT_API UTankTireModel : public UBaseTireModel
 {
 	// Tire model properties.

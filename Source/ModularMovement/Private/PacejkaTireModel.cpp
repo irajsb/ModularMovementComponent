@@ -23,6 +23,7 @@ void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	FVector WorldMeshVelocity = Mesh->GetBodyInstance()->
 										   GetUnrealWorldVelocityAtPoint(
 											   Wheel->WheelState.HitResult.TraceStart);
+	const bool Combine=UseCombinedFriction||(Wheel->WheelState.IsHandBrakeTorque&&UseCombinedFrictionWhenHandBraking);
 	WorldMeshVelocity.Z = 0;
 	const FVector LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity / 100.f);
 	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
@@ -30,6 +31,11 @@ void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 
 	const float WheelRadius = Wheel->WheelState.WheelSetup->WheelRadius / 100;
 	const float WheelVelocity = Wheel->WheelState.AngularVelocity * WheelRadius;
+
+
+	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
+		GetNumberOfWheels());
+	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*10.f:Wheel->WheelState.WheelLoad.Size() ;
 
 
 	float SlipForward, SlipLateral;
@@ -84,8 +90,8 @@ void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 		const float S_star = FMath::Sqrt(FMath::Square(Sx_normalized) + FMath::Square(alpha_normalized));
 
 		// Step 4: Modified Slip Ratio and Slip Angle
-		const float Sx_modified = S_star * Speak;
-		const float alpha_modified = S_star * SideSlipPeak;
+		const float Sx_modified =Combine? S_star * Speak:SlipForward;
+		const float alpha_modified =Combine? S_star * SideSlipPeak: Wheel->WheelState.SlipAngle;
 
 		FinalForceVector.X = Long.D * FMath::Sin(
 			Long.C * FMath::Atan(Long.B * Sx_modified - Long.E * (Long.B * Sx_modified - FMath::Atan(Long.B * Sx_modified))));
@@ -93,8 +99,11 @@ void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 			Lat.C * FMath::Atan(
 				Lat.B * alpha_modified - Lat.E * (Lat.B * alpha_modified - FMath::Atan(Lat.B * alpha_modified))));
 
-		FinalForceVector.X = FinalForceVector.X * (Sx_normalized / S_star);
-		FinalForceVector.Y = FinalForceVector.Y * (alpha_normalized / S_star);
+		if(Combine)
+		{
+			FinalForceVector.X = FinalForceVector.X * (Sx_normalized / S_star);
+			FinalForceVector.Y = FinalForceVector.Y * (alpha_normalized / S_star);
+		}
 	}
 
 	//Surface friction
@@ -105,8 +114,8 @@ void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 		SurfaceFriction = Wheel->WheelState.HitResult.PhysMaterial->Friction;
 	}
 
-	FinalForceVector.X *= Wheel->WheelState.WheelLoad.Z * SurfaceFriction;
-	FinalForceVector.Y *= Wheel->WheelState.WheelLoad.Z * SurfaceFriction;
+	FinalForceVector.X *=WheelLoad* SurfaceFriction;
+	FinalForceVector.Y *=WheelLoad* SurfaceFriction;
 
 	RELAXATION2(FinalForceVector.X, LastFX, 50.0f);
 	RELAXATION2(FinalForceVector.Y, LastFY, 50.0f);
@@ -168,7 +177,7 @@ void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 
 
 	//Gather Debug
-	const FVector TireForce = (FinalForceVector / Wheel->WheelState.WheelLoad.Size());
+	const FVector TireForce = (FinalForceVector / WheelLoad);
 	TireForceNormalized = FVector2f(TireForce.X, TireForce.Y);
 }
 
