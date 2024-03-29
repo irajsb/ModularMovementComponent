@@ -9,6 +9,7 @@
 #include "Engine/EngineTypes.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Components/SceneComponent.h"
+#include "Runtime/Launch/Resources/Version.h"
 #if  ENGINE_MINOR_VERSION >1
 #include "Engine/TimerHandle.h"
 #endif
