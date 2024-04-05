@@ -176,7 +176,8 @@ void UModularMovementComponent::InitializeComponent()
 
 	//Setup Mesh
 
-
+if(ApplyRecommendedMeshProperties)
+{
 	MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
 	MeshComponent->BodyInstance.bSimulatePhysics = true;
 	if (MeshComponent->GetCollisionObjectType())
@@ -187,7 +188,7 @@ void UModularMovementComponent::InitializeComponent()
 	MeshComponent->BodyInstance.bUseCCD = true;
 	MeshComponent->SetGenerateOverlapEvents(true);
 	MeshComponent->SetCanEverAffectNavigation(false);
-
+}
 
 	//Calculate Constants
 	AirDragConstant = GetSetup()->GetAirDragConstant();

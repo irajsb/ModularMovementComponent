@@ -46,6 +46,8 @@ class MODULARMOVEMENT_API UPacejkaTireModel : public UBaseTireModel
 	GENERATED_BODY()
 
 public:
+
+	UPacejkaTireModel();
 	UPROPERTY(EditAnywhere,Category=TireModel)
 	FPacejkaConstants Long;
 	UPROPERTY(EditAnywhere,Category=TireModel)

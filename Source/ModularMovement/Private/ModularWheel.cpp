@@ -91,7 +91,10 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	{
 		return;
 	}
-
+	if(WheelState.WheelSetup->WheelRadius==0.f)
+	{
+		return;
+	}
 
 	MODULAR_CYCLE_COUNTER(STAT_ModularSuspension)
 
@@ -228,7 +231,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 			Mesh = ParentBodyOverride;
 		}
 		
-		
+	
 		if (!FrictionForceVector.ContainsNaN())
 		{
 			AddForceAtPosition(Mesh, WheelState.HitResult.TraceStart, FrictionForceVector, NAME_None);
@@ -526,5 +529,6 @@ void UModularWheel::AddForceAtPosition(UPrimitiveComponent* Component, FVector P
 		const Chaos::FVec3 WorldTorque = Chaos::FVec3::CrossProduct(Position - WorldCOM, Force);
 		RigidHandle->AddForce(Force, false);
 		RigidHandle->AddTorque(WorldTorque, false);
+		
 	}
 }
