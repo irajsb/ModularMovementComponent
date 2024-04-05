@@ -29,19 +29,29 @@ FText UAnimGraphNode_AnimateIdler::GetTooltipText() const
 
 FText UAnimGraphNode_AnimateIdler::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	FText NodeTitle;
-	if (TitleType == ENodeTitleType::ListView || TitleType == ENodeTitleType::MenuTitle)
+	if ((TitleType == ENodeTitleType::ListView || TitleType == ENodeTitleType::MenuTitle) && (Node.TargetBone.BoneName == NAME_None))
 	{
-		NodeTitle = GetControllerDescription();
+		return GetControllerDescription();
 	}
-	else
+	// @TODO: the bone can be altered in the property editor, so we have to 
+	//        choose to mark this dirty when that happens for this to properly work
+	else //if (!CachedNodeTitles.IsTitleCached(TitleType, this))
 	{
-		// we don't have any run-time information, so it's limited to print  
-		// anymore than what it is it would be nice to print more data such as 
-		// name of bones for wheels, but it's not available in Persona
-		NodeTitle = FText(LOCTEXT("AnimGraphNode_AnimateIdler_Title", "Copy Rotation From Track"));
-	}	
-	return NodeTitle;
+		FFormatNamedArguments Args;
+		Args.Add(TEXT("ControllerDescription"), GetControllerDescription());
+		Args.Add(TEXT("BoneName"), FText::FromName(Node.TargetBone.BoneName));
+
+		// FText::Format() is slow, so we cache this to save on performance
+		if (TitleType == ENodeTitleType::ListView || TitleType == ENodeTitleType::MenuTitle)
+		{
+			CachedNodeTitles.SetCachedTitle(TitleType, FText::Format(LOCTEXT("AnimGraphNode_ModifyBone_ListTitle", "{ControllerDescription} - Bone: {BoneName}"), Args), this);
+		}
+		else
+		{
+			CachedNodeTitles.SetCachedTitle(TitleType, FText::Format(LOCTEXT("AnimGraphNode_ModifyBone_Title", "{ControllerDescription}\nBone: {BoneName}"), Args), this);
+		}
+	}
+	return CachedNodeTitles[TitleType];
 }
 
 

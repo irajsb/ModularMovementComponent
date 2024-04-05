@@ -14,6 +14,11 @@ UTankTrackComponent::UTankTrackComponent()
 	SetTickGroup(TG_PostPhysics);
 	//Enable tick
 	PrimaryComponentTick.bCanEverTick = true;
+	#if WITH_EDITOR
+	ScaleVisualizationWidth=30.f;
+	bShouldVisualizeScale=true;
+	#endif
+	
 }
 
 void UTankTrackComponent::PostInitProperties()

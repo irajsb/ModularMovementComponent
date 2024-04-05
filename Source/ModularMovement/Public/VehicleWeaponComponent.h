@@ -76,9 +76,7 @@ struct FWeaponDataRow
 	float InitialTimeBetweenShots;
 
 
-	/** Interpolation for speed */
-	UPROPERTY(EditAnywhere, Category = "Setup")
-	float InterpolationSpeed;
+
 
 	/** Infinite ammo (infinite reloads) */
 	UPROPERTY(EditAnywhere, Category = "Setup")
@@ -108,8 +106,15 @@ struct FWeaponDataRow
 	float AITimerMultiplier;
 
 	/** Weapon Recoil (Negative To Disable) */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(EditAnywhere, Category = "Setup",DisplayName="Physical Shock Recoil")
 	float WeaponRecoil;
+
+	// Recoil for animating barrels
+	UPROPERTY(EditAnywhere, Category = "Setup")
+	float MaxAnimationRecoil=-30.f;
+
+	UPROPERTY(EditAnywhere, Category = "Setup")
+	float RecoilInterpolationSpeed;
 
 	/** Flag indicating if owned by AI */
 	UPROPERTY(EditAnywhere, Category = "Setup")
@@ -143,10 +148,10 @@ struct FWeaponDataRow
 	UPROPERTY(EditAnywhere, Category = "Setup")
 	TEnumAsByte<ECollisionChannel> Channel;
 
-	FWeaponDataRow() : HeatPerShot(0), HeatReduce(0), Channel(ECC_Visibility)
+	FWeaponDataRow() : HeatPerShot(0), HeatReduce(0), RecoilInterpolationSpeed(200), Channel(ECC_Visibility)
 	{
 		ClipSize = 1;
-		InterpolationSpeed = 1;
+
 		InitialTimeBetweenShots = 1;
 		ReloadTime = 1;
 		AmmoCount = 32;
@@ -459,6 +464,8 @@ public:
 	bool ReplicateControlRotation = false;
 
 	float LastDirectionChange;
-	
+	UPROPERTY(BlueprintReadOnly,Category=Recoil)
+	float CurrentAnimationRecoil;
+	float TargetAnimationRecoil;
 	FRotator LastTargetRotation;
 };

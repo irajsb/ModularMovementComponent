@@ -95,8 +95,19 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	
 	CurrentHeat = FMath::Clamp<float>(CurrentHeat - WeaponConfig.HeatReduce * DeltaTime, 0, 1);
 
+	if(FMath::IsNearlyEqual(CurrentAnimationRecoil,TargetAnimationRecoil,0.1))
+	{
+		if(TargetAnimationRecoil!=0)
+		{
+			TargetAnimationRecoil=0;
+		}
+	}else
+	{
+		CurrentAnimationRecoil=UKismetMathLibrary::FInterpTo_Constant(CurrentAnimationRecoil,TargetAnimationRecoil,DeltaTime,WeaponConfig.RecoilInterpolationSpeed);
+	}
 	if(!WeaponConfig.AimDirectlyForward)
 	{
 		// Calculate direction from the world
@@ -305,7 +316,7 @@ void UVehicleWeaponComponent::OnBurstFinished()
 
 void UVehicleWeaponComponent::HandleFiring()
 {
-	if ((CurrentAmmoInClip > 0 || HasInfiniteClip() || HasInfiniteAmmo()) && CanFire())
+	if ((CurrentAmmoInClip > 0 || HasInfiniteClip() ) && CanFire())
 	{
 		if (GetNetMode() != NM_DedicatedServer)
 		{
@@ -387,6 +398,9 @@ bool UVehicleWeaponComponent::HasInfiniteClip() const
 
 void UVehicleWeaponComponent::SimulateWeaponFire()
 {
+
+
+	TargetAnimationRecoil=WeaponConfig.MaxAnimationRecoil;
 	if (GetOwner()->GetLocalRole() == ROLE_Authority && CurrentState != EWeaponState::Firing)
 	{
 		return;
@@ -479,7 +493,7 @@ void UVehicleWeaponComponent::StopSimulatingWeaponFire()
 
 void UVehicleWeaponComponent::UseAmmo()
 {
-	if (!HasInfiniteAmmo())
+	if (!HasInfiniteClip())
 	{
 		CurrentAmmoInClip--;
 	}
@@ -518,7 +532,7 @@ void UVehicleWeaponComponent::StartReload(bool bFromReplication)
 
 		if (GetOwner() && GetOwningPawn()->IsLocallyControlled())
 		{
-			PlayWeaponSound(ReloadSound);
+			
 
 			UpdateMainWeaponHUD(true);
 		}
@@ -533,13 +547,14 @@ void UVehicleWeaponComponent::StopReload()
 	{
 		bPendingReload = false;
 		DetermineWeaponState();
+		PlayWeaponSound(ReloadSound);
 		ReloadStateChange.Broadcast(false);
 	}
 }
 
 void UVehicleWeaponComponent::ReloadWeapon()
 {
-	if(CurrentAmmo>0)
+	if(CurrentAmmo>0||WeaponConfig.bInfiniteAmmo)
 	{
 		CurrentAmmoInClip = WeaponConfig.ClipSize;
 		CurrentAmmo -= WeaponConfig.ClipSize;
