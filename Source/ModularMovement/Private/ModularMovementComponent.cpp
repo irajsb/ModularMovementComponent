@@ -12,6 +12,7 @@
 #include "Utility/ModuarVehicleDebugger.h"
 #include "ModularAsyncCallBack.h"
 #include "ModularGearBox.h"
+#include "ModularVehicleData.h"
 #include "ModularVehicleFunctionLibrary.h"
 #include "GameFramework/Pawn.h"
 #include "PBDRigidsSolver.h"
@@ -75,6 +76,13 @@ void UModularMovementComponent::UpdateComponents(const TArray<UModularWheel*> Ad
 		}
 	}
 	Components = TempComponents;
+
+	auto Diffs=Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData;
+	for(auto Wheel :Components)
+	{
+		Diffs[Wheel->DifferentialIndex].Wheels.Add(Wheel);
+	}
+	Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData=Diffs;
 }
 
 
@@ -467,7 +475,7 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 
 
 	const float UseSteeringValue = SteeringInput;
-
+	
 
 	if (VehicleState.VehicleData->GetSteerType() == Tank)
 	{
@@ -491,6 +499,27 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 		}
 	}
 
+
+
+	float TempDiffRatio=-1.f;
+	for(auto Diff:Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData)
+	{
+		if(!Diff.Wheels.IsEmpty())
+		{
+			if(TempDiffRatio>0)
+			{
+				//initialize
+				TempDiffRatio=Diff.DifferentialRatio;
+			}
+			if(TempDiffRatio!=Diff.DifferentialRatio)
+			{
+				UE_LOG(LogModularVehicle,Error,TEXT("Found two active diffs with different ratios.This can cause unexpected behaviour"))
+			}
+			ApplyDifferential( Diff.Wheels,WheelTorque*Diff.TorqueTransferRatio,Diff.DifferentialType);
+		}
+	}
+	CurrentDifferentialRatio=TempDiffRatio;
+
 	for (UModularWheel* Component : Components)
 	{
 		if (Component->WheelState.WheelSetup)
@@ -499,17 +528,9 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 			Component->UpdateSuspension(DeltaTime, this);
 
 			//Apply Engine Torque 
-			if (GetSetup()->ShouldScaleDriveTorqueToNumberOfWheels())
-			{
-				Component->SetDriveTorqueOnWheels(VehicleState.DriveWheelsOnGround != 0
-					                                  ? WheelTorque / VehicleState.DriveWheelsOnGround
-					                                  : 0);
-			}
-			else
-			{
-				Component->SetDriveTorqueOnWheels(WheelTorque);
-			}
+		
 
+			
 
 			Component->WheelState.BrakeTorque = BrakeInput * Component->WheelState.WheelSetup->BrakeTorque;
 			Component->WheelState.IsHandBrakeTorque = false;
@@ -1026,4 +1047,69 @@ void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UModularMovementComponent, RepCosmeticData);
 }
+
+
+
+void UModularMovementComponent::ApplyDifferential(TArray<UModularWheel*> Wheels, float EngineTorque,  EModularDifferentialType DifferentialType)
+{
+	switch (DifferentialType)
+	{
+	case EModularDifferentialType::Open:
+		{
+			// Open differential: Equal torque distribution, but account for wheel slip
+			float TotalAngularVelocity = 0.0f;
+			for (UModularWheel* Wheel : Wheels)
+			{
+				TotalAngularVelocity += FMath::Abs(Wheel->WheelState.AngularVelocity);
+			}
+
+			for (UModularWheel* Wheel : Wheels)
+			{
+				if (TotalAngularVelocity > SMALL_NUMBER)
+				{
+					float SlipRatio = FMath::Abs(Wheel->WheelState.AngularVelocity) / TotalAngularVelocity;
+					float WheelTorque = SlipRatio * EngineTorque;
+					Wheel->SetDriveTorqueOnWheels(WheelTorque);
+				}
+				else
+				{
+					// If all wheels are slipping, distribute torque equally
+					float TorquePerWheel = EngineTorque / Wheels.Num();
+					Wheel->SetDriveTorqueOnWheels(TorquePerWheel);
+				}
+			}
+			break;
+		}
+	case EModularDifferentialType::LimitedSlip:
+		{
+			// Limited slip differential: Distribute torque based on wheel slip
+			float TotalSlip = 0.0f;
+			for (UModularWheel* Wheel : Wheels)
+			{
+				TotalSlip += FMath::Abs(Wheel->WheelState.AngularVelocity);
+			}
+
+			for (UModularWheel* Wheel : Wheels)
+			{
+				float SlipRatio = FMath::Abs(Wheel->WheelState.AngularVelocity) / TotalSlip;
+				float WheelTorque = SlipRatio * EngineTorque;
+				Wheel->SetDriveTorqueOnWheels(WheelTorque);
+			}
+			break;
+		}
+	case EModularDifferentialType::Locked:
+		{
+			// Locked differential: Equal torque distribution, no wheel slip
+			float TorquePerWheel = EngineTorque / Wheels.Num();
+			for (UModularWheel* Wheel : Wheels)
+			{
+				Wheel->SetDriveTorqueOnWheels(TorquePerWheel);
+			
+			}
+			break;
+		}
+	}
+}
+
+
 #undef LOCTEXT_NAMESPACE

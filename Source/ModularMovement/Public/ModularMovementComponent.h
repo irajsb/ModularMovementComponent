@@ -3,6 +3,8 @@
 #pragma once
 
 #include "BaseVehicleData.h"
+#include "ModularVehicleData.h"
+#include "TransmissionSystem.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "ModularMovementComponent.generated.h"
 
@@ -230,6 +232,9 @@ public:
 	UPROPERTY(Transient)
 	bool HandBrakeInput;
 
+
+	UPROPERTY(Transient)
+	float CurrentDifferentialRatio;
 	// Public properties representing air drag and rolling resistance constants for the vehicle.
 	public:
 	float AirDragConstant;
@@ -364,6 +369,7 @@ public:
 	FOldRigidBodyErrorCorrection ErrorCorrection;
 	
 	
+	void ApplyDifferential(TArray<UModularWheel*> Wheels, float EngineTorque, EModularDifferentialType DifferentialType);
 	
 
 	static void ShowSetupError( FString Error);

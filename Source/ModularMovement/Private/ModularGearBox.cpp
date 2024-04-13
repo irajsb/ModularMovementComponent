@@ -69,6 +69,7 @@ void UModularGearBox::SetTargetGear(int32 GearNum, bool bImmediate,class UModula
 
 void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* MovementComponent)
 {
+	MC=MovementComponent;
 	if(!IsManual)
 	{
 		FVehicleState VehicleState=MovementComponent->VehicleState;
@@ -114,7 +115,7 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 				}
 			}
 			//Calculate RPM from vehicle speed instead of wheel because wheel can get locked or spin
-			const float CurrentRpm= (VehicleState.ForwardSpeed/100*Gears[CurrentGear].GearRatio*DifferentialRatio/DriveWheelRadius)*30/PI;
+			const float CurrentRpm= (VehicleState.ForwardSpeed/100*Gears[CurrentGear].GearRatio*MovementComponent->CurrentDifferentialRatio/DriveWheelRadius)*30/PI;
 			 GearBoxRPMRatio=UKismetMathLibrary::MapRangeClamped(CurrentRpm, MovementComponent->GetSetup()->GetIdleRPM(),
 																		   MovementComponent->GetSetup()->GetMaxRPM(), 0, 1);
 		
@@ -164,7 +165,14 @@ float UModularGearBox::GetGearRatio()
 
 float UModularGearBox::GetDriveRatio()
 {
-	return 	Gears[CurrentGear].GearRatio*DifferentialRatio;
+
+	if(MC)
+	{
+		return 	Gears[CurrentGear].GearRatio*MC->CurrentDifferentialRatio;
+	}else
+	{
+		return 	Gears[CurrentGear].GearRatio;
+	}
 
 	
 }

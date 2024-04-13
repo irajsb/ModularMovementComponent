@@ -17,10 +17,10 @@ struct FCustomTrackTangent
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere,Category=Track)
-	int ContactPointIndex;
+	int ContactPointIndex=0;
 
 	UPROPERTY(EditAnywhere,Category=Track)
-	FVector Tangent;
+	FVector Tangent=FVector::ZeroVector;
 
 	UPROPERTY(EditAnywhere,Category=Track)
 	float Angle=0.f;
