@@ -20,11 +20,11 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
 		GetNumberOfWheels());
 	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*10.f:Wheel->WheelState.WheelLoad.Size() ;
-	
+
 	const float TrackInput=Wheel->WheelState.InitialLocalLocation.Y>0.f?ModularMovementComponent->VehicleState.TrackRight.TorqueTransfer
 	:ModularMovementComponent->VehicleState.TrackLeft.TorqueTransfer;
 
-	
+	const float SurfaceFriction=Wheel->WheelState.HitResult.PhysMaterial.IsValid()?Wheel->WheelState.HitResult.PhysMaterial->Friction:0.7;
 	if(Wheel->ParentBodyOverride)
 	{
 		Mesh=Wheel->ParentBodyOverride;
@@ -64,10 +64,8 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	if (Wheel->WheelState.HitResult.bBlockingHit)
 	{
 		//Friction of phys mat is default 0.7
-		const float LongitudinalAdhesiveLimit = WheelLoad * Wheel->WheelState.HitResult.
-			PhysMaterial.Get()->Friction * FrictionMultiplierLongitudinal;
-		const float LateralFrictionLimit = WheelLoad * Wheel->WheelState.HitResult.
-			PhysMaterial.Get()->Friction*CalculatedLatFrictionMultiplier;
+		const float LongitudinalAdhesiveLimit = WheelLoad * SurfaceFriction* FrictionMultiplierLongitudinal;
+		const float LateralFrictionLimit = WheelLoad * SurfaceFriction*CalculatedLatFrictionMultiplier;
 
 		if (Braking)
 		{

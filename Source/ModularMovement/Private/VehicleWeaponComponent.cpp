@@ -81,6 +81,8 @@ void UVehicleWeaponComponent::BeginPlay()
 						WidgetComponent->SetWidgetClass(WeaponConfig.AimWidgetClass);
 						WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
 						WidgetComponent->SetDrawSize(WeaponConfig.AimWidgetSize);
+						WidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+						
 					}
 				}
 			}

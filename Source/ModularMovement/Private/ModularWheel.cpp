@@ -140,6 +140,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 				break;
 			}
 		}
+		
 	}
 
 	if (!ValidHitFound)
@@ -149,6 +150,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 		WheelState.HitResult.TraceEnd = TraceEnd;
 		return;
 	}
+
 
 
 		// Calculate suspension force and damping 

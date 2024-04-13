@@ -6,11 +6,18 @@
 UIdlerComponent::UIdlerComponent()
 {
 	Radius=10.f;
-
-	ContactPoints.Add(FVector2D(-1,0));
-	ContactPoints.Add(FVector2D(0,1));
-	
+	ContactPoints.Reset();
+	FContactPoint ContactPoint;
+	ContactPoint.ContactPoint=FVector2D(0,1);
+	ContactPoints.Add(ContactPoint);
 	PrimaryComponentTick.bCanEverTick=false;
 }
+
+void UIdlerComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	OriginalLocation=GetRelativeLocation();
+}
+
 
 

@@ -21,8 +21,9 @@ public:
 	float Radius;
 
 	
+	UPROPERTY()
+	FVector OriginalLocation;
 
-
-	
+	virtual void BeginPlay() override;
 };
 

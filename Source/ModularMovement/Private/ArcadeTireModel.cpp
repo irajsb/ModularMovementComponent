@@ -58,11 +58,18 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 	// are we actually touching the ground
 	if (Wheel->WheelState.HitResult.bBlockingHit)
 	{
+
+		//Surface friction
+		float SurfaceFriction = 1.f;
+
+		if (Wheel->WheelState.HitResult.PhysMaterial.IsValid())
+		{
+			SurfaceFriction = Wheel->WheelState.HitResult.PhysMaterial->Friction;
+		}
+		
 		//Friction of phys mat is default 0.7
-		const float LongitudinalAdhesiveLimit = WheelLoad * Wheel->WheelState.HitResult.
-			PhysMaterial.Get()->Friction * FrictionMultiplierLongitudinal;
-		const float LateralFrictionLoadMultiplier = WheelLoad * Wheel->WheelState.HitResult.
-			PhysMaterial.Get()->Friction;
+		const float LongitudinalAdhesiveLimit = WheelLoad * SurfaceFriction * FrictionMultiplierLongitudinal;
+		const float LateralFrictionLoadMultiplier = WheelLoad * SurfaceFriction;
 
 		if (Braking)
 		{

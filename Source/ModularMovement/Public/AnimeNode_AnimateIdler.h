@@ -30,8 +30,10 @@ struct MODULARMOVEMENT_API FAnimNode_AnimateIdler : public FAnimNode_SkeletalCon
 	 
 	UPROPERTY(EditAnywhere, Category=Data,meta = (PinShownByDefault))
 	int OptionalTeethCount=-1;
-	FAnimNode_AnimateIdler();
 
+	
+	FAnimNode_AnimateIdler();
+	float LastLenDiff;
 	float AnimRot;
 	// FAnimNode_Base interface
 	virtual void GatherDebugData(FNodeDebugData& DebugData) override;

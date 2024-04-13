@@ -38,7 +38,7 @@ void FAnimNode_AnimateIdler::UpdateComponentPose_AnyThread(const FAnimationUpdat
 	if(OptionalTeethCount<0)
 	{
 		AnimRot += TrackComponent->TrackSpeed/Radius*	Context.GetDeltaTime();
-
+		
 
 		float IntegerPart = 0.f;
 		AnimRot= FMath::Modf(AnimRot / (2 * PI), &IntegerPart) * (2 * PI);
@@ -50,6 +50,8 @@ void FAnimNode_AnimateIdler::UpdateComponentPose_AnyThread(const FAnimationUpdat
 		AngularSpeed=AngularSpeed*TrackCount/OptionalTeethCount;
 		//Teeth per second
 		AnimRot += AngularSpeed*	Context.GetDeltaTime();
+		AnimRot+=TrackComponent->SplinePointDiff-LastLenDiff;
+		LastLenDiff=TrackComponent->SplinePointDiff;
 		float IntegerPart = 0.f;
 		AnimRot= FMath::Modf(AnimRot / (2 * PI), &IntegerPart) * (2 * PI);
 	

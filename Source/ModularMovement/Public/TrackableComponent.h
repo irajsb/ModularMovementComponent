@@ -12,18 +12,26 @@
 
 
 USTRUCT()
-struct FCustomTrackTangent
+struct FContactPoint
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere,Category=Track)
-	int ContactPointIndex;
 
 	UPROPERTY(EditAnywhere,Category=Track)
-	FVector Tangent;
+	FVector2D ContactPoint=FVector2D(0,-1);
 
+	//Zero To Disable
+	UPROPERTY(EditAnywhere,Category=Track)
+	FVector CustomTangent=FVector::ZeroVector;
+
+	//Track angle 0  up -180 down 
 	UPROPERTY(EditAnywhere,Category=Track)
 	float Angle=0.f;
+	// Track tension to keep track len constant . used between upper idlers
+	UPROPERTY(EditAnywhere,Category=Track)
+	float MaxSway=0.f;
+
+
 };
 
 
@@ -48,11 +56,11 @@ public:
 
 	//Contact points relative to radius. for example a contact point of (0,1) is top of the wheel and (1,0) is right side of the wheel and (0,-1) is down side of the wheel)
 	UPROPERTY(EditAnywhere,Category="Track")
-	TArray<FVector2D>ContactPoints;
+	TArray<FContactPoint>ContactPoints;
 
-	//Contact points relative to radius. for example a contact point of (0,1) is top of the wheel and (1,0) is right side of the wheel and (0,-1) is down side of the wheel)
 	UPROPERTY(EditAnywhere,Category="Track")
-	TArray<FCustomTrackTangent>CustomTangentArray;
+	bool IsSprocket=false;
+	
 	
 	
 	

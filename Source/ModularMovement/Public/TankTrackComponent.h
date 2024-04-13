@@ -13,36 +13,6 @@
  */
 
 
-USTRUCT()
-struct MODULARMOVEMENT_API FTrackSharedData
-{
-	GENERATED_BODY()
-
-	FTrackSharedData() = default;
-
-	FTrackSharedData(UInstancedStaticMeshComponent* InISMC)
-		: ISMC(InISMC),
-		RefCount(1)
-	{
-
-	}
-
-	UInstancedStaticMeshComponent* ISMC = nullptr;
-
-	int32 RefCount = 1;
-
-	/** Buffer holding current frame transforms for the static mesh instances, used to batch update the transforms */
-	TArray<int32> UpdateInstanceIds;
-	TArray<FTransform> StaticMeshInstanceTransforms;
-	TArray<FTransform> StaticMeshInstancePrevTransforms;
-
-	/** Buffer holding current frame custom floats for the static mesh instances, used to batch update the ISMs custom data */
-	TArray<float> StaticMeshInstanceCustomFloats;
-
-	// When initially adding to StaticMeshInstanceCustomFloats, can use the size as the write iterator, but on subsequent processors, we need to know where to start writing
-	int32 WriteIterator = 0;
-};
-
 
 UCLASS(BlueprintType,meta=(BlueprintSpawnableComponent))
 class MODULARMOVEMENT_API UTankTrackComponent : public USplineComponent
@@ -55,8 +25,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void SetupComponents(TArray<UTrackableComponent* > InWheels)	;
 
-	void RebuildSplines(float DeltaTime);
-	void UpdateMeshes(float DeltaTime);
+	void RebuildSplines(float DeltaTime, bool Editor);
+	void UpdateMeshes(float DeltaTime, bool Editor);
 	UPROPERTY()
 	TArray<UTrackableComponent* > Wheels;
 
@@ -80,7 +50,7 @@ public:
 	FVector IdlerOffset;
 
 	//Track offset to allign to sprocket teeth
-	UPROPERTY(EditAnywhere, Category = "Tank Track")
+	UPROPERTY(EditAnywhere, Category = "Tank Track",meta=(SliderExponent=0.0001))
 	float ConstantOffset;
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -89,14 +59,14 @@ public:
 	UPROPERTY()
 	UInstancedStaticMeshComponent * InstancedStaticMeshComponent;
 
-	TArray<FTrackSharedData> ISMCSharedData;
-	
-	TArray<int32> UpdateInstanceIds;
+
+
+
 	TArray<FTransform> UpdateInstanceTransforms;
-	TArray<FTransform> UpdateInstancePreviousTransforms;
-	
-	int32 InNumCustomDataFloats;
-	TArray<float> CustomFloatData;
+
+
+
+
 	UPROPERTY(BlueprintReadOnly,Category="Tank Track")
 	float TrackSpeed;
 	
@@ -107,6 +77,21 @@ public:
 	UPROPERTY(BlueprintReadOnly,Category="Tank Track")
 	float SprocketRadius;
 	float CurrentOffset;
+	UPROPERTY()
+	float OriginalSplineLen;
+	UPROPERTY()
+	float LenDiff;
+	UPROPERTY()
+	float OriginalTime;
+	UPROPERTY()
+	float SplinePointDiff;
+	UPROPERTY()
+	FVector OriginalSprocketContactPoint;
+	
+#if WITH_EDITOR
+
+virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 	
 	
 };
