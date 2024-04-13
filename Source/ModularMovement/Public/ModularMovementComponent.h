@@ -260,7 +260,8 @@ public:
 	//Data holder
 	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly, meta=(ShowOnlyInnerProperties ))
 	FVehicleState VehicleState;
-
+	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly, meta=(ShowOnlyInnerProperties ))
+	bool ApplyRecommendedMeshProperties=true;
 	/** Compute steering input */
 	float CalcSteeringInput(float DeltaTime);
 

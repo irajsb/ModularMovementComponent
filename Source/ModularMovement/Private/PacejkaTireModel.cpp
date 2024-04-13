@@ -7,6 +7,11 @@
 #include "ModularWheel.h"
 #include "Kismet/KismetMathLibrary.h"
 
+UPacejkaTireModel::UPacejkaTireModel(): LastFX(0), LastFY(0), Speak(0), SideSlipPeak(0)
+{
+	UseConstantWheelLoad = false;
+}
+
 void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
                                          UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 {
