@@ -85,7 +85,7 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	bool TractionControl=false;
 	// Makes vehicle lose less power when going up hill . 0 is physically realistic 1 is no power loss
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
-	float SteepSurfaceAssistance=0.5;
+	float SteepSurfaceAssistance=0.0;
 	
 	//Angle in degrees
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)

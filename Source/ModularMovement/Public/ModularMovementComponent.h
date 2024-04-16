@@ -369,7 +369,7 @@ public:
 	FOldRigidBodyErrorCorrection ErrorCorrection;
 	
 	
-	void ApplyDifferential(TArray<UModularWheel*> Wheels, float EngineTorque, EModularDifferentialType DifferentialType);
+	void ApplyDifferential(TArray<UModularWheel*> Wheels, float EngineTorque, EModularDifferentialType DifferentialType, float DeltaTime);
 	
 
 	static void ShowSetupError( FString Error);

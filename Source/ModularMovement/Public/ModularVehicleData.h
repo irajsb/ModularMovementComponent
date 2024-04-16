@@ -16,8 +16,8 @@ class UModularWheel;
 UENUM()
 enum EModularDifferentialType
 {
+	Simple,
 	Open,
-	LimitedSlip,
 	Locked
 };
 
@@ -27,7 +27,7 @@ struct FDifferentialData
 	GENERATED_BODY()
 
 	UPROPERTY(Category=Differential,EditAnywhere,BlueprintReadWrite)
-	TEnumAsByte<EModularDifferentialType> DifferentialType=EModularDifferentialType::Open;
+	TEnumAsByte<EModularDifferentialType> DifferentialType=EModularDifferentialType::Simple;
 	UPROPERTY(Category=Differential,EditAnywhere,BlueprintReadWrite,meta=(UIMax=1,UIMin=0.f,ClampMax=1.f,ClampMin=0.f))
 	float TorqueTransferRatio=1.f;
 	UPROPERTY(Category=Differential,EditAnywhere,BlueprintReadWrite)

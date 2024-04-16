@@ -32,6 +32,10 @@ FORCEINLINE float OmegaToRPM(float Omega)
 	return Omega * 30.f / PI;
 }
 
+FORCEINLINE float RPMToOmega(float RPM)
+{
+	return RPM * PI / 30.f;
+}
 UModularMovementComponent::UModularMovementComponent()
 {
 	SetIsReplicatedByDefault(true);
@@ -80,7 +84,10 @@ void UModularMovementComponent::UpdateComponents(const TArray<UModularWheel*> Ad
 	auto Diffs=Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData;
 	for(auto Wheel :Components)
 	{
-		Diffs[Wheel->DifferentialIndex].Wheels.Add(Wheel);
+		if(Wheel->WheelState.ApplyDriveForce)
+		{
+			Diffs[Wheel->DifferentialIndex].Wheels.Add(Wheel);
+		}
 	}
 	Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData=Diffs;
 }
@@ -419,10 +426,10 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 	VehicleState.EngineRads = FMath::FInterpConstantTo(VehicleState.EngineRads, TargetRPM, DeltaTime,
 	                                                   0.1 * VehicleState.VehicleData->GetMaxRPM());
-	VehicleState.EngineRads = FMath::Min(VehicleState.EngineRads, VehicleState.VehicleData->GetMaxRPM());
+	VehicleState.EngineRads = FMath::Min(VehicleState.EngineRads, RPMToOmega(VehicleState.VehicleData->GetMaxRPM()));
 
 	VehicleState.CurrentRpm = OmegaToRPM(VehicleState.EngineRads);
-
+	
 
 	//TODO Refactor
 	if (GetSetup()->ShouldZeroRpmWhenShifting() && GetSetup()->GetGearBox()->IsChangingGear())
@@ -500,36 +507,10 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 	}
 
 
-
-	float TempDiffRatio=-1.f;
-	for(auto Diff:Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData)
-	{
-		if(!Diff.Wheels.IsEmpty())
-		{
-			if(TempDiffRatio>0)
-			{
-				//initialize
-				TempDiffRatio=Diff.DifferentialRatio;
-			}
-			if(TempDiffRatio!=Diff.DifferentialRatio)
-			{
-				UE_LOG(LogModularVehicle,Error,TEXT("Found two active diffs with different ratios.This can cause unexpected behaviour"))
-			}
-			ApplyDifferential( Diff.Wheels,WheelTorque*Diff.TorqueTransferRatio,Diff.DifferentialType);
-		}
-	}
-	CurrentDifferentialRatio=TempDiffRatio;
-
 	for (UModularWheel* Component : Components)
 	{
 		if (Component->WheelState.WheelSetup)
 		{
-			//calc and Apply susp forces 
-			Component->UpdateSuspension(DeltaTime, this);
-
-			//Apply Engine Torque 
-		
-
 			
 
 			Component->WheelState.BrakeTorque = BrakeInput * Component->WheelState.WheelSetup->BrakeTorque;
@@ -544,19 +525,58 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 				}
 			}
 
-
+			//calc and Apply Suspension forces 
+			Component->UpdateSuspension(DeltaTime, this);
 			//Apply Steering
 			Component->UpdateSteering(DeltaTime, this, UseSteeringValue);
-
-			//Apply those torques 
-			Component->UpdateForces(DeltaTime, this);
-		}
-		else
+			if(!Component->WheelState.ApplyDriveForce)
+			{
+				Component->UpdateForces(DeltaTime,this);
+			}
+		}else
 		{
 			UModularVehicleFunctionLibrary::NotifyError(
 				"Wheel Setup class is missing in wheel" + Component->GetName() + " . Please create and assign one !");
 		}
 	}
+
+
+	float TempDiffRatio=-1.f;
+	for(auto Diff:Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData)
+	{
+		if(!Diff.Wheels.IsEmpty())
+		{
+			if(TempDiffRatio<0.f)
+			{
+				//initialize
+				TempDiffRatio=Diff.DifferentialRatio;
+			}
+			if(TempDiffRatio!=Diff.DifferentialRatio)
+			{
+				UE_LOG(LogModularVehicle,Error,TEXT("Found two active diffs with different ratios.This can cause unexpected behaviour"))
+			}
+			ApplyDifferential( Diff.Wheels,WheelTorque*Diff.TorqueTransferRatio,Diff.DifferentialType, DeltaTime);
+		}
+	}
+	CurrentDifferentialRatio=TempDiffRatio;
+
+	
+			
+
+			//Apply Engine Torque 
+		
+
+			
+
+			
+
+
+		
+
+		
+		
+		
+	
 }
 
 
@@ -1050,10 +1070,21 @@ void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 
 
 
-void UModularMovementComponent::ApplyDifferential(TArray<UModularWheel*> Wheels, float EngineTorque,  EModularDifferentialType DifferentialType)
+void UModularMovementComponent::ApplyDifferential(TArray<UModularWheel*> Wheels, float EngineTorque, EModularDifferentialType DifferentialType, float DeltaTime)
 {
+
+	
 	switch (DifferentialType)
 	{
+
+	case EModularDifferentialType::Simple:
+		{
+			for (UModularWheel* Wheel : Wheels)
+			{
+				Wheel->SetDriveTorqueOnWheels(EngineTorque/Wheels.Num());
+			}
+		}
+		break;
 	case EModularDifferentialType::Open:
 		{
 			// Open differential: Equal torque distribution, but account for wheel slip
@@ -1080,35 +1111,38 @@ void UModularMovementComponent::ApplyDifferential(TArray<UModularWheel*> Wheels,
 			}
 			break;
 		}
-	case EModularDifferentialType::LimitedSlip:
-		{
-			// Limited slip differential: Distribute torque based on wheel slip
-			float TotalSlip = 0.0f;
-			for (UModularWheel* Wheel : Wheels)
-			{
-				TotalSlip += FMath::Abs(Wheel->WheelState.AngularVelocity);
-			}
-
-			for (UModularWheel* Wheel : Wheels)
-			{
-				float SlipRatio = FMath::Abs(Wheel->WheelState.AngularVelocity) / TotalSlip;
-				float WheelTorque = SlipRatio * EngineTorque;
-				Wheel->SetDriveTorqueOnWheels(WheelTorque);
-			}
-			break;
-		}
+	
 	case EModularDifferentialType::Locked:
 		{
-			// Locked differential: Equal torque distribution, no wheel slip
-			float TorquePerWheel = EngineTorque / Wheels.Num();
 			for (UModularWheel* Wheel : Wheels)
 			{
-				Wheel->SetDriveTorqueOnWheels(TorquePerWheel);
-			
+				Wheel->SetDriveTorqueOnWheels(EngineTorque/Wheels.Num());
+				
 			}
-			break;
+		}
+		break;
+	}
+
+	
+	float AverageSpeed=0.f;
+	for (UModularWheel* Wheel : Wheels)
+	{
+		//Apply those torques 
+		Wheel->UpdateForces(DeltaTime, this);
+		AverageSpeed+=Wheel->WheelState.AngularVelocity;
+	}
+	AverageSpeed=AverageSpeed/Wheels.Num();
+	//Post Update
+
+	if(DifferentialType==Locked)
+	{
+		
+		for (UModularWheel* Wheel : Wheels)
+		{
+			Wheel->WheelState.AngularVelocity=AverageSpeed;
 		}
 	}
+	
 }
 
 
