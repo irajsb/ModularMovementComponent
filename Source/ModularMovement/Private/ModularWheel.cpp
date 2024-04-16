@@ -5,6 +5,7 @@
 #include "ModularMovementComponent.h"
 #include "ModularVehicleFunctionLibrary.h"
 #include "ModularMovement.h"
+#include "ModularVehicleData.h"
 #include "PhysicsProxy/SingleParticlePhysicsProxy.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -498,6 +499,32 @@ float UModularWheel::GetTrackOffset(float CurrentOffset, float SpeedMultiplier) 
 UBaseTireModel* UModularWheel::GetTireModel()
 {
 	return GetWheelSetup()->TireModel;
+}
+
+void UModularWheel::SetActiveDifferentialIndex(uint8 Index,UModularMovementComponent* MovementComponent)
+{
+	auto Data=Cast<UModularVehicleData>(MovementComponent->VehicleState.VehicleData);
+	if(!Data)
+	{
+		UE_LOG(LogTemp,Error,TEXT("No vehicle data in SetActiveDifferentialIndex"))
+		return;
+	}
+	if(!Data->DifferentialData.IsValidIndex(Index)||!Data->DifferentialData.IsValidIndex(DifferentialIndex))
+	{
+		UE_LOG(LogTemp,Error,TEXT("Invalid index  in SetActiveDifferentialIndex"))
+		return;
+		
+	}
+	
+	Data->DifferentialData[DifferentialIndex].Wheels.Remove(this);
+	DifferentialIndex=Index;
+	Data->DifferentialData[DifferentialIndex].Wheels.Add(this);
+	
+}
+
+uint8 UModularWheel::GetActiveDifferentialIndex()
+{
+	return DifferentialIndex;
 }
 
 void UModularWheel::ChangeTraceDebugVisibility(bool Enable)

@@ -57,9 +57,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission)
 	bool IsManual;
 
-	// Differential Ratio affecting RPM calculations
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission)
-	float DifferentialRatio = 3.1;
+	
 
 	// Time required to change gears
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission)
@@ -115,4 +113,6 @@ public:
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Transmission)
 	virtual bool IsInReverse();
 
+	UPROPERTY(Transient)
+	UModularMovementComponent* MC;
 };

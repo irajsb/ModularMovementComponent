@@ -10,8 +10,32 @@
 /**
  * 
  */
- 
 
+class UModularWheel;
+
+UENUM()
+enum EModularDifferentialType
+{
+	Simple,
+	Open,
+	Locked
+};
+
+USTRUCT(BlueprintType)
+struct FDifferentialData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(Category=Differential,EditAnywhere,BlueprintReadWrite)
+	TEnumAsByte<EModularDifferentialType> DifferentialType=EModularDifferentialType::Simple;
+	UPROPERTY(Category=Differential,EditAnywhere,BlueprintReadWrite,meta=(UIMax=1,UIMin=0.f,ClampMax=1.f,ClampMin=0.f))
+	float TorqueTransferRatio=1.f;
+	UPROPERTY(Category=Differential,EditAnywhere,BlueprintReadWrite)
+	float DifferentialRatio=3.1f;
+
+	TArray<UModularWheel* > Wheels;
+	
+};
 UCLASS()
 class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 {
@@ -30,6 +54,13 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	//Max rpm (Generally should be where torque curve reaches  0 torque  )
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Essential)
 	float MaxRpm=6000;
+
+
+	// List of all possible differential configs for this vehicle . Wheels can be moved between these differentials
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Differential)
+	TArray<FDifferentialData> DifferentialData;
+
+	
 	//How fast engine RPM can change . Used to stabilize RPM ranges from 0-1. Heavier vehicles generally have higher inertia due to heavier internal components 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
 	float EngineInertia=0.234;

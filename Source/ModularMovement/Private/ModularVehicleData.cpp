@@ -50,6 +50,9 @@ UModularVehicleData::UModularVehicleData()
 		Key=Curve->AddKey(1,1);
 		Curve->SetKeyInterpMode(Key,ERichCurveInterpMode::RCIM_Linear);
 	}
+
+	
+	DifferentialData.AddDefaulted();
 }
 
 float UModularVehicleData::GetIdleRPM() const

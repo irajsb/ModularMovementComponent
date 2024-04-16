@@ -36,6 +36,8 @@ public:
 	// override the parent that force is applied to
 	UPROPERTY(BlueprintReadWrite,Transient,Category=Setup)
 	UPrimitiveComponent* ParentBodyOverride;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
+	uint8 DifferentialIndex=0;
 	virtual void SetupWheels(UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateSuspension(float DeltaTime,UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateForces(float DeltaTime, UModularMovementComponent* ModularMovementComponent) ;
@@ -87,12 +89,23 @@ public:
 	UFUNCTION(BlueprintPure,BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	UBaseTireModel* GetTireModel();
 
+
+
+	//Set which differential index from array is active for this wheel 
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleWheel",meta =(KeyWords="Set Change Update "))
+	void SetActiveDifferentialIndex(uint8 Index,UModularMovementComponent* MovementComponent);
+
+	//Get which differential index from array is active for this wheel 
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleWheel",meta =(KeyWords="Set Change Update "))
+	uint8 GetActiveDifferentialIndex();
 	//Debug
 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void ChangeTraceDebugVisibility(bool Enable);
 	private:
 	bool Debug=false;
+
+
 
 	
 
