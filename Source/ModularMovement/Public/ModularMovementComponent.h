@@ -4,7 +4,6 @@
 
 #include "BaseVehicleData.h"
 #include "ModularVehicleData.h"
-#include "TransmissionSystem.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "ModularMovementComponent.generated.h"
 
@@ -369,7 +368,7 @@ public:
 	FOldRigidBodyErrorCorrection ErrorCorrection;
 	
 	
-	void ApplyDifferential(TArray<UModularWheel*> Wheels, float EngineTorque, EModularDifferentialType DifferentialType, float DeltaTime);
+	void ApplyDifferential( FDifferentialData DiffData, float EngineTorque, float DeltaTime);
 	
 
 	static void ShowSetupError( FString Error);

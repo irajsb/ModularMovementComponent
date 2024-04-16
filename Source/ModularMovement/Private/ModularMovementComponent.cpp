@@ -555,7 +555,7 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 			{
 				UE_LOG(LogModularVehicle,Error,TEXT("Found two active diffs with different ratios.This can cause unexpected behaviour"))
 			}
-			ApplyDifferential( Diff.Wheels,WheelTorque*Diff.TorqueTransferRatio,Diff.DifferentialType, DeltaTime);
+			ApplyDifferential( Diff,WheelTorque*Diff.TorqueTransferRatio,DeltaTime);
 		}
 	}
 	CurrentDifferentialRatio=TempDiffRatio;
@@ -1070,31 +1070,48 @@ void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 
 
 
-void UModularMovementComponent::ApplyDifferential(TArray<UModularWheel*> Wheels, float EngineTorque, EModularDifferentialType DifferentialType, float DeltaTime)
+void UModularMovementComponent::ApplyDifferential( FDifferentialData DiffData, float EngineTorque, float DeltaTime)
 {
 
+
 	
-	switch (DifferentialType)
+	
+	// Open differential: Equal torque distribution, but account for wheel slip
+	float TotalAngularVelocity = 0.0f;
+	float MinVelocity=BIG_NUMBER;
+	float MaxVelocity=-BIG_NUMBER;
+	const int WheelCount=DiffData.Wheels.Num();
+	for (UModularWheel* Wheel : DiffData.Wheels)
+	{
+		const float AngularVelocity=Wheel->WheelState.AngularVelocity;
+		TotalAngularVelocity += FMath::Abs(AngularVelocity);
+		if(AngularVelocity<MinVelocity)
+		{
+			MinVelocity=AngularVelocity;
+		}
+		if(AngularVelocity>MaxVelocity)
+		{
+			MaxVelocity=AngularVelocity;
+		}
+	}
+
+	const float Slip=DiffData.DifferentialType==Locked?1.f: UKismetMathLibrary::MapRangeClamped(FMath::Abs(MaxVelocity-MinVelocity),DiffData.MinSlip,DiffData.MaxSlip,0,1);
+	switch (DiffData.DifferentialType)
 	{
 
 	case EModularDifferentialType::Simple:
 		{
-			for (UModularWheel* Wheel : Wheels)
+			for (UModularWheel* Wheel : DiffData.Wheels)
 			{
-				Wheel->SetDriveTorqueOnWheels(EngineTorque/Wheels.Num());
+				Wheel->SetDriveTorqueOnWheels(EngineTorque/WheelCount);
 			}
 		}
 		break;
 	case EModularDifferentialType::Open:
 		{
-			// Open differential: Equal torque distribution, but account for wheel slip
-			float TotalAngularVelocity = 0.0f;
-			for (UModularWheel* Wheel : Wheels)
-			{
-				TotalAngularVelocity += FMath::Abs(Wheel->WheelState.AngularVelocity);
-			}
+			
 
-			for (UModularWheel* Wheel : Wheels)
+			for (UModularWheel* Wheel : DiffData.Wheels)
 			{
 				if (TotalAngularVelocity > SMALL_NUMBER)
 				{
@@ -1105,42 +1122,70 @@ void UModularMovementComponent::ApplyDifferential(TArray<UModularWheel*> Wheels,
 				else
 				{
 					// If all wheels are slipping, distribute torque equally
-					float TorquePerWheel = EngineTorque / Wheels.Num();
+					float TorquePerWheel = EngineTorque / WheelCount;
 					Wheel->SetDriveTorqueOnWheels(TorquePerWheel);
 				}
 			}
 			break;
 		}
-	
+	case EModularDifferentialType::LimitedSlip:
+		{
+			
+			for (UModularWheel* Wheel : DiffData.Wheels)
+			{
+				if (TotalAngularVelocity > SMALL_NUMBER)
+				{
+					float SlipRatio = FMath::Abs(Wheel->WheelState.AngularVelocity) / TotalAngularVelocity;
+					float LockedWheelTorque = EngineTorque /WheelCount;
+					float WheelTorque = SlipRatio * EngineTorque;
+					Wheel->SetDriveTorqueOnWheels(FMath::Lerp(WheelTorque,LockedWheelTorque,Slip));
+				}
+				else
+				{
+					// If all wheels are slipping, distribute torque equally
+					float TorquePerWheel = EngineTorque / WheelCount;
+					Wheel->SetDriveTorqueOnWheels(TorquePerWheel);
+				}
+			}
+		}
+		break;
 	case EModularDifferentialType::Locked:
 		{
-			for (UModularWheel* Wheel : Wheels)
+			for (UModularWheel* Wheel : DiffData.Wheels)
 			{
-				Wheel->SetDriveTorqueOnWheels(EngineTorque/Wheels.Num());
+				Wheel->SetDriveTorqueOnWheels(EngineTorque/WheelCount);
 				
 			}
 		}
 		break;
+	default:
+		UE_LOG(LogModularVehicle,Error,TEXT("Unimplemented differential Setup"));
 	}
 
 	
 	float AverageSpeed=0.f;
-	for (UModularWheel* Wheel : Wheels)
+	for (UModularWheel* Wheel : DiffData.Wheels)
 	{
 		//Apply those torques 
 		Wheel->UpdateForces(DeltaTime, this);
 		AverageSpeed+=Wheel->WheelState.AngularVelocity;
 	}
-	AverageSpeed=AverageSpeed/Wheels.Num();
+	AverageSpeed=AverageSpeed/WheelCount;
 	//Post Update
 
-	if(DifferentialType==Locked)
-	{
-		
-		for (UModularWheel* Wheel : Wheels)
+	
+
+	
+		for (UModularWheel* Wheel : DiffData.Wheels)
 		{
-			Wheel->WheelState.AngularVelocity=AverageSpeed;
-		}
+			if(DiffData.DifferentialType==Locked||DiffData.DifferentialType==LimitedSlip)
+			{
+			Wheel->WheelState.AngularVelocity=FMath::Lerp(Wheel->WheelState.AngularVelocity,AverageSpeed,Slip) ;
+			}
+			const float MaxWheelAngularVelocity = (GetSetup()->GetMaxRPM() * GetSetup()->GetGearBox()->GetDriveRatio() * 2 * PI) / 60 * Wheel->WheelState.WheelSetup->WheelRadius / 100;;
+
+
+			Wheel->WheelState.AngularVelocity=FMath::Clamp(Wheel->WheelState.AngularVelocity,-MaxWheelAngularVelocity,MaxWheelAngularVelocity);
 	}
 	
 }

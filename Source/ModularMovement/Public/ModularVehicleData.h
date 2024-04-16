@@ -18,6 +18,7 @@ enum EModularDifferentialType
 {
 	Simple,
 	Open,
+	LimitedSlip,
 	Locked
 };
 
@@ -33,6 +34,16 @@ struct FDifferentialData
 	UPROPERTY(Category=Differential,EditAnywhere,BlueprintReadWrite)
 	float DifferentialRatio=3.1f;
 
+	//Difference in wheel speeds where diff clutch will start locking
+	UPROPERTY(Category = Differential, EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "DifferentialType == EModularDifferentialType::LimitedSlip"))
+	float MinSlip=10.f;
+
+	//Difference in wheel speeds where diff clutch is fully  locking
+	UPROPERTY(Category = Differential, EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "DifferentialType == EModularDifferentialType::LimitedSlip"))
+	float MaxSlip=20.f;
+	
+
+	UPROPERTY()
 	TArray<UModularWheel* > Wheels;
 	
 };
