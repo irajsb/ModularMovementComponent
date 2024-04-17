@@ -375,5 +375,5 @@ public:
 
 	FRigidBodyState NewestBodyInstance;
 	
-	void ApplyBodyInstanceData();
+	void ApplyBodyInstanceData() const;
 };

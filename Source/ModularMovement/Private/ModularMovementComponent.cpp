@@ -960,7 +960,7 @@ void UModularMovementComponent::ShowSetupError(FString Error)
 	
 }
 
-void UModularMovementComponent::ApplyBodyInstanceData()
+void UModularMovementComponent::ApplyBodyInstanceData() const
 {
 	
 
@@ -973,8 +973,6 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 	FBodyInstance* BI = GetMesh()->GetBodyInstance();
 	if (BI && BI->IsInstanceSimulatingPhysics())
 	{
-		bool bRestoredState = true;
-
 		FRigidBodyState CurrentState;
 		GetMesh()->GetRigidBodyState(CurrentState);
 		
@@ -1043,7 +1041,8 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 	//	BI->SetAngularVelocityInRadians(FMath::DegreesToRadians(UpdatedQuat.Vector()), false);
 
 		// state is restored when no velocity corrections are required
-		bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() < KINDA_SMALL_NUMBER);
+		bool bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() <
+			KINDA_SMALL_NUMBER);
 	
 
 		/////// SLEEP UPDATE ///////
@@ -1115,14 +1114,14 @@ void UModularMovementComponent::ApplyDifferential( FDifferentialData DiffData, f
 			{
 				if (TotalAngularVelocity > SMALL_NUMBER)
 				{
-					float SlipRatio = FMath::Abs(Wheel->WheelState.AngularVelocity) / TotalAngularVelocity;
-					float WheelTorque = SlipRatio * EngineTorque;
+					const float SlipRatio = FMath::Abs(Wheel->WheelState.AngularVelocity) / TotalAngularVelocity;
+					const float WheelTorque = SlipRatio * EngineTorque;
 					Wheel->SetDriveTorqueOnWheels(WheelTorque);
 				}
 				else
 				{
 					// If all wheels are slipping, distribute torque equally
-					float TorquePerWheel = EngineTorque / WheelCount;
+					const float TorquePerWheel = EngineTorque / WheelCount;
 					Wheel->SetDriveTorqueOnWheels(TorquePerWheel);
 				}
 			}
@@ -1135,7 +1134,7 @@ void UModularMovementComponent::ApplyDifferential( FDifferentialData DiffData, f
 			{
 				if (TotalAngularVelocity > SMALL_NUMBER)
 				{
-					float SlipRatio = FMath::Abs(Wheel->WheelState.AngularVelocity) / TotalAngularVelocity;
+					const float SlipRatio = FMath::Abs(Wheel->WheelState.AngularVelocity) / TotalAngularVelocity;
 					float LockedWheelTorque = EngineTorque /WheelCount;
 					float WheelTorque = SlipRatio * EngineTorque;
 					Wheel->SetDriveTorqueOnWheels(FMath::Lerp(WheelTorque,LockedWheelTorque,Slip));
@@ -1143,7 +1142,7 @@ void UModularMovementComponent::ApplyDifferential( FDifferentialData DiffData, f
 				else
 				{
 					// If all wheels are slipping, distribute torque equally
-					float TorquePerWheel = EngineTorque / WheelCount;
+					const float TorquePerWheel = EngineTorque / WheelCount;
 					Wheel->SetDriveTorqueOnWheels(TorquePerWheel);
 				}
 			}
