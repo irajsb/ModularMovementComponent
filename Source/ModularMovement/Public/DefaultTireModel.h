@@ -11,43 +11,44 @@
  * This is our default tire model.
  * Easy to tune.
  */
-UCLASS(EditInlineNew)
+UCLASS(EditInlineNew,BlueprintType)
 class MODULARMOVEMENT_API UDefaultTireModel : public UBaseTireModel
 {
 	GENERATED_BODY()
 
 	UDefaultTireModel();
 
+public:
 	// Auto generate graph using the min and max parameters.
 	UPROPERTY(EditAnywhere, Category = TireModel)
 	bool AutoGenerateGraph;
 
 	// Minimum friction force for auto-generated graph.
-	UPROPERTY(EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateGraph))
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateGraph))
 	float MinFrictionForce = 0.8;
 
 	// Maximum friction force for auto-generated graph.
-	UPROPERTY(EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateGraph))
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateGraph))
 	float MaxFrictionForce = 1.5;
 
 	// Longitudinal grip curve for the tire.
-	UPROPERTY(EditAnywhere, Category = TireModel)
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel)
 	FRuntimeFloatCurve LongitudinalGripCurve;
 
 	// Auto generate the lateral graph using the min and max parameters.
-	UPROPERTY(EditAnywhere, Category = TireModel)
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel)
 	bool AutoGenerateTheLateralGraph;
 
 	// Minimum lateral friction force for auto-generated graph.
-	UPROPERTY(EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateTheLateralGraph))
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateGraph))
 	float MinFrictionLateralForce = 0.8;
 
 	// Maximum lateral friction force for auto-generated graph.
-	UPROPERTY(EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateTheLateralGraph))
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateGraph))
 	float MaxFrictionLateralForce = 1.5;
 
 	// Lateral grip curve for the tire.
-	UPROPERTY(EditAnywhere, Category = TireModel)
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel)
 	FRuntimeFloatCurve LateralGripCurve;
 
 	float LastSlipX;
@@ -64,4 +65,6 @@ class MODULARMOVEMENT_API UDefaultTireModel : public UBaseTireModel
 	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel) override;
 	virtual FString GetTireDebugData(FVector2f& SlipData) override;
 	virtual void SetupWheels() override;
+
+	virtual void RefreshTireData() override;
 };

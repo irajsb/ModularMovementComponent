@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
 #include "Engine/EngineTypes.h"
+#include "Camera/CameraShakeBase.h"
 #include "Components/SceneComponent.h"
 #include "VehicleSpringArm.generated.h"
 

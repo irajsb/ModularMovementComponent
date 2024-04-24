@@ -13,9 +13,11 @@
 #if  ENGINE_MINOR_VERSION >1
 #include "Engine/TimerHandle.h"
 #endif
-
+#include "GameFramework/Pawn.h"
 
 #include "GameFramework/Actor.h"
+#include "GameFramework/PlayerController.h"
+#include "Camera/CameraShakeBase.h"
 #include  "Sound/SoundCue.h"
 #include "Sound/SoundConcurrency.h"
 #include "Components/MeshComponent.h"

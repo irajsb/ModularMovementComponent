@@ -16,16 +16,16 @@ struct FPacejkaConstants
 	GENERATED_BODY()
 
 	//Stiffness
-	UPROPERTY(EditAnywhere,Category=TireModel)
+	UPROPERTY(BlueprintReadWrite,EditAnywhere,Category=TireModel)
 	float B=20.f;
 	//Shape
-	UPROPERTY(EditAnywhere,Category=TireModel)
+	UPROPERTY(BlueprintReadWrite,EditAnywhere,Category=TireModel)
 	float C=1.4f;
 	//Curvature
-	UPROPERTY(EditAnywhere,Category=TireModel)
+	UPROPERTY(BlueprintReadWrite,EditAnywhere,Category=TireModel)
 	float E=-0.05f;
 	//Peak Force
-	UPROPERTY(EditAnywhere,Category=TireModel)
+	UPROPERTY(BlueprintReadWrite,EditAnywhere,Category=TireModel)
 	float D=1.2f;
 
 	FPacejkaConstants(float InB,float InC,float InD,float InE)
@@ -48,9 +48,9 @@ class MODULARMOVEMENT_API UPacejkaTireModel : public UBaseTireModel
 public:
 
 	UPacejkaTireModel();
-	UPROPERTY(EditAnywhere,Category=TireModel)
+	UPROPERTY(BlueprintReadWrite,EditAnywhere,Category=TireModel)
 	FPacejkaConstants Long;
-	UPROPERTY(EditAnywhere,Category=TireModel)
+	UPROPERTY(BlueprintReadWrite,EditAnywhere,Category=TireModel)
 	FPacejkaConstants Lat=FPacejkaConstants(10.f,1.3f,1.2f,-0.2);
 	
 

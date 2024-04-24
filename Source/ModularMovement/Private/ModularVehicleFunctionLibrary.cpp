@@ -316,7 +316,7 @@ void UModularVehicleFunctionLibrary::ChangeCollisionOnPhysicsBody(USkeletalMeshC
 {
 	if(skeletalMesh)
 	{
-		if(auto BI=skeletalMesh->GetBodyInstance(boneName))
+		if(const auto BI=skeletalMesh->GetBodyInstance(boneName))
 		{
 			BI->SetShapeCollisionEnabled(0, CollisionType);
 		}

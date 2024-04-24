@@ -6,3 +6,8 @@
 float UBaseTireModel::GetTireStress(){
 return 0.f;
 }
+
+void UBaseTireModel::RefreshTireData()
+{
+	SetupWheels();
+}

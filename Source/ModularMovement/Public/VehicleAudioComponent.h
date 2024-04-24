@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/AudioComponent.h"
+#include "GameFramework/Pawn.h"
 #include "VehicleAudioComponent.generated.h"
 
 /**

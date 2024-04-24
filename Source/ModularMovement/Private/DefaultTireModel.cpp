@@ -203,8 +203,10 @@ FString UDefaultTireModel::GetTireDebugData(FVector2f& SlipData)
 	Output += "DriveTorque: " + FString::SanitizeFloat(WheelOwner->WheelState.DriveTorque) + TEXT("\n");
 	//Add normalized tire force
 	Output += "NetTorque: " + FString::SanitizeFloat(WheelOwner->WheelState.DriveTorque*WheelOwner->GetWheelSetup()->WheelRadius/100- TireForceNormalized.X*WheelOwner->WheelState.WheelLoad.Z);
+#if ENABLE_DRAW_DEBUG
 	// Draw Text at wheel location
 	DrawDebugString(WheelOwner->GetWorld(),WheelOwner->GetComponentLocation(),Output,nullptr,FColor::Red,0.0f,true);
+#endif
 	return Output;
 }
 
@@ -248,6 +250,12 @@ void UDefaultTireModel::SetupWheels()
 		}
 	}
 	
+}
+
+void UDefaultTireModel::RefreshTireData()
+{
+	Super::RefreshTireData();
+	RebuildCurves(AutoGenerateGraph,AutoGenerateTheLateralGraph);
 }
 
 
