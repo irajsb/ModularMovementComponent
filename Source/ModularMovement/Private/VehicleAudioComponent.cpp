@@ -6,10 +6,10 @@
 #include "ModularMovementComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
-
-UVehicleAudioComponent::UVehicleAudioComponent()
+#include "GenericPlatform/GenericPlatformMath.h"
+UVehicleAudioComponent::UVehicleAudioComponent(): Load(0), CurrentTurbo(0)
 {
-	PrimaryComponentTick.bCanEverTick=true;
+	PrimaryComponentTick.bCanEverTick = true;
 }
 
 void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -17,12 +17,12 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if(auto Pawn=Cast<APawn>(GetOwner()))
+	if(const auto Pawn=Cast<APawn>(GetOwner()))
 	{
 
-		if(auto MC= Cast<UModularMovementComponent>( Pawn->GetMovementComponent()))
+		if(const auto MC= Cast<UModularMovementComponent>( Pawn->GetMovementComponent()))
 		{
-			auto RPMRatio=MC->VehicleState.CurrentRpm/MC->VehicleState.VehicleData->GetMaxRPM();
+			const auto RPMRatio=MC->VehicleState.CurrentRpm/MC->VehicleState.VehicleData->GetMaxRPM();
 			const float RPMChange=RPMRatio-RPM;
 			RPM=UKismetMathLibrary::FInterpTo_Constant(RPM,RPMRatio,DeltaTime,RPMInterpolationSpeed);
 			SetFloatParameter("RPM",RPM*RPMMultiplier);

@@ -6,6 +6,9 @@
 #include "UObject/NoExportTypes.h"
 #include "Curves/CurveFloat.h"
 #include  "PhysicalMaterials/PhysicalMaterial.h"
+
+#include "DrawDebugHelpers.h"
+
 #include "BaseTireModel.generated.h"
 
 
@@ -63,4 +66,8 @@ public:
 	};
 	UPROPERTY()
 	UModularWheel* WheelOwner;
+
+	
+	UFUNCTION(BlueprintCallable,Category=Data)
+	virtual void RefreshTireData();
 };

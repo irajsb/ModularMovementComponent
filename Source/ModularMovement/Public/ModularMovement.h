@@ -1,9 +1,10 @@
 //Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 #pragma once
-
-
-
+#include "Modules/ModuleInterface.h"
+#include "Stats/Stats2.h"
+#include "Stats/Stats.h"
+#include "Logging/LogMacros.h"
 class FModularMovementModule : public IModuleInterface
 {
 public:

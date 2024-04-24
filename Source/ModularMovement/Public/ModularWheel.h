@@ -36,7 +36,7 @@ public:
 	// override the parent that force is applied to
 	UPROPERTY(BlueprintReadWrite,Transient,Category=Setup)
 	UPrimitiveComponent* ParentBodyOverride;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
+	UPROPERTY(EditAnywhere,Category=Setup)
 	uint8 DifferentialIndex=0;
 	virtual void SetupWheels(UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateSuspension(float DeltaTime,UModularMovementComponent* ModularMovementComponent) ;

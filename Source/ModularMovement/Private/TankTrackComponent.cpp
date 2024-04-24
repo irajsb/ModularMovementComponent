@@ -325,8 +325,13 @@ void UTankTrackComponent::UpdateMeshes(float DeltaTime, bool Editor)
 
 	
 
+#if ENGINE_MINOR_VERSION >3
+	if(InstancedStaticMeshComponent->GetInstanceCount()!=NumOfMeshesInTrack)
+	{
+#else
 	if(InstancedStaticMeshComponent->PerInstanceIds.Num()!=NumOfMeshesInTrack)
 	{
+#endif
 		InstancedStaticMeshComponent->ClearInstances();
 		for (int32 Index = 0; Index < NumOfMeshesInTrack; Index++)
 		{

@@ -9,6 +9,8 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Engine/HitResult.h"
+#include "GameFramework/Pawn.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "ModularVehicleFunctionLibrary.generated.h"
 
 /**

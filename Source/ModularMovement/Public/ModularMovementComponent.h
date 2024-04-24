@@ -4,6 +4,8 @@
 
 #include "BaseVehicleData.h"
 #include "ModularVehicleData.h"
+#include "Components/MeshComponent.h"
+#include "Engine/World.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "ModularMovementComponent.generated.h"
 
