@@ -17,6 +17,7 @@ void FModularMovementModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
 
+#if WITH_EDITOR
 FString Path=IPluginManager::Get().FindPlugin(TEXT("ModularMovement"))->GetBaseDir() / TEXT("Resources");
 	 StyleSet = MakeShareable(new FSlateStyleSet("ModularStyle"));
 	StyleSet->SetContentRoot(	Path);
@@ -30,7 +31,6 @@ FString Path=IPluginManager::Get().FindPlugin(TEXT("ModularMovement"))->GetBaseD
 	FSlateStyleRegistry::RegisterSlateStyle(*StyleSet.Get());
 
 
-#if WITH_EDITOR
 
 	const auto  Settings=UPhysicsSettings::Get();
 	if(!Settings->bSubstepping)
@@ -45,7 +45,10 @@ FString Path=IPluginManager::Get().FindPlugin(TEXT("ModularMovement"))->GetBaseD
 		Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("MultipleLSAsPopupDismiss", "Dismiss"), LOCTEXT("SubStepFixToolTipDismiss", "Dismiss this notification"), FSimpleDelegate::CreateRaw(this, &FModularMovementModule::OnSettingsDissmissed)));
 
 		Notif= FSlateNotificationManager::Get().AddNotification(Info);
-		Notif.Pin()->SetCompletionState(SNotificationItem::CS_Pending);
+		if(Notif.IsValid())
+		{
+			Notif.Pin()->SetCompletionState(SNotificationItem::CS_Pending);
+		}
 	}
 	
 	
@@ -57,10 +60,11 @@ void FModularMovementModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
-
+#if WITH_EDITOR
 	FSlateStyleRegistry::UnRegisterSlateStyle(*StyleSet.Get());
 	ensure(StyleSet.IsUnique());
 	StyleSet.Reset();
+	#endif
 }
 
 void FModularMovementModule::OnSettingsFix()
