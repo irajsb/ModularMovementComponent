@@ -20,6 +20,7 @@ enum ESuspensionType
 {
 	Sphere,
 	Line,
+	Constraint
 };
 
 

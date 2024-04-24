@@ -84,6 +84,9 @@ void UModularWheel::SetupWheels(UModularMovementComponent* ModularMovementCompon
 			
 		}
 	}
+
+
+
 }
 
 void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent* ModularMovementComponent)
@@ -97,6 +100,22 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 		return;
 	}
 
+	if(WheelState.WheelSetup->SuspensionType==Constraint)
+	{
+
+		FVector Lin,Ang;
+		SuspensionConstraint->GetConstraintForce(Lin,Ang);
+		WheelState.WheelLoad.Z=Lin.Size();
+		
+			WheelState.HitResult.TraceStart=GetComponentLocation();
+			if(WheelState.WheelLoad.Z>100.f)
+			{
+				WheelState.HitResult.bBlockingHit=true;
+				
+			}
+		
+		return;
+	}
 	MODULAR_CYCLE_COUNTER(STAT_ModularSuspension)
 
 
@@ -186,7 +205,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 			AddForceAtPosition(Mesh, TraceResult.ImpactPoint, CorrectedForce, NAME_None);
 	
 		}
-
+	
 		WheelState.PreviousLen = CurrentLen;
 		WheelState.HitResult = TraceResult;
 	}
@@ -412,11 +431,15 @@ FWheelState* UModularWheel::GetWheelState()
 
 UModularVehicleWheelData* UModularWheel::GetWheelSetup() const
 {
+	if(WheelState.WheelSetup)
 	return WheelState.WheelSetup;
+
+	return Cast<UModularVehicleWheelData>( WheelState.WheelSetupClass.LoadSynchronous()->ClassDefaultObject);
 }
 
 void UModularWheel::UpdateWheelSetup(UModularVehicleWheelData* VehicleWheelData)
 {
+	
 	WheelState.WheelSetup = VehicleWheelData;
 }
 
@@ -559,5 +582,54 @@ void UModularWheel::AddForceAtPosition(UPrimitiveComponent* Component, FVector P
 		RigidHandle->AddForce(Force, false);
 		RigidHandle->AddTorque(WorldTorque, false);
 		
+	}
+}
+
+void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponent,UPrimitiveComponent* ParentBody ,UPrimitiveComponent* WheelOrDifferential,UPrimitiveComponent* InWheelCollision)
+{
+
+	if(SuspensionConstraint)
+	{
+		SuspensionConstraint->DestroyComponent();
+	}
+	auto WheelSetup=GetWheelSetup();
+	if(WheelSetup)
+	{
+		if (WheelSetup->SuspensionType==Constraint)
+		{
+
+			const FTransform WheelTransform=GetComponentTransform();
+			const FTransform ParentTransform=MovementComponent->GetOwner()->GetTransform();
+			const FTransform RelativeTransform = WheelTransform.GetRelativeTransform(ParentTransform);
+			auto Comp=MovementComponent->GetOwner()->AddComponentByClass(UPhysicsConstraintComponent::StaticClass(),false,RelativeTransform,false);
+			SuspensionConstraint=Cast<UPhysicsConstraintComponent>(Comp);
+			SuspensionConstraint->SetConstrainedComponents(WheelOrDifferential,NAME_None,ParentBody,NAME_None);
+			// Set up the constraint properties here
+			SuspensionConstraint->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked,0.f);
+			SuspensionConstraint->SetLinearYLimit(ELinearConstraintMotion::LCM_Limited,5.f);
+			SuspensionConstraint->SetLinearZLimit(ELinearConstraintMotion::LCM_Limited,WheelSetup->SuspensionLength);
+			SuspensionConstraint->SetAngularTwistLimit(ACM_Free,0);
+			SuspensionConstraint->SetAngularSwing1Limit(ACM_Free,0);
+			SuspensionConstraint->SetAngularSwing2Limit(ACM_Locked,0);
+			SuspensionConstraint->SetLinearPositionTarget(FVector(0,0,-WheelSetup->SuspensionLength));
+			SuspensionConstraint->SetLinearPositionDrive(false,true,true);
+			SuspensionConstraint->SetLinearDriveParams(WheelSetup->SpringRate,WheelSetup->DampingCompress,0);
+			SuspensionConstraint->SetLinearVelocityDrive(false,true,true);
+			SuspensionConstraint->SetLinearVelocityTarget(FVector(0,0,0));
+	
+			
+
+			WheelCollision=InWheelCollision;
+			 NoFrictionDefaultPhysMaterial = NewObject<UPhysicalMaterial>();
+			NoFrictionDefaultPhysMaterial->Friction=0.f;
+			NoFrictionDefaultPhysMaterial->StaticFriction=0.f;
+			NoFrictionDefaultPhysMaterial->Restitution=0.5;
+			NoFrictionDefaultPhysMaterial->FrictionCombineMode=EFrictionCombineMode::Min;
+			if(WheelCollision)
+			{
+				WheelCollision->SetPhysMaterialOverride(NoFrictionDefaultPhysMaterial);
+			}
+			// You can adjust other properties like drive properties, angular limits, etc.
+		}
 	}
 }

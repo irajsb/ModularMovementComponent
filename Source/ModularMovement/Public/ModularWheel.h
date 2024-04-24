@@ -90,6 +90,8 @@ public:
 	UBaseTireModel* GetTireModel();
 
 
+	
+
 
 	//Set which differential index from array is active for this wheel 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleWheel",meta =(KeyWords="Set Change Update "))
@@ -113,7 +115,15 @@ public:
 	void AddForceAtPosition(UPrimitiveComponent* Component, FVector Position, FVector Force, FName BoneName);
 
 
+	//Setup constraint only if suspension is of type constraint
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void SetupConstraints(UModularMovementComponent* MovementComponent,UPrimitiveComponent* ParentBody, UPrimitiveComponent* WheelOrDifferential,UPrimitiveComponent* InWheelCollision);
+	UPROPERTY()
+	UPhysicsConstraintComponent* SuspensionConstraint=nullptr;
+	UPROPERTY()
+	UPrimitiveComponent* WheelCollision=nullptr;
 
 
-	
+	UPROPERTY()
+	UPhysicalMaterial* NoFrictionDefaultPhysMaterial;
 };
