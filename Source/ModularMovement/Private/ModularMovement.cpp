@@ -2,8 +2,8 @@
 
 #include "ModularMovement.h"
 
- 	
 
+#include "ModularMovementSettings.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Styling/SlateStyle.h"
@@ -33,7 +33,7 @@ FString Path=IPluginManager::Get().FindPlugin(TEXT("ModularMovement"))->GetBaseD
 
 
 	const auto  Settings=UPhysicsSettings::Get();
-	if(!Settings->bSubstepping)
+	if(!Settings->bSubstepping&&!GetMutableDefault<UModularMovementSettings>()->SubstepShown)
 	{
 		FNotificationInfo Info(LOCTEXT("SubStepSettings", "Modular Movement Requires Substepping"));
 		Info.ExpireDuration = 120.0f;
@@ -41,7 +41,7 @@ FString Path=IPluginManager::Get().FindPlugin(TEXT("ModularMovement"))->GetBaseD
 		Info.bUseThrobber=false;
 		Info.Image = FCoreStyle::Get().GetBrush(TEXT("MessageLog.Warning"));
 
-		Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("MultipleLSAsPopupBeginRepair", "Enable Settings"), LOCTEXT("SubStepFixToolTip", "Apply Recommended Settings"), FSimpleDelegate::CreateRaw(this, &FModularMovementModule::OnSettingsFix)));
+
 		Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("MultipleLSAsPopupDismiss", "Dismiss"), LOCTEXT("SubStepFixToolTipDismiss", "Dismiss this notification"), FSimpleDelegate::CreateRaw(this, &FModularMovementModule::OnSettingsDissmissed)));
 
 		Notif= FSlateNotificationManager::Get().AddNotification(Info);
@@ -101,6 +101,10 @@ void FModularMovementModule::OnSettingsDissmissed()
 		NotifPopup->ExpireAndFadeout();
 
 		Notif.Reset();
+		auto Obj=UModularMovementSettings::StaticClass()->GetDefaultObject<UModularMovementSettings>();
+		Obj->SubstepShown=true;
+		Obj->SaveConfig();
+		
 	}
 }
 

@@ -123,6 +123,10 @@ public:
 	UPROPERTY()
 	UPrimitiveComponent* WheelCollision=nullptr;
 
+	UPROPERTY()
+	UPrimitiveComponent* ConstraintParent=nullptr;
+	
+
 
 	UPROPERTY()
 	UPhysicalMaterial* NoFrictionDefaultPhysMaterial;

@@ -48,7 +48,9 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	// Trace channel
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	TEnumAsByte<ESuspensionType> SuspensionType;
-	
+	// Suspension force in other directions rather than Z . This is necessary to allow natural twists of suspension
+	UPROPERTY(EditAnywhere,AdvancedDisplay,BlueprintReadWrite,Category=Essential,meta=(EditCondition="SuspensionType==Constraint",EditConditionHides))
+	float NonZForceMultiplier=5.f;
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelWidth=30;

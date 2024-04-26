@@ -140,7 +140,7 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	FinalForceVector.X *= WheelLoad * SurfaceFriction;
 	FinalForceVector.Y *= WheelLoad* SurfaceFriction;
 
-	RELAXATION2(FinalForceVector.X, LastFX, 50.0f);
+	RELAXATION2(FinalForceVector.X, LastFX, 30.0f);
 	RELAXATION2(FinalForceVector.Y, LastFY, 50.0f);
 
 
@@ -202,7 +202,8 @@ FString UDefaultTireModel::GetTireDebugData(FVector2f& SlipData)
 	//Add Drive torque
 	Output += "DriveTorque: " + FString::SanitizeFloat(WheelOwner->WheelState.DriveTorque) + TEXT("\n");
 	//Add normalized tire force
-	Output += "NetTorque: " + FString::SanitizeFloat(WheelOwner->WheelState.DriveTorque*WheelOwner->GetWheelSetup()->WheelRadius/100- TireForceNormalized.X*WheelOwner->WheelState.WheelLoad.Z);
+	Output += "NetTorque: " + FString::SanitizeFloat(WheelOwner->WheelState.DriveTorque*WheelOwner->GetWheelSetup()->WheelRadius/100- TireForceNormalized.X*WheelOwner->WheelState.WheelLoad.Z)+ TEXT("\n");;
+	Output += "WheelLoad: " + FString::SanitizeFloat(WheelOwner->WheelState.WheelLoad.Z);
 #if ENABLE_DRAW_DEBUG
 	// Draw Text at wheel location
 	DrawDebugString(WheelOwner->GetWorld(),WheelOwner->GetComponentLocation(),Output,nullptr,FColor::Red,0.0f,true);

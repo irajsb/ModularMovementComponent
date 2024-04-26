@@ -72,7 +72,7 @@ bool UModularVehicleData::ShouldZeroRpmWhenShifting() const
 
 float UModularVehicleData::GetTorqueForRPM(float RPM) const
 {
-	return EngineTorqueCurve.GetRichCurveConst()->Eval(RPM);
+	return TorqueMultiplier*EngineTorqueCurve.GetRichCurveConst()->Eval(RPM);
 }
 
 float UModularVehicleData::GetEngineInertia() const

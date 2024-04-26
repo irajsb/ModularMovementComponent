@@ -17,6 +17,8 @@ public:
 	void OnSettingsDissmissed();
 
 	TWeakPtr<class SNotificationItem> Notif;
+
+
 };
 
 

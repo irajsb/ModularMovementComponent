@@ -56,6 +56,9 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	//Torque Curve Newton /Meter 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Essential)
 	FRuntimeFloatCurve EngineTorqueCurve;
+	//Torque Curve Multiplier
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Essential)
+	float TorqueMultiplier=1.f;
 	//Set RPM TO Zero When Shifting
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine)
 	bool ZeroRpmWhenShifting;

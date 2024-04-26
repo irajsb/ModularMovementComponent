@@ -16,7 +16,7 @@ DECLARE_CYCLE_STAT(TEXT("Modular Updage Suspension"), STAT_ModularSuspension, ST
 DECLARE_CYCLE_STAT(TEXT("Modular Updage Forces"), STAT_ModularForces, STATGROUP_MovementPhysics);
 
 // Sets default values for this component's properties
-UModularWheel::UModularWheel(): WheelState(), ParentBodyOverride(nullptr)
+UModularWheel::UModularWheel(): WheelState(), ParentBodyOverride(nullptr), NoFrictionDefaultPhysMaterial(nullptr)
 {
 	PrimaryComponentTick.bCanEverTick = true;
 }
@@ -57,9 +57,11 @@ void UModularWheel::SetupWheels(UModularMovementComponent* ModularMovementCompon
 		{
 			WheelState.WheelSetup->TireModel = DuplicateObject<UBaseTireModel>(WheelState.WheelSetup->TireModel, this);
 			GetTireModel()->SetupWheels();
-		}else
+		}
+		else
 		{
-			UModularVehicleFunctionLibrary::NotifyError("No tire model. Please Select a tire model in your wheel setup");
+			UModularVehicleFunctionLibrary::NotifyError(
+				"No tire model. Please Select a tire model in your wheel setup");
 		}
 
 		ModularMovementComponent->ActorsToIgnore.AddUnique(GetOwner());
@@ -68,25 +70,21 @@ void UModularWheel::SetupWheels(UModularMovementComponent* ModularMovementCompon
 		{
 			ModularMovementComponent->ActorsToIgnore.AddUnique(ModularMovementComponent->GetOwner());
 		}
-	}else
+	}
+	else
 	{
-		UModularVehicleFunctionLibrary::NotifyError("Wheel Setup class is missing in wheel components. Please create and assign one !");
+		UModularVehicleFunctionLibrary::NotifyError(
+			"Wheel Setup class is missing in wheel components. Please create and assign one !");
 	}
 
 
-	if(OptionalBoneName!=NAME_None)
+	if (OptionalBoneName != NAME_None)
 	{
-		if(auto SMesh=Cast<USkeletalMeshComponent>(ModularMovementComponent->GetMesh()))
+		if (auto SMesh = Cast<USkeletalMeshComponent>(ModularMovementComponent->GetMesh()))
 		{
-			
-			
-			SMesh->SetAllBodiesBelowPhysicsDisabled(OptionalBoneName,true,true);
-			
+			SMesh->SetAllBodiesBelowPhysicsDisabled(OptionalBoneName, true, true);
 		}
 	}
-
-
-
 }
 
 void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent* ModularMovementComponent)
@@ -95,33 +93,39 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	{
 		return;
 	}
-	if(WheelState.WheelSetup->WheelRadius==0.f)
+	if (WheelState.WheelSetup->WheelRadius == 0.f)
 	{
 		return;
 	}
 
-	if(WheelState.WheelSetup->SuspensionType==Constraint)
-	{
+	WheelState.WheelLoad = FVector::ZeroVector;
 
-		FVector Lin,Ang;
-		SuspensionConstraint->GetConstraintForce(Lin,Ang);
-		WheelState.WheelLoad.Z=Lin.Size();
+	if (WheelState.WheelSetup->SuspensionType == Constraint)
+	{
+		FVector Lin, Ang;
+		SuspensionConstraint->GetConstraintForce(Lin, Ang);
 		
-			WheelState.HitResult.TraceStart=GetComponentLocation();
-			if(WheelState.WheelLoad.Z>100.f)
-			{
-				WheelState.HitResult.bBlockingHit=true;
-				
-			}
-		
-		return;
+		WheelState.WheelLoad.Z = FMath::Abs(Lin.Z);
+
+		WheelState.HitResult.TraceStart = GetComponentLocation();
+		if (WheelState.WheelLoad.Z > 100.f)
+		{
+			WheelState.HitResult.bBlockingHit = true;
+		}
+
+
+		if (!WheelCollision)
+		{
+			return;
+		}
 	}
 	MODULAR_CYCLE_COUNTER(STAT_ModularSuspension)
 
 
-	
+	//if we have a custom wheel collision then use that for tracing as well. It will be used only for friction 
+
 	// Gather data for trace
-	WheelState.WheelLoad = FVector::ZeroVector;
+
 	UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
 	if (ParentBodyOverride)
 	{
@@ -129,13 +133,16 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	}
 
 	const FTransform MeshTransform = Mesh->GetComponentTransform();
-	const FVector ComponentLocation = MeshTransform.TransformPosition(
-		WheelState.InitialLocalLocation + WheelState.WheelSetup->TraceStartOffset);
+	const FVector ComponentLocation = WheelCollision
+		                                  ? WheelCollision->GetComponentLocation()
+		                                  : MeshTransform.TransformPosition(
+			                                  WheelState.InitialLocalLocation + WheelState.WheelSetup->
+			                                  TraceStartOffset);
 	FVector DirectionVector = Mesh->GetUpVector();
 	const FVector TraceEnd = ComponentLocation + (DirectionVector * -1 * WheelState.WheelSetup->SuspensionLength);
 	FHitResult TraceResult;
 	TraceResult.TraceStart = ComponentLocation;
-	TraceResult.TraceEnd = TraceEnd;
+	TraceResult.TraceEnd = WheelCollision ? ComponentLocation : TraceEnd;
 	TraceResult.bBlockingHit = false;
 	TArray<FHitResult> Hits;
 	bool ValidHitFound = false;
@@ -144,7 +151,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	const float SuspensionLenOver100 = WheelSetup->SuspensionLength / 100;
 
 	// Start Trace
-	UKismetSystemLibrary::SphereTraceMulti(GetWorld(), ComponentLocation, TraceEnd, WheelState.WheelSetup->WheelRadius,
+	UKismetSystemLibrary::SphereTraceMulti(GetWorld(), ComponentLocation, TraceResult.TraceEnd, WheelState.WheelSetup->WheelRadius,
 	                                       ModularMovementComponent->GetSetup()->GetSuspensionTraceTypeQuery(), true,
 	                                       ModularMovementComponent->ActorsToIgnore,
 	                                       Debug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
@@ -154,16 +161,18 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	{
 		if (Hit.bBlockingHit)
 		{
-			const FVector Position = MeshTransform.InverseTransformPosition(Hit.ImpactPoint) - WheelState.
-				InitialLocalLocation;
-			if (FMath::Abs(Position.Y) < WheelSetup->WheelWidth && Hit.ImpactNormal.Z > 0)
+			
+			const FVector Position = MeshTransform.InverseTransformPosition(Hit.ImpactPoint) - WheelState.InitialLocalLocation;
+			if (FMath::Abs(Position.Y) < WheelSetup->WheelWidth ||WheelCollision )
 			{
 				ValidHitFound = true;
 				TraceResult = Hit;
 				break;
 			}
+			
+				
+			
 		}
-		
 	}
 
 	if (!ValidHitFound)
@@ -175,9 +184,10 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	}
 
 
-
+	if (WheelState.WheelSetup->SuspensionType != Constraint)
+	{
 		// Calculate suspension force and damping 
-		const float CurrentLen = FMath::Clamp<float>( TraceResult.Time,0.f,1.f);
+		const float CurrentLen = FMath::Clamp<float>(TraceResult.Time, 0.f, 1.f);
 		const float Stiffness = WheelSetup->SpringRate * (1 - CurrentLen) * SuspensionLenOver100;
 		const float SuspensionDiff = (CurrentLen - WheelState.PreviousLen) * SuspensionLenOver100;
 
@@ -197,18 +207,19 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 			//Draw Debugs
 
 			DirectionVector = UKismetMathLibrary::VLerp(DirectionVector, FVector::UpVector,
-														WheelState.WheelSetup->SteepSurfaceAssistance);
+			                                            WheelState.WheelSetup->SteepSurfaceAssistance);
 			FVector CorrectedForce = DirectionVector * SIForceToUnrealForce(WheelState.WheelLoad.Z);
 
 
-			
 			AddForceAtPosition(Mesh, TraceResult.ImpactPoint, CorrectedForce, NAME_None);
-	
+			
 		}
-	
+
 		WheelState.PreviousLen = CurrentLen;
-		WheelState.HitResult = TraceResult;
+		
 	}
+	WheelState.HitResult = TraceResult;
+}
 
 
 void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* ModularMovementComponent)
@@ -227,7 +238,6 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	WheelState.WheelSetup->TireModel->UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, this);
 
 
-
 	WheelState.AngularPosition += WheelState.AngularVelocity * DeltaTime;
 
 
@@ -241,10 +251,20 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	//Apply Forces to bodies 
 	if (ModularMovementComponent->ShouldProcessPhysics())
 	{
-		FVector FrictionForceVector=FVector(0.f,0.f,0.f);
-		FrictionForceVector += GetForwardVector() * FinalForceVector.X;
-		FrictionForceVector += GetRightVector() * FinalForceVector.Y;
+		FVector FrictionForceVector = FVector(0.f, 0.f, 0.f);
+
+
+		FVector ImpactToLocation =   WheelState.HitResult.ImpactPoint-WheelState.HitResult.Location;
+		ImpactToLocation.Normalize();
+		FVector ForwardVector = FVector::CrossProduct(ImpactToLocation, GetRightVector());
+
+		FVector GroundZVector = WheelState.HitResult.Normal;
+		FVector GroundXVector = FVector::CrossProduct(GetRightVector(), GroundZVector);
+		FVector GroundYVector = FVector::CrossProduct(GroundZVector, GroundXVector);
+		FMatrix Mat = FMatrix(GroundXVector, GroundYVector, GroundZVector, ModularMovementComponent->GetMesh()->GetComponentLocation());
+		 FrictionForceVector = Mat.TransformVector(FinalForceVector);
 		
+
 		//Calculate direction of force
 
 		UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
@@ -252,11 +272,19 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		{
 			Mesh = ParentBodyOverride;
 		}
+
 		
-	
 		if (!FrictionForceVector.ContainsNaN())
 		{
+
+			if(!SuspensionConstraint){
 			AddForceAtPosition(Mesh, WheelState.HitResult.TraceStart, FrictionForceVector, NAME_None);
+
+			}else
+			{
+				
+				AddForceAtPosition(ConstraintParent, WheelState.HitResult.ImpactPoint, FrictionForceVector, NAME_None);
+			}
 		}
 	}
 }
@@ -395,7 +423,7 @@ void UModularWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* 
 
 	UModularVehicleFunctionLibrary::GetWheelAnimationData(this, Location, Rotation, DeltaTime);
 
-	Location=GetComponentTransform().TransformPosition(Location);
+	Location = GetComponentTransform().TransformPosition(Location);
 	TArray<USceneComponent*> Components;
 	GetChildrenComponents(false, Components);
 	for (USceneComponent* Mesh : Components)
@@ -406,7 +434,6 @@ void UModularWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* 
 			Mesh->SetRelativeRotation(Rotation);
 
 
-		
 			Mesh->SetWorldLocation(Location);
 		}
 	}
@@ -431,15 +458,16 @@ FWheelState* UModularWheel::GetWheelState()
 
 UModularVehicleWheelData* UModularWheel::GetWheelSetup() const
 {
-	if(WheelState.WheelSetup)
-	return WheelState.WheelSetup;
+	if (WheelState.WheelSetup)
+	{
+		return WheelState.WheelSetup;
+	}
 
-	return Cast<UModularVehicleWheelData>( WheelState.WheelSetupClass.LoadSynchronous()->ClassDefaultObject);
+	return Cast<UModularVehicleWheelData>(WheelState.WheelSetupClass.LoadSynchronous()->ClassDefaultObject);
 }
 
 void UModularWheel::UpdateWheelSetup(UModularVehicleWheelData* VehicleWheelData)
 {
-	
 	WheelState.WheelSetup = VehicleWheelData;
 }
 
@@ -524,25 +552,23 @@ UBaseTireModel* UModularWheel::GetTireModel()
 	return GetWheelSetup()->TireModel;
 }
 
-void UModularWheel::SetActiveDifferentialIndex(uint8 Index,UModularMovementComponent* MovementComponent)
+void UModularWheel::SetActiveDifferentialIndex(uint8 Index, UModularMovementComponent* MovementComponent)
 {
-	auto Data=Cast<UModularVehicleData>(MovementComponent->VehicleState.VehicleData);
-	if(!Data)
+	auto Data = Cast<UModularVehicleData>(MovementComponent->VehicleState.VehicleData);
+	if (!Data)
 	{
-		UE_LOG(LogTemp,Error,TEXT("No vehicle data in SetActiveDifferentialIndex"))
+		UE_LOG(LogTemp, Error, TEXT("No vehicle data in SetActiveDifferentialIndex"))
 		return;
 	}
-	if(!Data->DifferentialData.IsValidIndex(Index)||!Data->DifferentialData.IsValidIndex(DifferentialIndex))
+	if (!Data->DifferentialData.IsValidIndex(Index) || !Data->DifferentialData.IsValidIndex(DifferentialIndex))
 	{
-		UE_LOG(LogTemp,Error,TEXT("Invalid index  in SetActiveDifferentialIndex"))
+		UE_LOG(LogTemp, Error, TEXT("Invalid index  in SetActiveDifferentialIndex"))
 		return;
-		
 	}
-	
+
 	Data->DifferentialData[DifferentialIndex].Wheels.Remove(this);
-	DifferentialIndex=Index;
+	DifferentialIndex = Index;
 	Data->DifferentialData[DifferentialIndex].Wheels.Add(this);
-	
 }
 
 uint8 UModularWheel::GetActiveDifferentialIndex()
@@ -581,51 +607,59 @@ void UModularWheel::AddForceAtPosition(UPrimitiveComponent* Component, FVector P
 		const Chaos::FVec3 WorldTorque = Chaos::FVec3::CrossProduct(Position - WorldCOM, Force);
 		RigidHandle->AddForce(Force, false);
 		RigidHandle->AddTorque(WorldTorque, false);
-		
 	}
 }
 
-void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponent,UPrimitiveComponent* ParentBody ,UPrimitiveComponent* WheelOrDifferential,UPrimitiveComponent* InWheelCollision)
+void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponent, UPrimitiveComponent* ParentBody,
+                                     UPrimitiveComponent* WheelOrDifferential, UPrimitiveComponent* InWheelCollision)
 {
-
-	if(SuspensionConstraint)
+	if (SuspensionConstraint)
 	{
 		SuspensionConstraint->DestroyComponent();
 	}
-	auto WheelSetup=GetWheelSetup();
-	if(WheelSetup)
+	auto WheelSetup = GetWheelSetup();
+	if (WheelSetup)
 	{
-		if (WheelSetup->SuspensionType==Constraint)
+		if (WheelSetup->SuspensionType == Constraint)
 		{
-
-			const FTransform WheelTransform=GetComponentTransform();
-			const FTransform ParentTransform=MovementComponent->GetOwner()->GetTransform();
+			const FTransform WheelTransform = GetComponentTransform();
+			const FTransform ParentTransform = MovementComponent->GetOwner()->GetTransform();
 			const FTransform RelativeTransform = WheelTransform.GetRelativeTransform(ParentTransform);
-			auto Comp=MovementComponent->GetOwner()->AddComponentByClass(UPhysicsConstraintComponent::StaticClass(),false,RelativeTransform,false);
-			SuspensionConstraint=Cast<UPhysicsConstraintComponent>(Comp);
-			SuspensionConstraint->SetConstrainedComponents(WheelOrDifferential,NAME_None,ParentBody,NAME_None);
+			auto Comp = MovementComponent->GetOwner()->AddComponentByClass(
+				UPhysicsConstraintComponent::StaticClass(), false, RelativeTransform, false);
+			SuspensionConstraint = Cast<UPhysicsConstraintComponent>(Comp);
+			SuspensionConstraint->SetConstrainedComponents(WheelOrDifferential, NAME_None, ParentBody, NAME_None);
+			ConstraintParent=WheelOrDifferential;
 			// Set up the constraint properties here
-			SuspensionConstraint->SetLinearXLimit(ELinearConstraintMotion::LCM_Locked,0.f);
-			SuspensionConstraint->SetLinearYLimit(ELinearConstraintMotion::LCM_Limited,5.f);
-			SuspensionConstraint->SetLinearZLimit(ELinearConstraintMotion::LCM_Limited,WheelSetup->SuspensionLength);
-			SuspensionConstraint->SetAngularTwistLimit(ACM_Free,0);
-			SuspensionConstraint->SetAngularSwing1Limit(ACM_Free,0);
-			SuspensionConstraint->SetAngularSwing2Limit(ACM_Locked,0);
-			SuspensionConstraint->SetLinearPositionTarget(FVector(0,0,-WheelSetup->SuspensionLength));
-			SuspensionConstraint->SetLinearPositionDrive(false,true,true);
-			SuspensionConstraint->SetLinearDriveParams(WheelSetup->SpringRate,WheelSetup->DampingCompress,0);
-			SuspensionConstraint->SetLinearVelocityDrive(false,true,true);
-			SuspensionConstraint->SetLinearVelocityTarget(FVector(0,0,0));
-	
+			SuspensionConstraint->SetLinearXLimit(LCM_Limited, 1.f);
+			SuspensionConstraint->SetLinearYLimit(LCM_Limited, 1.f);
+			SuspensionConstraint->SetLinearZLimit(LCM_Limited, WheelSetup->SuspensionLength);
 			
+			SuspensionConstraint->SetAngularTwistLimit(ACM_Free, 0);
+			SuspensionConstraint->SetAngularSwing1Limit(ACM_Free, 0);
+			SuspensionConstraint->SetAngularSwing2Limit(ACM_Locked, 0);
+			SuspensionConstraint->SetLinearPositionTarget(FVector(0, 0, -WheelSetup->SuspensionLength));
+			SuspensionConstraint->SetLinearPositionDrive(true, true, true);
+			
+		
+			SuspensionConstraint->SetLinearVelocityDrive(true, true, true);
+			SuspensionConstraint->SetLinearVelocityTarget(FVector(0, 0, 0));
 
-			WheelCollision=InWheelCollision;
-			 NoFrictionDefaultPhysMaterial = NewObject<UPhysicalMaterial>();
-			NoFrictionDefaultPhysMaterial->Friction=0.f;
-			NoFrictionDefaultPhysMaterial->StaticFriction=0.f;
-			NoFrictionDefaultPhysMaterial->Restitution=0.5;
-			NoFrictionDefaultPhysMaterial->FrictionCombineMode=EFrictionCombineMode::Min;
-			if(WheelCollision)
+			auto Constraint=	SuspensionConstraint->GetConstraint().Get();
+
+			//Suspension and velocity forces * By a multiplier in Twist 
+			const float S=WheelSetup->SpringRate;
+			const float V=WheelSetup->DampingCompress;
+			const float M=WheelSetup->NonZForceMultiplier;
+			Constraint->SetLinearDriveParams(FVector(S*M,S*M,S),FVector(V*M,V*M,V),FVector::ZeroVector);
+
+			WheelCollision = InWheelCollision;
+			NoFrictionDefaultPhysMaterial = NewObject<UPhysicalMaterial>();
+			NoFrictionDefaultPhysMaterial->Friction = 0.f;
+			NoFrictionDefaultPhysMaterial->StaticFriction = 0.f;
+			NoFrictionDefaultPhysMaterial->Restitution = 0.5;
+			NoFrictionDefaultPhysMaterial->FrictionCombineMode = EFrictionCombineMode::Min;
+			if (WheelCollision)
 			{
 				WheelCollision->SetPhysMaterialOverride(NoFrictionDefaultPhysMaterial);
 			}
