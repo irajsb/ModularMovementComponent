@@ -15,6 +15,7 @@ class UModularWheel;
 class UModularVehicleDebugger;
 //Cosmetic delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange, int, CurrentGear, int, TargetGear, bool, Finished);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEngineStateChange, bool, IsEngineOn,bool, IsStarting);
 
 struct FModularVehicleDebugParams
 {
@@ -101,12 +102,16 @@ struct FRepCosmeticData
 	TArray<FWheelRepCosmeticData> WheelRepCosmeticDatas;
 	UPROPERTY()
 	FRigidBodyState RigidBodyState;
-	FRepCosmeticData()
+
+	UPROPERTY()
+	float CurrentFuel;
+	UPROPERTY()
+	bool EngineOn;
+	FRepCosmeticData(): CurrentFuel(0), EngineOn(0)
 	{
 		EngineRPM = 0;
 		CurrentGear = 0;
 	}
-
 };
 
 USTRUCT()
@@ -169,6 +174,14 @@ struct FVehicleState
 
 	// Engine revolutions per second
 	float EngineRads=0.f;
+
+
+	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+	float CurrentFuel;
+
+	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+	bool IsEngineOn;
+	
 };
 
 
@@ -268,6 +281,11 @@ public:
 	FVehicleState VehicleState;
 	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly, meta=(ShowOnlyInnerProperties ))
 	bool ApplyRecommendedMeshProperties=true;
+
+	//Vehicle will spawn with off engine
+	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
+	bool SpawnWithTurnedOffEngine=false;
+	
 	/** Compute steering input */
 	float CalcSteeringInput(float DeltaTime);
 
@@ -288,7 +306,23 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
 	float GetRPMRatio();
 
+	// 0 for instant start
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void HoldStarter(float StartTime);
+	//Release starter after its on or cancel starting if its in middle of it 
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void ReleaseStarter();
+	//Stop engine if its on
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void StopEngine();
+	//Fuel
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void AddFuel(float Amount);
 
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void SetFuel(float Amount);
+	
+	FTimerHandle StarterTimerHandle;
 	//We setup wheels here
 	virtual void InitializeComponent() override;
 
@@ -342,6 +376,7 @@ public:
 
 
 
+
 	UFUNCTION()
 	void OnRep_RepCosmeticData();
 
@@ -359,6 +394,8 @@ public:
 	//Delegates
 	UPROPERTY(BlueprintAssignable)
 	FOnGearChange OnGearChange;
+	UPROPERTY(BlueprintAssignable)
+	FOnEngineStateChange OnEngineStateChange;
 	//debug
 
 

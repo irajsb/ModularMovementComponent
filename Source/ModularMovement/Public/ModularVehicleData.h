@@ -177,6 +177,16 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	
 	
 
+	//Fuel tank capacity in liters
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Fuel)
+	float TankCapacity=70.f;
+	//Fuel consumption per second at idle
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Fuel)
+	float EngineFuelConsumptionIdle;
+	//MaxRPM consumption per second
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Fuel)
+	float EngineFuelConsumptionMaxRPM;
+
 //Getter Functions
 	virtual float GetIdleRPM() const override;
 	virtual float GetMaxRPM() const override;
@@ -215,4 +225,9 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	virtual float GetFullThrottleSpeed() const override;
 	virtual float GetAIMaxSteerMultiplier() const override;
 	virtual float GetTurnThreshold() const override;
+
+	//Fuel
+
+	virtual float GetTankCapacity() const override;
+	virtual float GetFuelConsumption(float RPMRatio) const override;
 };

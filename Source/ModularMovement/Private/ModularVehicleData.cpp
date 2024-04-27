@@ -217,3 +217,13 @@ float UModularVehicleData::GetTurnThreshold() const
 	return TurnThreshold;
 	
 }
+
+float UModularVehicleData::GetTankCapacity() const
+{
+	return  TankCapacity;
+}
+
+float UModularVehicleData::GetFuelConsumption(float RPMRatio) const
+{
+	return  FMath::Lerp(EngineFuelConsumptionIdle,EngineFuelConsumptionMaxRPM,RPMRatio);
+}

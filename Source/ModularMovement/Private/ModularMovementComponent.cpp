@@ -113,7 +113,9 @@ UBaseVehicleData* UModularMovementComponent::GetSetup() const
 void UModularMovementComponent::SetThrottleInput(float Input)
 {
 	//Setting RawThrottleInput
-	RawThrottleInput = FMath::Clamp<float>(Input, -1.f, 1.f);
+	
+		RawThrottleInput = FMath::Clamp<float>(Input, -1.f, 1.f);
+	
 }
 
 void UModularMovementComponent::SetSteeringInput(float Input)
@@ -150,6 +152,50 @@ float UModularMovementComponent::GetRPMRatio()
 	return UKismetMathLibrary::MapRangeClamped(VehicleState.CurrentRpm,
 	                                           GetSetup()->GetIdleRPM(),
 	                                           GetSetup()->GetMaxRPM(), 0, 1);
+}
+
+void UModularMovementComponent::HoldStarter( float StartTime)
+{
+	auto StaterFinish=[this,StartTime]()
+	{
+		// if no fuel keep the loop going else start engine 
+		HoldStarter(VehicleState.CurrentFuel==0.f?StartTime: 0.f);
+	};
+	if(StartTime==0.f)
+	{
+		VehicleState.IsEngineOn=true;
+		OnEngineStateChange.Broadcast(true,false);
+		return;
+		
+	}
+	GetWorld()->GetTimerManager().SetTimer(StarterTimerHandle,StaterFinish,StartTime,false);
+	OnEngineStateChange.Broadcast(false,true);
+	
+}
+
+void UModularMovementComponent::ReleaseStarter()
+{
+	GetWorld()->GetTimerManager().ClearTimer(StarterTimerHandle);
+	OnEngineStateChange.Broadcast(VehicleState.IsEngineOn,false);
+}
+
+void UModularMovementComponent::StopEngine()
+{
+	if(VehicleState.IsEngineOn)
+	{
+		VehicleState.IsEngineOn=false;
+		OnEngineStateChange.Broadcast(false,false);
+	}
+}
+
+void UModularMovementComponent::AddFuel(float Amount)
+{
+	VehicleState.CurrentFuel=FMath::Min(VehicleState.CurrentFuel+Amount,GetSetup()->GetTankCapacity());
+}
+
+void UModularMovementComponent::SetFuel(float Amount)
+{
+	VehicleState.CurrentFuel=FMath::Min(Amount,GetSetup()->GetTankCapacity());
 }
 
 
@@ -377,6 +423,13 @@ void UModularMovementComponent::BeginPlay()
 	{
 		GetMesh()->SetEnableGravity(false);
 	}
+
+	if(!VehicleState.IsEngineOn&&!SpawnWithTurnedOffEngine)
+	{
+		HoldStarter(0.f);
+	}
+
+	VehicleState.CurrentFuel=GetSetup()->GetTankCapacity();
 }
 
 void UModularMovementComponent::CaptureState(float DeltaTime)
@@ -418,15 +471,18 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 			AxleRPM = ComponentOmega;
 		}
 	}
+	if(!VehicleState.IsEngineOn)
+	{
+		AxleRPM=0.f;
+	}
 
-
+	const float MaxRads=RPMToOmega(VehicleState.VehicleData->GetMaxRPM());
+		const float MinRads=VehicleState.IsEngineOn?RPMToOmega(VehicleState.VehicleData->GetIdleRPM()):0.f;
 	const float TargetRPM = FMath::Clamp<float>(
-		AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio(),
-		GetSetup()->GetIdleRPM(), GetSetup()->GetMaxRPM());
+		AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio(),MinRads, MaxRads);
 
-	VehicleState.EngineRads = FMath::FInterpConstantTo(VehicleState.EngineRads, TargetRPM, DeltaTime,
-	                                                   0.1 * VehicleState.VehicleData->GetMaxRPM());
-	VehicleState.EngineRads = FMath::Min(VehicleState.EngineRads, RPMToOmega(VehicleState.VehicleData->GetMaxRPM()));
+	VehicleState.EngineRads = FMath::FInterpConstantTo(VehicleState.EngineRads, TargetRPM, DeltaTime,0.1 * VehicleState.VehicleData->GetMaxRPM());
+	
 
 	VehicleState.CurrentRpm = OmegaToRPM(VehicleState.EngineRads);
 	
@@ -448,11 +504,27 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 		//Use curve 
-		const float EngineTorque = ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm);
-
+		const float EngineTorque = VehicleState.IsEngineOn?ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm):0;
+		
 		//Gearbox 
 		const float TransmissionTorque = GetSetup()->GetGearBox()->GetDriveRatio();
-		//Final 
+		
+
+		//Fuel
+		const float RPMRatio=GetRPMRatio();
+
+		const float FuelConsumption=VehicleState.VehicleData->GetFuelConsumption(RPMRatio);
+
+		if(VehicleState.IsEngineOn)
+		{
+			VehicleState.CurrentFuel=FMath::Max(0, VehicleState.CurrentFuel-FuelConsumption*DeltaTime);
+			if(VehicleState.CurrentFuel==0.f)
+			{
+				StopEngine();
+			}
+		}
+
+		
 
 
 		WheelTorque = EngineTorque * TransmissionTorque;
@@ -813,9 +885,10 @@ float UModularMovementComponent::CalcSteeringInput(float DeltaTime)
 
 float UModularMovementComponent::CalcBrakeInput() const
 {
+	
 	if (GetSetup()->ShouldReverseAsBrake())
 	{
-		float NewBrakeInput = 0.0f;
+		float NewBrakeInput =VehicleState.IsEngineOn? 0.0f:GetSetup()->GetIdleBrakeInput();
 
 		// if player wants to move forwards...
 		if (RawThrottleInput > 0.f)
@@ -907,6 +980,8 @@ void UModularMovementComponent::UpdateReplicatedCosmeticData()
 	RepCosmeticData.EngineRPM = GetRPMRatio() * 255.f;
 	RepCosmeticData.CurrentGear = GetSetup()->GetGearBox()->CurrentGear;
 	RepCosmeticData.SteeringInput = SteeringInput;
+	RepCosmeticData.CurrentFuel=VehicleState.CurrentFuel;
+	RepCosmeticData.EngineOn=VehicleState.IsEngineOn;
 	const auto BI = GetMesh()->GetBodyInstance();
 	
 	BI->GetRigidBodyState(RepCosmeticData.RigidBodyState);
@@ -946,6 +1021,13 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 		}
 	}
 
+	VehicleState.CurrentFuel=RepCosmeticData.CurrentFuel;
+	if(VehicleState.IsEngineOn!=RepCosmeticData.EngineOn)
+	{
+		VehicleState.IsEngineOn=RepCosmeticData.EngineOn;
+		OnEngineStateChange.Broadcast(VehicleState.IsEngineOn,false);
+	}
+	
 	NewestBodyInstance=RepCosmeticData.RigidBodyState;
 	ApplyBodyInstanceData();
 	

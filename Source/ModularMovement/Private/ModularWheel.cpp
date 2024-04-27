@@ -641,7 +641,8 @@ void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponen
 			SuspensionConstraint->SetLinearPositionTarget(FVector(0, 0, -WheelSetup->SuspensionLength));
 			SuspensionConstraint->SetLinearPositionDrive(true, true, true);
 			
-		
+			
+			SuspensionConstraint->GetConstraint().Get()->SetDisableCollision(true);
 			SuspensionConstraint->SetLinearVelocityDrive(true, true, true);
 			SuspensionConstraint->SetLinearVelocityTarget(FVector(0, 0, 0));
 

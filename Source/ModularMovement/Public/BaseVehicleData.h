@@ -108,6 +108,12 @@ public:
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual bool GetScaleTireFrictionWithSurfaceAngle(){return true;}
 
+	//Fuel
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Fuel)
+	virtual float GetTankCapacity()const{return 0.f;}
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Fuel)
+	virtual float GetFuelConsumption(float RPMRatio)const{return 0.f;}
 
 
 	//AI
