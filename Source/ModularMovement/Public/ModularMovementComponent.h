@@ -11,6 +11,7 @@
 
 
 #define SIForceToUnrealForce(In) In*100.0f
+class UTerrainInteraction;
 class UModularWheel;
 class UModularVehicleDebugger;
 //Cosmetic delegates
@@ -286,6 +287,10 @@ public:
 	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
 	bool SpawnWithTurnedOffEngine=false;
 	
+	UPROPERTY()
+	UTerrainInteraction* TerrainInteractionComponent=nullptr;
+	UFUNCTION(BlueprintCallable)
+	UTerrainInteraction* GetTerrainInteractionComponent();
 	/** Compute steering input */
 	float CalcSteeringInput(float DeltaTime);
 
@@ -321,7 +326,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void SetFuel(float Amount);
-	
+	// Get fuel range 0-1
+	UFUNCTION(BlueprintCallable,BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
+	float GetFuelRatio();
 	FTimerHandle StarterTimerHandle;
 	//We setup wheels here
 	virtual void InitializeComponent() override;

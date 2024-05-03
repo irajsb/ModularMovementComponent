@@ -16,6 +16,7 @@
 #include "ModularVehicleFunctionLibrary.h"
 #include "GameFramework/Pawn.h"
 #include "PBDRigidsSolver.h"
+#include "TerrainInteraction.h"
 #include "Net/UnrealNetwork.h"
 #include "Physics/Experimental/PhysScene_Chaos.h"
 
@@ -196,6 +197,15 @@ void UModularMovementComponent::AddFuel(float Amount)
 void UModularMovementComponent::SetFuel(float Amount)
 {
 	VehicleState.CurrentFuel=FMath::Min(Amount,GetSetup()->GetTankCapacity());
+}
+
+float UModularMovementComponent::GetFuelRatio()
+{
+	if(!GetSetup())
+	{
+		return 0.f;
+	}
+	return VehicleState.CurrentFuel/ GetSetup()->GetTankCapacity();
 }
 
 
@@ -391,11 +401,17 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 		ApplyBodyInstanceData();
 	}
+
+	if(TerrainInteractionComponent)
+	{
+		TerrainInteractionComponent->Update(DeltaTime,Components);
+	}
 }
 
 void UModularMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
 
 	//Check data 
 	if (!GetSetup())
@@ -866,6 +882,17 @@ void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuanti
 	HandBrakeInput = QHandbrakeInput == 1;
 }
 
+
+UTerrainInteraction* UModularMovementComponent::GetTerrainInteractionComponent()
+{
+	if(GetOwner())
+	{
+		auto Comp=	GetOwner()->GetComponentByClass(UTerrainInteraction::StaticClass());
+		TerrainInteractionComponent=Cast<UTerrainInteraction>(Comp);
+		
+	}
+	return TerrainInteractionComponent;
+}
 
 float UModularMovementComponent::CalcSteeringInput(float DeltaTime)
 {
