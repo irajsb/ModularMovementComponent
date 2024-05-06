@@ -120,6 +120,9 @@ class MODULARMOVEMENT_API UVehicleSpringArm : public USceneComponent
 		meta = (editcondition = "bEnableCameraLag", ClampMin = "0.0", UIMin = "0.0"))
 	float CameraLagMaxDistance;
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
+	float MinPitch=10.f;
 	/**
 	 * Get the target rotation we inherit, used as the base target for the boom rotation.
 	 * This is derived from attachment to our parent and considering the UsePawnControlRotation and absolute rotation flags.

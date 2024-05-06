@@ -116,14 +116,14 @@ struct FWheelState{
 	//Ranges from 0-1
 	UPROPERTY(Transient)
 	float PreviousLen=0.f;
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	float SteerAngle=0.f;
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	FHitResult HitResult=FHitResult();
 	UPROPERTY(Transient)
 	bool bIsSlipping=false;
 	//SuspensionForce That was applied;
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	FVector WheelLoad=FVector::ZeroVector;
 
 	//Base class to create an instance from for setup of this wheel
@@ -146,13 +146,13 @@ struct FWheelState{
 	bool AffectedByHandBrake=false;
 
 	
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	float DriveTorque=0.f;
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	float BrakeTorque=0.f;
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	bool IsHandBrakeTorque=false;
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	float Spin=0.f;
 
 	
@@ -160,18 +160,20 @@ struct FWheelState{
 
 	// [radians/sec] Wheel Rotation Angular Velocity
 
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	float AngularVelocity=0.f;
-	UPROPERTY(Transient)
+	
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	float AngularAcceleration=0.f;
-	UPROPERTY(Transient)
+	
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	// [radians/sec] Wheel Rotation Angular Velocity
 	float AngularPosition=0.f;// [radians]
 	
 	// Angle between wheel forwards and velocity vector
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	float SlipAngle=0.f;
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	float SlipRatio=0.f;
 	//Location of wheel relative to body
 	UPROPERTY(Transient)

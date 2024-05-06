@@ -17,6 +17,7 @@ class UModularVehicleDebugger;
 //Cosmetic delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange, int, CurrentGear, int, TargetGear, bool, Finished);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEngineStateChange, bool, IsEngineOn,bool, IsStarting);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCustomEvent, uint8, EventType,UModularWheel*, Wheel);
 
 struct FModularVehicleDebugParams
 {
@@ -422,4 +423,7 @@ public:
 	FRigidBodyState NewestBodyInstance;
 	
 	void ApplyBodyInstanceData() const;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnCustomEvent OnCustomEvent;
 };

@@ -38,6 +38,10 @@ public:
 	UPrimitiveComponent* ParentBodyOverride;
 	UPROPERTY(EditAnywhere,Category=Setup)
 	uint8 DifferentialIndex=0;
+
+	// For terrain interaction
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
+	bool AllowDrawInRenderTarget=true;
 	virtual void SetupWheels(UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateSuspension(float DeltaTime,UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateForces(float DeltaTime, UModularMovementComponent* ModularMovementComponent) ;
@@ -118,6 +122,11 @@ public:
 	//Setup constraint only if suspension is of type constraint
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void SetupConstraints(UModularMovementComponent* MovementComponent,UPrimitiveComponent* ParentBody, UPrimitiveComponent* WheelOrDifferential,UPrimitiveComponent* InWheelCollision);
+	/* you can create custom events using this. not replicated... its used to unify events an handle them once by reacting to them on modular movement OnCustomEventDelegate for example when tire is flattened
+	 *You can call this event on a specific wheel but react to it and write code once for all wheels in modular movement OnCustomEventDelegate
+	 * */
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void CallCustomEvent(uint8 Index);
 	UPROPERTY()
 	UPhysicsConstraintComponent* SuspensionConstraint=nullptr;
 	UPROPERTY()
@@ -130,4 +139,11 @@ public:
 
 	UPROPERTY()
 	UPhysicalMaterial* NoFrictionDefaultPhysMaterial;
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+	TArray<USceneComponent*> ChildWheels;
+
+	UPROPERTY(Transient)
+	UModularMovementComponent* MovementComponentRef;
 };

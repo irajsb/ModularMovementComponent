@@ -16,7 +16,8 @@ DECLARE_CYCLE_STAT(TEXT("Modular Updage Suspension"), STAT_ModularSuspension, ST
 DECLARE_CYCLE_STAT(TEXT("Modular Updage Forces"), STAT_ModularForces, STATGROUP_MovementPhysics);
 
 // Sets default values for this component's properties
-UModularWheel::UModularWheel(): WheelState(), ParentBodyOverride(nullptr), NoFrictionDefaultPhysMaterial(nullptr)
+UModularWheel::UModularWheel(): WheelState(), ParentBodyOverride(nullptr), NoFrictionDefaultPhysMaterial(nullptr),
+                                MovementComponentRef(nullptr)
 {
 	PrimaryComponentTick.bCanEverTick = true;
 }
@@ -26,6 +27,18 @@ UModularWheel::UModularWheel(): WheelState(), ParentBodyOverride(nullptr), NoFri
 void UModularWheel::BeginPlay()
 {
 	Super::BeginPlay();
+
+	GetChildrenComponents(false, ChildWheels);
+	if(GetWheelSetup()->SuspensionType==Constraint)
+	{
+		
+		
+		for (auto Component:ChildWheels)
+		{
+			FAttachmentTransformRules AttachmentRules(EAttachmentRule::KeepWorld, true);
+			Component->AttachToComponent(ConstraintParent,AttachmentRules);
+		}
+	}
 }
 
 void UModularWheel::SetupWheels(UModularMovementComponent* ModularMovementComponent)
@@ -89,6 +102,7 @@ void UModularWheel::SetupWheels(UModularMovementComponent* ModularMovementCompon
 
 void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent* ModularMovementComponent)
 {
+	MovementComponentRef=ModularMovementComponent;
 	if (!ModularMovementComponent || !WheelState.WheelSetup)
 	{
 		return;
@@ -251,18 +265,15 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	//Apply Forces to bodies 
 	if (ModularMovementComponent->ShouldProcessPhysics())
 	{
-		FVector FrictionForceVector = FVector(0.f, 0.f, 0.f);
-
-
 		FVector ImpactToLocation =   WheelState.HitResult.ImpactPoint-WheelState.HitResult.Location;
 		ImpactToLocation.Normalize();
-		FVector ForwardVector = FVector::CrossProduct(ImpactToLocation, GetRightVector());
+		FVector::CrossProduct(ImpactToLocation, GetRightVector());
 
-		FVector GroundZVector = WheelState.HitResult.Normal;
-		FVector GroundXVector = FVector::CrossProduct(GetRightVector(), GroundZVector);
-		FVector GroundYVector = FVector::CrossProduct(GroundZVector, GroundXVector);
-		FMatrix Mat = FMatrix(GroundXVector, GroundYVector, GroundZVector, ModularMovementComponent->GetMesh()->GetComponentLocation());
-		 FrictionForceVector = Mat.TransformVector(FinalForceVector);
+		const FVector GroundZVector = WheelState.HitResult.Normal;
+		const FVector GroundXVector = FVector::CrossProduct(GetRightVector(), GroundZVector);
+		const FVector GroundYVector = FVector::CrossProduct(GroundZVector, GroundXVector);
+		const FMatrix Mat = FMatrix(GroundXVector, GroundYVector, GroundZVector, ModularMovementComponent->GetMesh()->GetComponentLocation());
+		const FVector FrictionForceVector = Mat.TransformVector(FinalForceVector);
 		
 
 		//Calculate direction of force
@@ -424,17 +435,19 @@ void UModularWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* 
 	UModularVehicleFunctionLibrary::GetWheelAnimationData(this, Location, Rotation, DeltaTime);
 
 	Location = GetComponentTransform().TransformPosition(Location);
-	TArray<USceneComponent*> Components;
-	GetChildrenComponents(false, Components);
-	for (USceneComponent* Mesh : Components)
+	
+
+	for (USceneComponent* Mesh : ChildWheels)
 	{
 		if (Mesh->IsA(UMeshComponent::StaticClass()))
 		{
 			Rotation = (Rotation.Quaternion().Rotator());
 			Mesh->SetRelativeRotation(Rotation);
 
-
-			Mesh->SetWorldLocation(Location);
+			if(!SuspensionConstraint)
+			{
+				Mesh->SetWorldLocation(Location);
+			}
 		}
 	}
 }
@@ -666,5 +679,13 @@ void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponen
 			}
 			// You can adjust other properties like drive properties, angular limits, etc.
 		}
+	}
+}
+
+void UModularWheel::CallCustomEvent(uint8 Index)
+{
+	if(MovementComponentRef)
+	{
+		MovementComponentRef->OnCustomEvent.Broadcast(Index,this);
 	}
 }

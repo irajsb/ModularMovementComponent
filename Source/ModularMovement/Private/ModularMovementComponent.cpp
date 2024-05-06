@@ -404,7 +404,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 	if(TerrainInteractionComponent)
 	{
-		TerrainInteractionComponent->Update(DeltaTime,Components);
+		TerrainInteractionComponent->Update(DeltaTime,this,Components);
 	}
 }
 
@@ -446,6 +446,7 @@ void UModularMovementComponent::BeginPlay()
 	}
 
 	VehicleState.CurrentFuel=GetSetup()->GetTankCapacity();
+	TerrainInteractionComponent=GetTerrainInteractionComponent();
 }
 
 void UModularMovementComponent::CaptureState(float DeltaTime)

@@ -266,6 +266,7 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	
 
 	if (const APawn* OwningPawn = Cast<APawn>(GetOwner()))
 	{
@@ -290,7 +291,22 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 				AirborneTime = 0.f;
 			}
 		}
-		const FRotator CurrentRot = bUsePawnControlRotation ? OwningPawn->GetViewRotation() : GetComponentRotation();
+		 FRotator CurrentRot = bUsePawnControlRotation ? OwningPawn->GetViewRotation() : GetComponentRotation();
+		if(MinPitch!=0.f)
+		{
+			if(CurrentRot.Pitch<180.f)
+			{
+				CurrentRot.Pitch=FMath::Min(MinPitch,CurrentRot.Pitch);
+			}
+			if(bUsePawnControlRotation)
+			{
+				if(OwningPawn->GetController())
+				{
+					OwningPawn->GetController()->SetControlRotation(CurrentRot);
+				}
+			}
+		
+		}
 		if (UMeshComponent* Mesh = Cast<UMeshComponent>(GetOwner()->GetRootComponent()))
 		{
 			const FVector Velocity = Mesh->GetPhysicsLinearVelocity() * FVector(1, 1, 0);

@@ -7,6 +7,9 @@
 #include "TerrainInteraction.generated.h"
 
 
+class UModularMovementComponent;
+class UModularWheel;
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MODULARMOVEMENT_API UTerrainInteraction : public UActorComponent
 {
@@ -24,15 +27,46 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	void Update(float DeltaTime, const TArray<UModularWheel*>& Components);
+	void Update(float DeltaTime,UModularMovementComponent* MC, const TArray<UModularWheel*>& Components);
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	UTextureRenderTarget2D* RenderTarget2D;
 
-	// Limit to one draw per frame
-	int ComponentDrawIndex=0;
 
-	UPROPERTY()
-	UCanvas* Canvas;
+
+	//How big a RenderTarget pixel is in world
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = "World Drawing Board | Simulating RT")
+	FVector2D PixelWorldSize;
+
+	//The canvas size in world
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = "World Drawing Board | Canvas")
+	FVector2D CanvasWorldSize = FVector2D(2048,2048);
+
+	UPROPERTY(BlueprintReadWrite,Category = "World Drawing Board | Canvas")
+	FVector CanvasCenter;
 	
-		
+
+	UPROPERTY(BlueprintReadWrite,Category = "World Drawing Board | Canvas")
+	float CanvasRot;
+	
+
+	UPROPERTY(EditAnywhere,Category = "World Drawing Board | Simulating RT")
+	FVector2D BrushSize=FVector2D(32,64);
+
+	UPROPERTY(EditAnywhere)
+	float PixelSizeScale=1.f;
+
+	FVector2D  PreviousOffsetLocation;
+	FVector2D  PreviousDrawLocation;
+
+	// Sets PosAndSize Vector on this (naming should be exact)
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = "World Drawing Board | Canvas")
+	UMaterialParameterCollection* MaterialParameterCollection;
+
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = "World Drawing Board | Canvas")
+	UMaterialInterface* MaterialInterface;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = "World Drawing Board | Canvas")
+	UMaterialInterface* OffsetMat;
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = "World Drawing Board | Canvas")
+	float MinDrawDistance=30;
+	
 };
