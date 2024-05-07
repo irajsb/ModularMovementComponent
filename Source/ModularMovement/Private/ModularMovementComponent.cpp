@@ -600,15 +600,16 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 				RawThrottleInput) + RightTrackInput;
 		}
 
+		
 		// In some rare cases where ground is perfectly flat and vehicle is perfectly still track forces can cancel each other so prevent that here
 		if(VehicleState.ForwardSpeed<10.f&&VehicleState.TrackRight.TorqueTransfer!=VehicleState.TrackLeft.TorqueTransfer)
 		{
 			if(VehicleState.TrackRight.TorqueTransfer<VehicleState.TrackLeft.TorqueTransfer)
 			{
-				VehicleState.TrackRight.TorqueTransfer*=0.9;
+				VehicleState.TrackRight.TorqueTransfer=0;
 			}else
 			{
-				VehicleState.TrackLeft.TorqueTransfer*=0.9;
+				VehicleState.TrackLeft.TorqueTransfer=0;
 			}
 			
 		}
