@@ -6,6 +6,7 @@
 #include "ModularVehicleFunctionLibrary.h"
 #include "ModularMovement.h"
 #include "ModularVehicleData.h"
+#include "VehicleParticleSurfaceData.h"
 #include "PhysicsProxy/SingleParticlePhysicsProxy.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -16,7 +17,8 @@ DECLARE_CYCLE_STAT(TEXT("Modular Updage Suspension"), STAT_ModularSuspension, ST
 DECLARE_CYCLE_STAT(TEXT("Modular Updage Forces"), STAT_ModularForces, STATGROUP_MovementPhysics);
 
 // Sets default values for this component's properties
-UModularWheel::UModularWheel(): WheelState(), ParentBodyOverride(nullptr), NoFrictionDefaultPhysMaterial(nullptr),
+UModularWheel::UModularWheel(): WheelState(), ParentBodyOverride(nullptr), SurfaceData(nullptr),
+                                NoFrictionDefaultPhysMaterial(nullptr),
                                 MovementComponentRef(nullptr)
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -38,6 +40,21 @@ void UModularWheel::BeginPlay()
 			FAttachmentTransformRules AttachmentRules(EAttachmentRule::KeepWorld, true);
 			Component->AttachToComponent(ConstraintParent,AttachmentRules);
 		}
+	}
+
+	if(IsValid(SurfaceDataClass))
+	{
+		SurfaceData=DuplicateObject<UVehicleParticleSurfaceData>(SurfaceDataClass.GetDefaultObject(),this);
+	}
+}
+
+void UModularWheel::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if(SurfaceData)
+	{
+		SurfaceData->UpdateParticleForWheel(this);
 	}
 }
 

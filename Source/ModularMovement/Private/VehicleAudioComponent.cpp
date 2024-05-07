@@ -7,9 +7,18 @@
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "GenericPlatform/GenericPlatformMath.h"
+
+void UVehicleAudioComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	
+}
+
 UVehicleAudioComponent::UVehicleAudioComponent(): Load(0), CurrentTurbo(0)
 {
 	PrimaryComponentTick.bCanEverTick = true;
+	bAutoActivate= false;
 }
 
 void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -22,18 +31,31 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 		if(const auto MC= Cast<UModularMovementComponent>( Pawn->GetMovementComponent()))
 		{
-			const auto RPMRatio=MC->VehicleState.CurrentRpm/MC->VehicleState.VehicleData->GetMaxRPM();
-			const float RPMChange=RPMRatio-RPM;
-			RPM=UKismetMathLibrary::FInterpTo_Constant(RPM,RPMRatio,DeltaTime,RPMInterpolationSpeed);
-			SetFloatParameter("RPM",RPM*RPMMultiplier);
+			if(IsActive())
+			{
+				const auto RPMRatio=MC->VehicleState.CurrentRpm/MC->VehicleState.VehicleData->GetMaxRPM();
+				const float RPMChange=RPMRatio-RPM;
+				RPM=UKismetMathLibrary::FInterpTo_Constant(RPM,RPMRatio,DeltaTime,RPMInterpolationSpeed);
+				SetFloatParameter("RPM",RPM*RPMMultiplier);
 
-			const float NewLoad=((FMath::Abs(MC->ThrottleInput)/2)+(RPMChange > 0.05) )? 0.5f : 0.0f;
-			Load=UKismetMathLibrary::FInterpTo_Constant(Load,NewLoad,DeltaTime,LoadInterpolationSpeed);
-			SetFloatParameter("Load",Load*LoadMultiplier);
+				const float NewLoad=((FMath::Abs(MC->ThrottleInput)/2)+(RPMChange > 0.05) )? 0.5f : 0.0f;
+				Load=UKismetMathLibrary::FInterpTo_Constant(Load,NewLoad,DeltaTime,LoadInterpolationSpeed);
+				SetFloatParameter("Load",Load*LoadMultiplier);
 
 			
-			CurrentTurbo=UKismetMathLibrary::FInterpTo_Constant(CurrentTurbo,RPMRatio,DeltaTime,TurboInterpolationSpeed);
-			SetFloatParameter("Turbo",CurrentTurbo*TurboMultiplier);
+				CurrentTurbo=UKismetMathLibrary::FInterpTo_Constant(CurrentTurbo,RPMRatio,DeltaTime,TurboInterpolationSpeed);
+				SetFloatParameter("Turbo",CurrentTurbo*TurboMultiplier);
+			}else
+			{
+				
+					
+						if(MC->VehicleState.IsEngineOn)
+						{
+							Activate(true);
+						}
+					
+				
+			}
 		}
 	}
 }

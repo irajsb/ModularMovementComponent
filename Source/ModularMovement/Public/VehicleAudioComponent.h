@@ -13,6 +13,8 @@
 UCLASS(meta=(BlueprintSpawnableComponent))
 class MODULARMOVEMENT_API UVehicleAudioComponent : public UAudioComponent
 {
+
+	virtual void BeginPlay() override;
 	GENERATED_BODY()
 	UVehicleAudioComponent();
 	UPROPERTY(EditAnywhere,Category="EngineSound")

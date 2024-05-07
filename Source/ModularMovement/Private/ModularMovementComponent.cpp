@@ -165,6 +165,9 @@ void UModularMovementComponent::HoldStarter( float StartTime)
 	if(StartTime==0.f)
 	{
 		VehicleState.IsEngineOn=true;
+		
+		StarterTimerHandle.Invalidate();
+		
 		OnEngineStateChange.Broadcast(true,false);
 		return;
 		
@@ -176,8 +179,11 @@ void UModularMovementComponent::HoldStarter( float StartTime)
 
 void UModularMovementComponent::ReleaseStarter()
 {
-	GetWorld()->GetTimerManager().ClearTimer(StarterTimerHandle);
-	OnEngineStateChange.Broadcast(VehicleState.IsEngineOn,false);
+	if(StarterTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(StarterTimerHandle);
+		OnEngineStateChange.Broadcast(VehicleState.IsEngineOn,false);
+	}
 }
 
 void UModularMovementComponent::StopEngine()

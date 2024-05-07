@@ -11,6 +11,7 @@
 
 #include "ModularWheel.generated.h"
 
+class UVehicleParticleSurfaceData;
 class UVehicleDebugWidget;
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MODULARMOVEMENT_API UModularWheel : public UTrackableComponent
@@ -24,6 +25,7 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 public:	
 	
@@ -42,6 +44,11 @@ public:
 	// For terrain interaction
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
 	bool AllowDrawInRenderTarget=true;
+	//Surface emitter class
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
+	TSubclassOf<UVehicleParticleSurfaceData> SurfaceDataClass;
+	UPROPERTY(Transient)
+	UVehicleParticleSurfaceData* SurfaceData;
 	virtual void SetupWheels(UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateSuspension(float DeltaTime,UModularMovementComponent* ModularMovementComponent) ;
 	virtual void UpdateForces(float DeltaTime, UModularMovementComponent* ModularMovementComponent) ;

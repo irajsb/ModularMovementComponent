@@ -25,7 +25,7 @@ public class ModularMovement : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core", "Engine", "AnimGraphRuntime", "ChaosVehiclesCore",
+				"Core", "Engine", "AnimGraphRuntime", "ChaosVehiclesCore", "Niagara",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
