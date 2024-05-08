@@ -12,6 +12,7 @@
 void UVehicleParticleSurfaceData::UpdateParticleForWheel(UModularWheel* Wheel)
 {
 
+	
 	bool Found=false;
 	if(Wheel->WheelState.HitResult.PhysMaterial.IsValid())
 	{
@@ -47,6 +48,15 @@ void UVehicleParticleSurfaceData::UpdateParticleForWheel(UModularWheel* Wheel)
 void UVehicleParticleSurfaceData::HandleParticle(UModularWheel* Wheel, UParticleSystem* Particle)
 {
 
+	const float Velocity=FMath::Abs(Wheel->WheelState.AngularVelocity);
+	
+	
+
+	float Rate =Wheel->WheelState.HitResult.bBlockingHit?
+		FMath::GetMappedRangeValueClamped(FVector2D(MinAngularSpeedInRadian, MaxAngularSpeedInRadian), FVector2D(0.0f, 1.0f), Velocity)
+			:0.f;
+
+	Rate=FMath::Max(Rate,Wheel->WheelState.TireStress);
 	
 	if(const auto Comp=Cast<UNiagaraComponent>(CurrentEmitter))
 	{
@@ -62,9 +72,9 @@ void UVehicleParticleSurfaceData::HandleParticle(UModularWheel* Wheel, UParticle
 			
 		}
 		Comp->SetWorldLocation(Wheel->WheelState.HitResult.ImpactPoint);
+		Comp->SetFloatParameter("Strength",Rate);
 		
 		
-		const bool ValidHit=Wheel->WheelState.HitResult.bBlockingHit;
 		
 		
 		
@@ -79,6 +89,14 @@ void UVehicleParticleSurfaceData::HandleParticle(UModularWheel* Wheel, UParticle
 
 void UVehicleParticleSurfaceData::HandleNiagaraParticle(UModularWheel* Wheel, UNiagaraSystem* Particle)
 {
+	const float Velocity=FMath::Abs(Wheel->WheelState.AngularVelocity);
+
+	float Rate =Wheel->WheelState.HitResult.bBlockingHit?
+		FMath::GetMappedRangeValueClamped(FVector2D(MinAngularSpeedInRadian, MaxAngularSpeedInRadian), FVector2D(0.0f, 1.0f), Velocity)
+			:0.f;
+
+	Rate=FMath::Max(Rate,Wheel->WheelState.TireStress);
+	
 	if (const auto Comp = Cast<UParticleSystemComponent>(CurrentEmitter))
 	{
 		Comp->DestroyComponent();
@@ -93,11 +111,7 @@ void UVehicleParticleSurfaceData::HandleNiagaraParticle(UModularWheel* Wheel, UN
 			
 		}
 		Comp->SetWorldLocation(Wheel->WheelState.HitResult.ImpactPoint);
-		const bool ValidHit=Wheel->WheelState.HitResult.bBlockingHit;
-		
-		if(Comp->IsActive()!=ValidHit){
-			Comp->SetActive(ValidHit,true);
-		}
+		Comp->SetFloatParameter("Strength",Rate);
 	}
 	else
 	{

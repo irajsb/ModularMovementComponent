@@ -46,6 +46,13 @@ class MODULARMOVEMENT_API UVehicleParticleSurfaceData : public UObject
 	FVector SpawnOffset;
 	UPROPERTY(EditAnywhere)
 	FRotator RotOffset;
+
+	UPROPERTY(EditAnywhere)
+	float MinAngularSpeedInRadian=1.f;
+
+	UPROPERTY(EditAnywhere)
+	float MaxAngularSpeedInRadian=5.f;
+	
 public:
 	void UpdateParticleForWheel(UModularWheel* Wheel);
 
