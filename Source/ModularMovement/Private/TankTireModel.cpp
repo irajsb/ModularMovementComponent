@@ -24,6 +24,7 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	const float TrackInput=Wheel->WheelState.InitialLocalLocation.Y>0.f?ModularMovementComponent->VehicleState.TrackRight.TorqueTransfer
 	:ModularMovementComponent->VehicleState.TrackLeft.TorqueTransfer;
 
+	const float TotalTracksInput=FMath::Abs(ModularMovementComponent->VehicleState.TrackLeft.TorqueTransfer)+FMath::Abs(ModularMovementComponent->VehicleState.TrackRight.TorqueTransfer);
 	const float SurfaceFriction=Wheel->WheelState.HitResult.PhysMaterial.IsValid()?Wheel->WheelState.HitResult.PhysMaterial->Friction:0.7;
 	if(Wheel->ParentBodyOverride)
 	{
@@ -72,11 +73,15 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 			float BrakeInput=FMath::Abs(TrackInput);
 			if(TrackInput==0.f)
 			{
-				BrakeInput=NormalizedSteeringBrakeInput;
+				if(TotalTracksInput!=0.f)
+				{
+					BrakeInput=NormalizedSteeringBrakeInput;
+				}
 			}
+
 			
 			//Clamp brake torque to force required to bring to stop, helps in lower speeds
-			FinalForceVector.X = BrakeInput*Wheel->WheelState.WheelSetup->BrakeTorque *ReverseVelocitySign /WheelRadiusM;
+			FinalForceVector.X =FMath::Clamp(BrakeInput*Wheel->WheelState.WheelSetup->BrakeTorque *ReverseVelocitySign /WheelRadiusM,-ForceRequiredToBringToStop,ForceRequiredToBringToStop); 
 			
 			
 			//if ABS enabled we allow unrealistic brake torque because of arcade tire model 

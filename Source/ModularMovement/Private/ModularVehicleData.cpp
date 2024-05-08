@@ -10,7 +10,7 @@ UModularVehicleData::UModularVehicleData()
 
 	
 	SuspensionTraceTypeQuery= UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility);
-	WrongDirectionThreshold=100.f;
+	WrongDirectionThreshold=20.f;
 	StopThreshold = 10.0f;
 	IdleBrakeInput=0.1f;
 	ReverseThreshold=0.4;

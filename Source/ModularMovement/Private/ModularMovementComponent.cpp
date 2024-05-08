@@ -600,16 +600,23 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 				RawThrottleInput) + RightTrackInput;
 		}
 
-		
+		if(RawThrottleInput==0.f&&RawSteeringInput==0.f)
+		{
+			VehicleState.TrackRight.TorqueTransfer=VehicleState.TrackLeft.TorqueTransfer=-1.f*BrakeInput*FMath::Sign(VehicleState.ForwardSpeed);
+			
+			
+		}
 		// In some rare cases where ground is perfectly flat and vehicle is perfectly still track forces can cancel each other so prevent that here
-		if(VehicleState.ForwardSpeed<10.f&&VehicleState.TrackRight.TorqueTransfer!=VehicleState.TrackLeft.TorqueTransfer)
+		if(FMath::Abs(VehicleState.ForwardSpeed)<10.f&&VehicleState.TrackRight.TorqueTransfer!=VehicleState.TrackLeft.TorqueTransfer)
 		{
 			if(VehicleState.TrackRight.TorqueTransfer<VehicleState.TrackLeft.TorqueTransfer)
 			{
 				VehicleState.TrackRight.TorqueTransfer=0;
+				VehicleState.TrackLeft.TorqueTransfer=VehicleState.TrackLeft.TorqueTransfer*2;
 			}else
 			{
 				VehicleState.TrackLeft.TorqueTransfer=0;
+				VehicleState.TrackRight.TorqueTransfer=VehicleState.TrackRight.TorqueTransfer*2;
 			}
 			
 		}
@@ -961,14 +968,15 @@ float UModularMovementComponent::CalcBrakeInput() const
 		// if player isn't pressing forward or backwards...
 		else
 		{
-			if (VehicleState.ForwardSpeed < GetSetup()->GetStopThreshold() && VehicleState.ForwardSpeed > -GetSetup()->
-				GetStopThreshold()) //auto brake 
+			if (FMath::Abs(VehicleState.ForwardSpeed) < GetSetup()->GetStopThreshold())
+				
 			{
 				NewBrakeInput = 1.f;
 			}
 			else
 			{
 				NewBrakeInput = GetSetup()->GetIdleBrakeInput();
+			
 			}
 		}
 
