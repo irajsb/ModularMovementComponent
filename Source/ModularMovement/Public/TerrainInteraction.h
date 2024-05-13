@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Materials/MaterialParameterCollection.h"
 #include "TerrainInteraction.generated.h"
 
 

@@ -7,6 +7,7 @@
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
 #include "Particles/ParticleSystemComponent.h"
 
 void UVehicleParticleSurfaceData::UpdateParticleForWheel(UModularWheel* Wheel)
@@ -114,7 +115,7 @@ void UVehicleParticleSurfaceData::HandleNiagaraParticle(UModularWheel* Wheel, UN
 		Comp->SetFloatParameter("Strength",Rate);
 	}
 	else
-	{
+	{	
 		CurrentEmitter = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),Particle ,Wheel->WheelState.HitResult.ImpactPoint);
 	}
 

@@ -20,13 +20,13 @@ struct FSurfaceParticleCouple
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere)
-	UPhysicalMaterial* MaterialClass;
+	UPhysicalMaterial* MaterialClass=nullptr;
 
 	UPROPERTY(EditAnywhere)
-	UParticleSystem* Particle;
+	UParticleSystem* Particle=nullptr;
 
 	UPROPERTY(EditAnywhere)
-	UNiagaraSystem* NiagaraSystem;
+	UNiagaraSystem* NiagaraSystem=nullptr;
 	
 };
 UCLASS(Blueprintable,BlueprintType)
@@ -36,10 +36,10 @@ class MODULARMOVEMENT_API UVehicleParticleSurfaceData : public UObject
 
 	//Default particle to use . Set one of the two defaults 
 	UPROPERTY(EditAnywhere)
-	UParticleSystem* DefaultParticle;
+	UParticleSystem* DefaultParticle=nullptr;
 	//Default particle to use . Set one of the two defaults 
 	UPROPERTY(EditAnywhere)
-	UNiagaraSystem* DefaultNiagaraSystem;
+	UNiagaraSystem* DefaultNiagaraSystem=nullptr;
 	UPROPERTY(EditAnywhere)
 	TArray<FSurfaceParticleCouple> SurfaceParticleCouples;
 	UPROPERTY(EditAnywhere)

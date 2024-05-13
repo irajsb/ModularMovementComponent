@@ -17,6 +17,7 @@
 #include "GameFramework/Pawn.h"
 #include "PBDRigidsSolver.h"
 #include "TerrainInteraction.h"
+#include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 #include "Physics/Experimental/PhysScene_Chaos.h"
 

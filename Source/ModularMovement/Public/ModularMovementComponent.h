@@ -136,7 +136,7 @@ struct FVehicleState
 
 	// Pointer to the vehicle data
 	UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
-	UBaseVehicleData* VehicleData;
+	UBaseVehicleData* VehicleData=nullptr;
 
 	// Current RPM (Revolutions Per Minute) of the vehicle's engine
 	UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
@@ -179,10 +179,10 @@ struct FVehicleState
 
 
 	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	float CurrentFuel;
+	float CurrentFuel=0.f;
 
 	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	bool IsEngineOn;
+	bool IsEngineOn=true;
 	
 };
 
