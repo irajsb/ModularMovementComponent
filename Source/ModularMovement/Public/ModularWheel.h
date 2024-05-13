@@ -152,7 +152,7 @@ public:
 	UPhysicalMaterial* NoFrictionDefaultPhysMaterial;
 
 public:
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly,Category="Wheel")
 	TArray<USceneComponent*> ChildWheels;
 
 	UPROPERTY(Transient)

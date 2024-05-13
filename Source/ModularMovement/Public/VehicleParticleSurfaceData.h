@@ -19,13 +19,13 @@ struct FSurfaceParticleCouple
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Setup")
 	UPhysicalMaterial* MaterialClass=nullptr;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Setup")
 	UParticleSystem* Particle=nullptr;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Setup")
 	UNiagaraSystem* NiagaraSystem=nullptr;
 	
 };
@@ -35,22 +35,22 @@ class MODULARMOVEMENT_API UVehicleParticleSurfaceData : public UObject
 	GENERATED_BODY()
 
 	//Default particle to use . Set one of the two defaults 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Setup")
 	UParticleSystem* DefaultParticle=nullptr;
 	//Default particle to use . Set one of the two defaults 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Setup")
 	UNiagaraSystem* DefaultNiagaraSystem=nullptr;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Setup")
 	TArray<FSurfaceParticleCouple> SurfaceParticleCouples;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Setup")
 	FVector SpawnOffset;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Setup")
 	FRotator RotOffset;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Setup")
 	float MinAngularSpeedInRadian=1.f;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Setup")
 	float MaxAngularSpeedInRadian=5.f;
 	
 public:

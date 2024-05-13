@@ -290,7 +290,7 @@ public:
 	
 	UPROPERTY()
 	UTerrainInteraction* TerrainInteractionComponent=nullptr;
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	UTerrainInteraction* GetTerrainInteractionComponent();
 	/** Compute steering input */
 	float CalcSteeringInput(float DeltaTime);

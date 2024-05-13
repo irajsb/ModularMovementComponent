@@ -30,7 +30,7 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	void Update(float DeltaTime,UModularMovementComponent* MC, const TArray<UModularWheel*>& Components);
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = "World Drawing Board | Simulating RT")
 	UTextureRenderTarget2D* RenderTarget2D;
 
 
@@ -54,7 +54,7 @@ public:
 	UPROPERTY(EditAnywhere,Category = "World Drawing Board | Simulating RT")
 	FVector2D BrushSize=FVector2D(32,64);
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "World Drawing Board | Simulating RT")
 	float PixelSizeScale=1.f;
 
 	FVector2D  PreviousOffsetLocation;
