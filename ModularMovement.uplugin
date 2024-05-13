@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.5",
+	"VersionName": "1.6",
 	"FriendlyName": "ModularMovement",
 	"Description": "Modular  movement component for vehicles ",
 	"Category": "Other",
@@ -18,7 +18,6 @@
 			"Name": "ModularMovement",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"AdditionalDependencies": ["Niagara"],
 			"WhitelistPlatforms": [
 				"Win64",
 				"Linux",
@@ -35,5 +34,10 @@
 				"Android","IOS"
 			]
 		}
-	]
+	],
+	"Plugins": [
+		{
+			"Name": "Niagara",
+			"Enabled": true
+		}]
 }

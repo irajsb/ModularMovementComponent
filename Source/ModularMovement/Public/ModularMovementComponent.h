@@ -182,7 +182,7 @@ struct FVehicleState
 	float CurrentFuel=0.f;
 
 	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	bool IsEngineOn=true;
+	bool IsEngineOn=false;
 	
 };
 
