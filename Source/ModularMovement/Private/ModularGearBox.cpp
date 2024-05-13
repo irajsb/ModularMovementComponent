@@ -183,7 +183,7 @@ void UModularGearBox::SetCurrentGear(int InGear)
 
 	if(Gears.IsValidIndex(InGear))
 	{
-		CurrentGear=InGear;
+		TargetGear=CurrentGear=InGear;
 	}else
 	{
 		UE_LOG(LogTemp,Error,TEXT("Invalid gear passed %d"),InGear);

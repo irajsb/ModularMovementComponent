@@ -80,7 +80,7 @@ float UModularVehicleData::GetEngineInertia() const
 	return EngineInertia;
 }
 
-UModularGearBox* UModularVehicleData::GetGearBox()
+UModularGearBox* UModularVehicleData::GetGearBox()const 
 {
 	return GearBoxData;
 }
@@ -103,7 +103,7 @@ bool UModularVehicleData::ShouldScaleDriveTorqueToNumberOfWheels() const
 
 bool UModularVehicleData::ShouldReverseAsBrake() const
 {
-	return bReverseAsBrake;
+	return bReverseAsBrake&&!GetGearBox()->IsManual;
 }
 
 float UModularVehicleData::GetStopThreshold() const

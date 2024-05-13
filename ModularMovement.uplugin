@@ -18,6 +18,7 @@
 			"Name": "ModularMovement",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
+			"AdditionalDependencies": ["Niagara"],
 			"WhitelistPlatforms": [
 				"Win64",
 				"Linux",

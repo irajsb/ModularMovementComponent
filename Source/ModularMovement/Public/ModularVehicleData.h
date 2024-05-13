@@ -194,7 +194,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	virtual float GetTorqueForRPM(float RPM) const override;
 	virtual float GetEngineInertia() const override;
 	//Trans
-	virtual UModularGearBox* GetGearBox() override;
+	virtual UModularGearBox* GetGearBox()const  override;
 	
 	//misc
 	virtual bool GetScaleTireFrictionWithSurfaceAngle() override;

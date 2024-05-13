@@ -182,6 +182,7 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	if (FMath::Abs(AngularAcceleration) > FMath::Abs(Wheel->WheelState.AngularVelocity))
 	{
 		AngularAcceleration = -Wheel->WheelState.AngularVelocity;
+		
 	}
 
 	Wheel->WheelState.AngularVelocity += AngularAcceleration;
@@ -270,7 +271,7 @@ void UDefaultTireModel::RebuildCurves(bool ForceLong,bool ForceLateral)
 			const auto LateralForceCurve=LateralGripCurve.GetRichCurve();
 			auto KeyHandle = LateralForceCurve->AddKey(0, 0);
 			LateralForceCurve->SetKeyInterpMode(KeyHandle, ERichCurveInterpMode::RCIM_Cubic);
-			KeyHandle = LateralForceCurve->AddKey(0.1396263, MaxFrictionLateralForce);
+			KeyHandle = LateralForceCurve->AddKey(0.01, MaxFrictionLateralForce);
 			LateralForceCurve->SetKeyInterpMode(KeyHandle, ERichCurveInterpMode::RCIM_Cubic);
 			KeyHandle = LateralForceCurve->AddKey(0.3490659, MinFrictionLateralForce);
 			LateralForceCurve->SetKeyInterpMode(KeyHandle, ERichCurveInterpMode::RCIM_Cubic);
@@ -285,7 +286,7 @@ void UDefaultTireModel::RebuildCurves(bool ForceLong,bool ForceLateral)
 			const auto ForceCurve=LongitudinalGripCurve.GetRichCurve();
 			auto KeyHandle = ForceCurve->AddKey(0, 0);
 			ForceCurve->SetKeyInterpMode(KeyHandle, ERichCurveInterpMode::RCIM_Cubic);
-			KeyHandle = ForceCurve->AddKey(0.2, MaxFrictionForce);
+			KeyHandle = ForceCurve->AddKey(0.02, MaxFrictionForce);
 			ForceCurve->SetKeyInterpMode(KeyHandle, ERichCurveInterpMode::RCIM_Cubic);
 			KeyHandle = ForceCurve->AddKey(1.f, MinFrictionForce);
 			ForceCurve->SetKeyInterpMode(KeyHandle, ERichCurveInterpMode::RCIM_Cubic);

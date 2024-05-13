@@ -87,7 +87,10 @@ void UModularMovementComponent::UpdateComponents(const TArray<UModularWheel*> Ad
 	{
 		if(Wheel->WheelState.ApplyDriveForce)
 		{
-			Diffs[Wheel->DifferentialIndex].Wheels.Add(Wheel);
+			if(Diffs.IsValidIndex(Wheel->DifferentialIndex))
+			{
+				Diffs[Wheel->DifferentialIndex].Wheels.Add(Wheel);
+			}
 		}
 	}
 	Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData=Diffs;
@@ -291,7 +294,6 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* Body
 		SteeringInput = CalcSteeringInput(DeltaTime);
 		ThrottleInput = CalcThrottleInput(DeltaTime);
 		BrakeInput = CalcBrakeInput();
-
 		float WheelTorque = 0.f;
 
 		UpdateAirDrag();
@@ -500,9 +502,8 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 	}
 
 	const float MaxRads=RPMToOmega(VehicleState.VehicleData->GetMaxRPM());
-		const float MinRads=VehicleState.IsEngineOn?RPMToOmega(VehicleState.VehicleData->GetIdleRPM()):0.f;
-	const float TargetRPM = FMath::Clamp<float>(
-		AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio(),MinRads, MaxRads);
+	const float MinRads=VehicleState.IsEngineOn?RPMToOmega(VehicleState.VehicleData->GetIdleRPM()):0.f;
+	const float TargetRPM =GetSetup()->GetGearBox()->GetDriveRatio()==0?ThrottleInput*MaxRads: FMath::Clamp<float>(AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio(),MinRads, MaxRads);
 
 	VehicleState.EngineRads = FMath::FInterpConstantTo(VehicleState.EngineRads, TargetRPM, DeltaTime,0.1 * VehicleState.VehicleData->GetMaxRPM());
 	
@@ -606,7 +607,7 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 			
 			
 		}
-		// In some rare cases where ground is perfectly flat and vehicle is perfectly still track forces can cancel each other so prevent that here
+		// In some rare cases where ground is perfectly flat and vehicle is perfectly still track forces can cancel each other so pr  that here
 		if(FMath::Abs(VehicleState.ForwardSpeed)<10.f&&VehicleState.TrackRight.TorqueTransfer!=VehicleState.TrackLeft.TorqueTransfer)
 		{
 			if(VehicleState.TrackRight.TorqueTransfer<VehicleState.TrackLeft.TorqueTransfer)
@@ -646,7 +647,7 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 			Component->UpdateSuspension(DeltaTime, this);
 			//Apply Steering
 			Component->UpdateSteering(DeltaTime, this, UseSteeringValue);
-			if(!Component->WheelState.ApplyDriveForce)
+			if(!Component->WheelState.ApplyDriveForce||Component->DifferentialIndex==255)
 			{
 				Component->UpdateForces(DeltaTime,this);
 			}
@@ -676,23 +677,6 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 		}
 	}
 	CurrentDifferentialRatio=TempDiffRatio;
-
-	
-			
-
-			//Apply Engine Torque 
-		
-
-			
-
-			
-
-
-		
-
-		
-		
-		
 	
 }
 
@@ -939,12 +923,12 @@ float UModularMovementComponent::CalcSteeringInput(float DeltaTime)
 	return SteeringInput;
 }
 
-float UModularMovementComponent::CalcBrakeInput() const
+float UModularMovementComponent::CalcBrakeInput() 
 {
-	
+	float NewBrakeInput =VehicleState.IsEngineOn? 0.0f:GetSetup()->GetIdleBrakeInput();
 	if (GetSetup()->ShouldReverseAsBrake())
 	{
-		float NewBrakeInput =VehicleState.IsEngineOn? 0.0f:GetSetup()->GetIdleBrakeInput();
+		
 
 		// if player wants to move forwards...
 		if (RawThrottleInput > 0.f)
@@ -980,12 +964,21 @@ float UModularMovementComponent::CalcBrakeInput() const
 			}
 		}
 
-		return FMath::Clamp<float>(NewBrakeInput, 0.0, 1.0);
+		NewBrakeInput= FMath::Clamp<float>(NewBrakeInput, 0.0, 1.0);
+	}else
+	{
+		if(RawBrakeInput==0&&RawThrottleInput<0)
+		{
+			NewBrakeInput=RawThrottleInput;
+		}else
+		{
+			NewBrakeInput = FMath::Abs(RawBrakeInput);
+		}
+		
 	}
-	float NewBrakeInput = FMath::Abs(RawBrakeInput);
 
 	// if player isn't pressing forward or backwards...
-	if (RawBrakeInput < SMALL_NUMBER && RawThrottleInput < SMALL_NUMBER)
+	if (FMath::Abs(RawBrakeInput) < SMALL_NUMBER && FMath::Abs(RawThrottleInput) < SMALL_NUMBER)
 	{
 		if (VehicleState.ForwardSpeed < GetSetup()->GetStopThreshold() && VehicleState.ForwardSpeed > -GetSetup()->
 			GetStopThreshold()) //auto brake 
@@ -1001,17 +994,16 @@ float UModularMovementComponent::CalcBrakeInput() const
 float UModularMovementComponent::CalcThrottleInput(float DeltaTime) const
 {
 	float NewThrottleInput = RawThrottleInput;
-
+	const bool IsInReverse=GetSetup()->GetGearBox()->IsInReverse();
 	if (GetSetup()->ShouldReverseAsBrake())
 	{
-		if (RawBrakeInput > 0.f && GetSetup()->GetGearBox()->IsInReverse())
+		if (RawBrakeInput > 0.f &&IsInReverse )
 		{
 			NewThrottleInput = RawBrakeInput;
 		}
 		else
 		//If the user is changing direction we should really be braking first and not applying any gas, so wait until they've changed gears
-			if (RawThrottleInput > 0.f && GetSetup()->GetGearBox()->IsInReverse() || RawThrottleInput < 0.f
-				&& !GetSetup()->GetGearBox()->IsInReverse())
+			if (RawThrottleInput > 0.f && IsInReverse || RawThrottleInput < 0.f&& !IsInReverse)
 			{
 				NewThrottleInput = 0.f;
 			}
@@ -1023,7 +1015,19 @@ float UModularMovementComponent::CalcThrottleInput(float DeltaTime) const
 		NewThrottleInput = FMath::Clamp(FMath::Abs(RawThrottleInput) + FMath::Abs(SteeringInput), 0.f, 1.f);
 	}
 
-
+	if(!GetSetup()->ShouldReverseAsBrake()&&IsInReverse)
+	{
+			if(NewThrottleInput>0)
+			{
+				NewThrottleInput*=-1;
+			}else
+			{
+				if(NewThrottleInput<0)
+				{
+					NewThrottleInput=0;
+				}
+			}
+	}
 	return NewThrottleInput;
 }
 
@@ -1325,6 +1329,7 @@ void UModularMovementComponent::ApplyDifferential( FDifferentialData DiffData, f
 
 			Wheel->WheelState.AngularVelocity=FMath::Clamp(Wheel->WheelState.AngularVelocity,-MaxWheelAngularVelocity,MaxWheelAngularVelocity);
 	}
+
 	
 }
 

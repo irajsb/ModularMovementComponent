@@ -590,15 +590,25 @@ void UModularWheel::SetActiveDifferentialIndex(uint8 Index, UModularMovementComp
 		UE_LOG(LogTemp, Error, TEXT("No vehicle data in SetActiveDifferentialIndex"))
 		return;
 	}
-	if (!Data->DifferentialData.IsValidIndex(Index) || !Data->DifferentialData.IsValidIndex(DifferentialIndex))
+	if (!Data->DifferentialData.IsValidIndex(Index) )
 	{
 		UE_LOG(LogTemp, Error, TEXT("Invalid index  in SetActiveDifferentialIndex"))
 		return;
+	}if(DifferentialBlackList.Contains(Index))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Differential is blacklisted for this wheel. Ignoring"))
+		Index=255;
 	}
 
-	Data->DifferentialData[DifferentialIndex].Wheels.Remove(this);
+	if(Data->DifferentialData.IsValidIndex(DifferentialIndex))
+	{
+		Data->DifferentialData[DifferentialIndex].Wheels.Remove(this);
+	}
 	DifferentialIndex = Index;
-	Data->DifferentialData[DifferentialIndex].Wheels.Add(this);
+	if(Data->DifferentialData.IsValidIndex(DifferentialIndex))
+	{
+		Data->DifferentialData[DifferentialIndex].Wheels.Add(this);
+	}
 }
 
 uint8 UModularWheel::GetActiveDifferentialIndex()

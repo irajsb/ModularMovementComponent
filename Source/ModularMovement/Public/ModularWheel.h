@@ -38,9 +38,13 @@ public:
 	// override the parent that force is applied to
 	UPROPERTY(BlueprintReadWrite,Transient,Category=Setup)
 	UPrimitiveComponent* ParentBodyOverride;
+	//Index of differential array in vehicle setup .255 is for disconnected from power
 	UPROPERTY(EditAnywhere,Category=Setup)
 	uint8 DifferentialIndex=0;
 
+	//List of unsupported differentials for this wheel
+	UPROPERTY(EditAnywhere,Category=Setup)
+	TArray<uint8> DifferentialBlackList;
 	// For terrain interaction
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
 	bool AllowDrawInRenderTarget=true;

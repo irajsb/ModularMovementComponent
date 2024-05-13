@@ -58,7 +58,7 @@ public:
 	//Transmission
 
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
-	virtual class UModularGearBox* GetGearBox(){return nullptr;}
+	virtual class UModularGearBox* GetGearBox()const {return nullptr;}
 
 
 

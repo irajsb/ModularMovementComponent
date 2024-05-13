@@ -296,7 +296,7 @@ public:
 	float CalcSteeringInput(float DeltaTime);
 
 	/** Compute brake input */
-	float CalcBrakeInput() const;
+	float CalcBrakeInput() ;
 
 
 	float CalcThrottleInput(float DeltaTime) const;
