@@ -132,7 +132,10 @@ public:
 
 	//Setup constraint only if suspension is of type constraint
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void SetupConstraints(UModularMovementComponent* MovementComponent,UPrimitiveComponent* ParentBody, UPrimitiveComponent* WheelOrDifferential,UPrimitiveComponent* InWheelCollision);
+	void SetupConstraints(UModularMovementComponent* MovementComponent,UPrimitiveComponent* ParentBody, UPrimitiveComponent* WheelOrDifferential,UPrimitiveComponent* InWheelCollision,bool IsAxle);
+	//Pass a custom constraint component 
+	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+	void SetupCustomConstraint(UModularMovementComponent* MovementComponent,UPhysicsConstraintComponent* ConstraintComponent,UPrimitiveComponent* ParentBody, UPrimitiveComponent* WheelOrDifferential,UPrimitiveComponent* InWheelCollision);
 	/* you can create custom events using this. not replicated... its used to unify events an handle them once by reacting to them on modular movement OnCustomEventDelegate for example when tire is flattened
 	 *You can call this event on a specific wheel but react to it and write code once for all wheels in modular movement OnCustomEventDelegate
 	 * */

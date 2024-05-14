@@ -139,7 +139,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 		SuspensionConstraint->GetConstraintForce(Lin, Ang);
 		
 		WheelState.WheelLoad.Z = FMath::Abs(Lin.Z);
-
+		
 		WheelState.HitResult.TraceStart = GetComponentLocation();
 		if (WheelState.WheelLoad.Z > 100.f)
 		{
@@ -307,7 +307,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		if (!FrictionForceVector.ContainsNaN())
 		{
 
-			if(!SuspensionConstraint){
+			if(1){
 			AddForceAtPosition(Mesh, WheelState.HitResult.TraceStart, FrictionForceVector, NAME_None);
 
 			}else
@@ -653,7 +653,7 @@ void UModularWheel::AddForceAtPosition(UPrimitiveComponent* Component, FVector P
 }
 
 void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponent, UPrimitiveComponent* ParentBody,
-                                     UPrimitiveComponent* WheelOrDifferential, UPrimitiveComponent* InWheelCollision)
+                                     UPrimitiveComponent* WheelOrDifferential, UPrimitiveComponent* InWheelCollision,bool IsAxle)
 {
 	if (SuspensionConstraint)
 	{
@@ -673,19 +673,21 @@ void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponen
 			SuspensionConstraint->SetConstrainedComponents(WheelOrDifferential, NAME_None, ParentBody, NAME_None);
 			ConstraintParent=WheelOrDifferential;
 			// Set up the constraint properties here
-			SuspensionConstraint->SetLinearXLimit(LCM_Limited, 1.f);
-			SuspensionConstraint->SetLinearYLimit(LCM_Limited, 1.f);
+			SuspensionConstraint->SetLinearXLimit(IsAxle?LCM_Limited:LCM_Locked, 1.f);
+			SuspensionConstraint->SetLinearYLimit(IsAxle?LCM_Limited:LCM_Locked, 1.f);
 			SuspensionConstraint->SetLinearZLimit(LCM_Limited, WheelSetup->SuspensionLength);
 			
-			SuspensionConstraint->SetAngularTwistLimit(ACM_Free, 0);
-			SuspensionConstraint->SetAngularSwing1Limit(ACM_Free, 0);
+			SuspensionConstraint->SetAngularTwistLimit(IsAxle?ACM_Free:ACM_Locked, 0);
+			SuspensionConstraint->SetAngularSwing1Limit(IsAxle?ACM_Free:ACM_Locked, 0);
+			
 			SuspensionConstraint->SetAngularSwing2Limit(ACM_Locked, 0);
 			SuspensionConstraint->SetLinearPositionTarget(FVector(0, 0, -WheelSetup->SuspensionLength));
-			SuspensionConstraint->SetLinearPositionDrive(true, true, true);
 			
+			SuspensionConstraint->SetLinearPositionDrive(IsAxle, IsAxle, true);
 			
+			SuspensionConstraint->GetConstraint().Get()->DisableParentDominates();
 			SuspensionConstraint->GetConstraint().Get()->SetDisableCollision(true);
-			SuspensionConstraint->SetLinearVelocityDrive(true, true, true);
+			SuspensionConstraint->SetLinearVelocityDrive(IsAxle, IsAxle, true);
 			SuspensionConstraint->SetLinearVelocityTarget(FVector(0, 0, 0));
 
 			auto Constraint=	SuspensionConstraint->GetConstraint().Get();
@@ -693,7 +695,8 @@ void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponen
 			//Suspension and velocity forces * By a multiplier in Twist 
 			const float S=WheelSetup->SpringRate;
 			const float V=WheelSetup->DampingCompress;
-			const float M=WheelSetup->NonZForceMultiplier;
+			const float M=IsAxle?WheelSetup->NonZForceMultiplier:0;
+			
 			Constraint->SetLinearDriveParams(FVector(S*M,S*M,S),FVector(V*M,V*M,V),FVector::ZeroVector);
 
 			WheelCollision = InWheelCollision;
@@ -709,6 +712,34 @@ void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponen
 			// You can adjust other properties like drive properties, angular limits, etc.
 		}
 	}
+}
+
+void UModularWheel::SetupCustomConstraint(UModularMovementComponent* MovementComponent,
+	UPhysicsConstraintComponent* ConstraintComponent, UPrimitiveComponent* ParentBody,
+	UPrimitiveComponent* WheelOrDifferential, UPrimitiveComponent* InWheelCollision)
+{
+
+
+	if(SuspensionConstraint)
+	{
+		SuspensionConstraint->DestroyComponent();
+	}
+	SuspensionConstraint=ConstraintComponent;
+	
+	SuspensionConstraint->SetConstrainedComponents(WheelOrDifferential, NAME_None, ParentBody, NAME_None);
+	ConstraintParent=WheelOrDifferential;
+	WheelCollision = InWheelCollision;
+	NoFrictionDefaultPhysMaterial = NewObject<UPhysicalMaterial>();
+	NoFrictionDefaultPhysMaterial->Friction = 0.f;
+	NoFrictionDefaultPhysMaterial->StaticFriction = 0.f;
+	NoFrictionDefaultPhysMaterial->Restitution = 0.5;
+	NoFrictionDefaultPhysMaterial->FrictionCombineMode = EFrictionCombineMode::Min;
+	if (WheelCollision)
+	{
+		WheelCollision->SetPhysMaterialOverride(NoFrictionDefaultPhysMaterial);
+	}
+
+	
 }
 
 void UModularWheel::CallCustomEvent(uint8 Index)

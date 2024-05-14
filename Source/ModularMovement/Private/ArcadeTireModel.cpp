@@ -54,7 +54,7 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 		MassPerWheel * FrictionMultiplierLongitudinal * (GroundVelocityVector.X) / 100 /
 		DeltaTime);
 
-
+	
 	// are we actually touching the ground
 	if (Wheel->WheelState.HitResult.bBlockingHit)
 	{
@@ -112,6 +112,7 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 
 	
 	}
+	
 
 	//Determine wheel speed
 	if (Locked)
