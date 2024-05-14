@@ -36,9 +36,11 @@ void UModularWheel::BeginPlay()
 		
 		
 		for (auto Component:ChildWheels)
+		{	if(Component!=ConstraintParent)
 		{
 			FAttachmentTransformRules AttachmentRules(EAttachmentRule::KeepWorld, true);
 			Component->AttachToComponent(ConstraintParent,AttachmentRules);
+		}
 		}
 	}
 

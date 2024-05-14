@@ -138,16 +138,18 @@ public:
 	 * */
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void CallCustomEvent(uint8 Index);
-	UPROPERTY()
+
+public:
+	UPROPERTY(BlueprintReadOnly,Category=Constraint)
 	UPhysicsConstraintComponent* SuspensionConstraint=nullptr;
 	UPROPERTY()
 	UPrimitiveComponent* WheelCollision=nullptr;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly,Category=Constraint)
 	UPrimitiveComponent* ConstraintParent=nullptr;
 	
 
-
+private:
 	UPROPERTY()
 	UPhysicalMaterial* NoFrictionDefaultPhysMaterial;
 
