@@ -175,7 +175,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	const FVector TraceEnd = ComponentLocation + (DirectionVector * -1 * WheelState.WheelSetup->SuspensionLength);
 	FHitResult TraceResult;
 	TraceResult.TraceStart = ComponentLocation;
-	TraceResult.TraceEnd = WheelCollision ? ComponentLocation : TraceEnd;
+	TraceResult.TraceEnd = WheelCollision ? ComponentLocation+FVector(0,0,-1) : TraceEnd;
 	TraceResult.bBlockingHit = false;
 	TArray<FHitResult> Hits;
 	bool ValidHitFound = false;
@@ -198,6 +198,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 			const FVector Position = MeshTransform.InverseTransformPosition(Hit.ImpactPoint) - WheelState.InitialLocalLocation;
 			if (FMath::Abs(Position.Y) < WheelSetup->WheelWidth ||WheelCollision )
 			{
+				
 				ValidHitFound = true;
 				TraceResult = Hit;
 				break;
