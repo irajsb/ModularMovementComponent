@@ -119,11 +119,12 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 			{
 				if (GetNetMode() == NM_Standalone || GetOwnerRole() < ROLE_Authority)
 				{
+
+					SetAimDirection(CalculateAimDirection(PC));
+					
 				
-					ServerSetControlRotation(GetWorld()->GetFirstPlayerController()->GetControlRotation().Vector());
 				
-				}
-				SetAimDirection(CalculateAimDirection(PC));
+			
 
 				FHitResult HitResult;
 				const FVector CamLoc = OverrideAimCamera
@@ -140,23 +141,26 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 													 WeaponConfig.Channel, Params);
 				//Camera aim loc
 				TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
+					ServerSetControlRotation(TargetLocation);
+					const FVector ComponentLoc = GetComponentLocation();
+					GetWorld()->LineTraceSingleByChannel(HitResult, ComponentLoc,
+														 ComponentLoc + CurrentWeaponRotationWorldSpace.Vector() * 1000000.0,
+														 WeaponConfig.Channel, Params);
+					const FVector WidgetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
 		
-	
+			
+					if (WidgetComponent)
+					{
+						WidgetComponent->SetWorldLocation(WidgetLocation);
+					}
+
+					
+				}
 				UpdateAnim(DeltaTime);
 				CurrentWeaponRotationWorldSpace = GetOwner()->GetActorRotation().RotateVector(
 					CurrentWeaponRotation.Quaternion().Vector()).Rotation();
 
-				const FVector ComponentLoc = GetComponentLocation();
-				GetWorld()->LineTraceSingleByChannel(HitResult, ComponentLoc,
-													 ComponentLoc + CurrentWeaponRotationWorldSpace.Vector() * 1000000.0,
-													 WeaponConfig.Channel, Params);
-				TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
-		
-			
-				if (WidgetComponent)
-				{
-					WidgetComponent->SetWorldLocation(TargetLocation);
-				}
+				
 			}
 		}
 		else
@@ -318,6 +322,7 @@ void UVehicleWeaponComponent::OnBurstFinished()
 
 void UVehicleWeaponComponent::HandleFiring()
 {
+	
 	if ((CurrentAmmoInClip > 0 || HasInfiniteClip() ) && CanFire())
 	{
 		if (GetNetMode() != NM_DedicatedServer)
@@ -374,8 +379,9 @@ void UVehicleWeaponComponent::HandleFiring()
 			StartReload();
 		}
 
-		// setup refire timer
+
 		
+		// setup refire timer
 		bRefiring = (CurrentState == EWeaponState::Firing && WeaponConfig.InitialTimeBetweenShots > 0.0f);
 		if (bRefiring)
 		{
@@ -581,7 +587,7 @@ bool UVehicleWeaponComponent::ServerHandleFiring_Validate()
 
 void UVehicleWeaponComponent::ServerHandleFiring_Implementation()
 {
-	//HandleFiring();
+	HandleFiring();
 
 	if ((CurrentAmmoInClip > 0 && CanFire() || WeaponConfig.bInfiniteClip))
 	{
@@ -600,7 +606,7 @@ void UVehicleWeaponComponent::HandleReFiring()
 	// Update TimerIntervalAdjustment
 	const UWorld* MyWorld = GetWorld();
 
-	const float SlackTimeThisFrame = FMath::Max(0.0f, (MyWorld->TimeSeconds - LastFireTime) - CurrentTimeBetweenShots);
+	float SlackTimeThisFrame = FMath::Max(0.0f, (MyWorld->TimeSeconds - LastFireTime) - WeaponConfig.InitialTimeBetweenShots);
 
 	if (bAllowAutomaticWeaponCatchup)
 	{
@@ -693,9 +699,9 @@ void UVehicleWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, CurrentAmmo, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, CurrentAmmoInClip, COND_OwnerOnly);
 
-	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, BurstCounter, COND_SkipOwner);
-	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, CurrentWeaponRotation, COND_SkipOwner);
-	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, bPendingReload, COND_SkipOwner);
+	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, BurstCounter, COND_SimulatedOnly);
+	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, CurrentWeaponRotation, COND_SimulatedOnly);
+	DOREPLIFETIME_CONDITION(UVehicleWeaponComponent, bPendingReload, COND_SimulatedOnly);
 }
 
 
@@ -864,6 +870,7 @@ FVector UVehicleWeaponComponent::CalculateAimDirection(const APlayerController* 
 		
 		UGameplayStatics::DeprojectScreenToWorld(PC,UWidgetLayoutLibrary::GetViewportSize(GetWorld())/AimLocationOnScreen,WorldPos,WorldDirection);
 		
+		
 	}
 	return WorldDirection;
 }
@@ -877,11 +884,6 @@ void UVehicleWeaponComponent::SetAimDirection(const FVector& In)
 
 void UVehicleWeaponComponent::ServerSetControlRotation_Implementation(FVector In)
 {
-	if (GetOwningPawn())
-	{
-		if (APlayerController* PC = Cast<APlayerController>(GetOwningPawn()->GetController()))
-		{
-			PC->SetControlRotation(In.Rotation());
-		}
-	}
+	TargetLocation=In;
+	
 }

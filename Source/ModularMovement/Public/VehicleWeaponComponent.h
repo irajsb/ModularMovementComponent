@@ -462,8 +462,7 @@ public:
 	//Custom camera for aiming
 	UPROPERTY(BlueprintReadWrite, Category=Weapon)
 	UCameraComponent* OverrideAimCamera = nullptr;
-	UPROPERTY(EditAnywhere, Category=Setup)
-	bool ReplicateControlRotation = false;
+
 
 	float LastDirectionChange;
 	UPROPERTY(BlueprintReadOnly,Category=Recoil)
