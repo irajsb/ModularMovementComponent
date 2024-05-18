@@ -132,7 +132,7 @@ public:
 
 	//Setup constraint only if suspension is of type constraint
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void SetupConstraints(UModularMovementComponent* MovementComponent,UPrimitiveComponent* ParentBody, UPrimitiveComponent* WheelOrDifferential,UPrimitiveComponent* InWheelCollision,bool IsAxle);
+	void SetupConstraints(UModularMovementComponent* MovementComponent,UPrimitiveComponent* ParentBody, UPrimitiveComponent* WheelOrDifferential,UPrimitiveComponent* InWheelCollision,UPhysicsConstraintComponent* InOptionalConstraint,bool IsAxle);
 	//Pass a custom constraint component 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void SetupCustomConstraint(UModularMovementComponent* MovementComponent,UPhysicsConstraintComponent* ConstraintComponent,UPrimitiveComponent* ParentBody, UPrimitiveComponent* WheelOrDifferential,UPrimitiveComponent* InWheelCollision);
