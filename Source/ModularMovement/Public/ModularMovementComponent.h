@@ -28,6 +28,13 @@ struct FModularVehicleDebugParams
 	int AIDebug = false;
 };
 
+UENUM(BlueprintType)
+enum EVehicleNetworkMode
+{	
+	Default,
+	ClientAuthoritative,
+	 
+};
 
 USTRUCT()
 struct FOldRigidBodyErrorCorrection
@@ -104,7 +111,7 @@ struct FRepCosmeticData
 	TArray<FWheelRepCosmeticData> WheelRepCosmeticDatas;
 	UPROPERTY()
 	FRigidBodyState RigidBodyState;
-
+	
 	UPROPERTY()
 	float CurrentFuel;
 	UPROPERTY()
@@ -281,12 +288,15 @@ public:
 	//Data holder
 	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly, meta=(ShowOnlyInnerProperties ))
 	FVehicleState VehicleState;
-	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly, meta=(ShowOnlyInnerProperties ))
+	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
 	bool ApplyRecommendedMeshProperties=true;
 
 	//Vehicle will spawn with off engine
 	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
 	bool SpawnWithTurnedOffEngine=false;
+
+	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
+	TEnumAsByte<EVehicleNetworkMode> NetworkMode;
 	
 	UPROPERTY()
 	UTerrainInteraction* TerrainInteractionComponent=nullptr;
@@ -370,8 +380,8 @@ public:
 	///replication
 
 
-	bool ShouldProcessPhysics() const;
-	bool ShouldProcessCosmetics() const;
+	bool ShouldProcessPhysics() ;
+	bool ShouldProcessCosmetics() ;
 	bool ShouldReplicateInput() const;
 
 
@@ -381,13 +391,16 @@ public:
 	/** Replicated cosmetic data  */
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_RepCosmeticData)
 	FRepCosmeticData RepCosmeticData;
+	
+	bool CosmeticDataInitialized=false;
 
 
 
 
 	UFUNCTION()
 	void OnRep_RepCosmeticData();
-
+	UFUNCTION(Server,Reliable)
+	void SetCosmeticDataOnServer(FRepCosmeticData Data);
 
 	/** Pass current state to server */
 	UFUNCTION(reliable, server, WithValidation)
@@ -426,4 +439,8 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnCustomEvent OnCustomEvent;
+
+	bool IsLocal();
+	 bool CachedIsLocal = false;
+	 bool CachedIsLocalValue = false;
 };

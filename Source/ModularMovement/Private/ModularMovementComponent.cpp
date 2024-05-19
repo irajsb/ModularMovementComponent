@@ -304,11 +304,11 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* Body
 
 		UpdateWheels(fDeltaTime, WheelTorque);
 
-		UpdateReplicatedCosmeticData();
+		
 	}
 	else
 	{
-		if (GetOwnerRole() < ROLE_AutonomousProxy)
+		if (ShouldProcessCosmetics())
 		{
 			for (UModularWheel* Component : Components)
 			{
@@ -396,6 +396,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	if (ShouldProcessPhysics())
 	{
 		GetSetup()->GetGearBox()->Update(DeltaTime, this);
+		UpdateReplicatedCosmeticData();
 	}
 
 	for (UModularWheel* Component : Components)
@@ -405,11 +406,22 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	CaptureState(DeltaTime);
 
 
-	// Check if we are in the process of body's state correction
-	if (GetOwnerRole()<ROLE_Authority)
+	if(NetworkMode==Default)
 	{
+		if (GetOwnerRole()<ROLE_Authority)
+		{
 
-		ApplyBodyInstanceData();
+			ApplyBodyInstanceData();
+		}
+	}else
+	{
+		if(!IsLocal())
+		{
+			ApplyBodyInstanceData();
+		}else
+		{
+			SetCosmeticDataOnServer(RepCosmeticData);
+		}
 	}
 
 	if(TerrainInteractionComponent)
@@ -443,11 +455,22 @@ void UModularMovementComponent::BeginPlay()
 
 	GetSetup()->GetGearBox()->SetupGearBox();
 
+	
 	GetMesh()->SetSimulatePhysics(true);
 
-	if (GetOwnerRole() < ROLE_AutonomousProxy)
+	if(NetworkMode==Default)
 	{
-		GetMesh()->SetEnableGravity(false);
+		if (GetOwnerRole() < ROLE_AutonomousProxy)
+		{
+			GetMesh()->SetEnableGravity(false);
+		}
+	}else
+	{
+		if(!IsLocal())
+		{
+			GetMesh()->SetEnableGravity(false);
+			
+		}
 	}
 
 	if(!VehicleState.IsEngineOn&&!SpawnWithTurnedOffEngine)
@@ -858,25 +881,41 @@ float UModularMovementComponent::CmToM(float In)
 }
 
 
-bool UModularMovementComponent::ShouldProcessPhysics() const
+bool UModularMovementComponent::ShouldProcessPhysics() 
 {
 	if (GetNetMode() == NM_Standalone)
 	{
 		return true;
 	}
-
-
-	return GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
+	if(NetworkMode==Default)
+	{
+		return GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
+	}else
+	{
+		return IsLocal();
+	}
 }
 
-bool UModularMovementComponent::ShouldProcessCosmetics() const
+bool UModularMovementComponent::ShouldProcessCosmetics() 
 {
-	return GetNetMode() == NM_Standalone || (GetNetMode() == NM_Client && GetOwnerRole() != ROLE_Authority);
+	if(NetworkMode==Default)
+	{
+		return GetOwnerRole()<ROLE_AutonomousProxy;
+	}else
+	{
+		return !IsLocal();
+	}
 }
 
 bool UModularMovementComponent::ShouldReplicateInput() const
 {
-	return (GetPawnOwner()->GetLocalRole() != ROLE_Authority && GetPawnOwner()->IsLocallyControlled());
+	if(NetworkMode==Default)
+	{
+		return (GetPawnOwner()->GetLocalRole() != ROLE_Authority && GetPawnOwner()->IsLocallyControlled());
+	}else
+	{
+		return false;
+	}
 }
 
 
@@ -1036,9 +1075,12 @@ float UModularMovementComponent::CalcThrottleInput(float DeltaTime) const
 
 void UModularMovementComponent::UpdateReplicatedCosmeticData()
 {
-	if (GetOwnerRole() < ROLE_Authority)
+	if(NetworkMode==Default)
 	{
-		return;
+		if (GetOwnerRole() < ROLE_Authority)
+		{
+			return;
+		}
 	}
 	RepCosmeticData.EngineRPM = GetRPMRatio() * 255.f;
 	RepCosmeticData.CurrentGear = GetSetup()->GetGearBox()->CurrentGear;
@@ -1060,7 +1102,13 @@ void UModularMovementComponent::UpdateReplicatedCosmeticData()
 
 void UModularMovementComponent::OnRep_RepCosmeticData()
 {
-	if (GetOwnerRole() == ROLE_SimulatedProxy)
+
+	CosmeticDataInitialized=true;
+	if(NetworkMode==ClientAuthoritative&&IsLocal())
+	{
+		return;
+	}
+	if (GetOwnerRole() == ROLE_SimulatedProxy||NetworkMode==ClientAuthoritative)
 	{
 		VehicleState.CurrentRpm = UKismetMathLibrary::MapRangeClamped(RepCosmeticData.EngineRPM, 0, 255,
 		                                                              GetSetup()->GetIdleRPM(),
@@ -1072,7 +1120,7 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 			GetSetup()->GetGearBox()->SetCurrentGear(RepCosmeticData.CurrentGear);
 		}
 		SteeringInput = RepCosmeticData.SteeringInput;
-
+		
 		for (int Index = 0; Index != Components.Num(); Index++)
 		{
 			if (RepCosmeticData.WheelRepCosmeticDatas.IsValidIndex(Index))
@@ -1092,8 +1140,17 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 	}
 	
 	NewestBodyInstance=RepCosmeticData.RigidBodyState;
-	ApplyBodyInstanceData();
+	if(!IsLocal())
+	{
+		ApplyBodyInstanceData();
+	}
 	
+}
+
+void UModularMovementComponent::SetCosmeticDataOnServer_Implementation(FRepCosmeticData Data)
+{
+	RepCosmeticData=Data;
+	OnRep_RepCosmeticData();
 }
 
 void UModularMovementComponent::ShowSetupError(FString Error)
@@ -1107,22 +1164,28 @@ void UModularMovementComponent::ShowSetupError(FString Error)
 
 void UModularMovementComponent::ApplyBodyInstanceData() const
 {
-	
 
-	if (GetMesh() == nullptr)
+
+	if (GetMesh() == nullptr||!CosmeticDataInitialized)
 	{
 		return ;
 	}
-
-
 	FBodyInstance* BI = GetMesh()->GetBodyInstance();
+	
+
+
+	
 	if (BI && BI->IsInstanceSimulatingPhysics())
 	{
+		
 		FRigidBodyState CurrentState;
 		GetMesh()->GetRigidBodyState(CurrentState);
 		
+		
 		const bool bShouldSleep = false;
 
+		
+		//BI->SetLinearVelocity(CurrentState.LinVel + FixLinVel, false);
 		/////// POSITION CORRECTION ///////
 
 		// Find out how much of a correction we are making
@@ -1183,7 +1246,8 @@ void UModularMovementComponent::ApplyBodyInstanceData() const
 		/////// BODY UPDATE ///////
 		BI->SetBodyTransform(FTransform(UpdatedQuat, UpdatedPos), ETeleportType::TeleportPhysics);
 		BI->SetLinearVelocity(CurrentState.LinVel + FixLinVel, false);
-	//	BI->SetAngularVelocityInRadians(FMath::DegreesToRadians(UpdatedQuat.Vector()), false);
+		
+		BI->SetAngularVelocityInRadians(FVector(0,0,0), false);
 
 		// state is restored when no velocity corrections are required
 		bool bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() <
@@ -1205,11 +1269,51 @@ void UModularMovementComponent::ApplyBodyInstanceData() const
 
 }
 
+bool UModularMovementComponent::IsLocal() 
+{
+	// Check if the cached result is available
+	if (CachedIsLocal)
+	{
+		return CachedIsLocalValue;
+	}
+
+	const ENetMode NetMode = GetNetMode();
+	const auto Owner = GetOwner();
+	if (NetMode == NM_Standalone)
+	{
+		// Not networked.
+		CachedIsLocal = true;
+		CachedIsLocalValue = true;
+		return true;
+	}
+
+	if (NetMode == NM_Client && Owner->GetLocalRole() == ROLE_AutonomousProxy)
+	{
+		// Networked client in control.
+		CachedIsLocal = true;
+		CachedIsLocalValue = true;
+		return true;
+	}
+
+	if (NetMode == NM_ListenServer && GetWorld()->GetFirstPlayerController() == GetPawnOwner()->GetController())
+	{
+		CachedIsLocal = true;
+		CachedIsLocalValue = true;
+		return true;
+	}
+
+	// If none of the conditions are met, the result is false
+	CachedIsLocal = true;
+	CachedIsLocalValue = false;
+	return false;
+}
+
 
 void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UModularMovementComponent, RepCosmeticData);
+	
 }
 
 

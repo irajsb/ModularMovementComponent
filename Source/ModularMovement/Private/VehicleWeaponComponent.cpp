@@ -72,7 +72,7 @@ void UVehicleWeaponComponent::BeginPlay()
 		if(GetOwningPawn()->GetController()){
 			if(GetOwningPawn()->GetController()->IsPlayerController())
 			{
-				if (GetNetMode() == NM_Standalone || GetOwnerRole() == ROLE_AutonomousProxy)
+				if (GetNetMode() == NM_Standalone || GetOwnerRole() == ROLE_AutonomousProxy||(GetNetMode()==NM_ListenServer&&IsLocal()))
 				{
 					if (const auto Comp = GetOwner()->AddComponentByClass(UWidgetComponent::StaticClass(), false, FTransform(),
 																		  false))
@@ -117,7 +117,7 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 		{
 			if (const auto PC = Cast<APlayerController>(GetOwningPawn()->GetController()))
 			{
-				if (GetNetMode() == NM_Standalone || GetOwnerRole() < ROLE_Authority)
+				if (GetNetMode() == NM_Standalone || GetOwnerRole() < ROLE_Authority||(GetNetMode()==NM_ListenServer&&IsLocal()))
 				{
 
 					SetAimDirection(CalculateAimDirection(PC));
@@ -140,7 +140,8 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 				GetWorld()->LineTraceSingleByChannel(HitResult, CamLoc, CamLoc + AimDirection * 1000000.0,
 													 WeaponConfig.Channel, Params);
 				//Camera aim loc
-				TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
+					TargetLocation = HitResult.bBlockingHit ? HitResult.ImpactPoint : HitResult.TraceEnd;
+					
 					ServerSetControlRotation(TargetLocation);
 					const FVector ComponentLoc = GetComponentLocation();
 					GetWorld()->LineTraceSingleByChannel(HitResult, ComponentLoc,
@@ -880,6 +881,32 @@ void UVehicleWeaponComponent::SetAimDirection(const FVector& In)
 	AimDirection = In;
 }
 
+bool UVehicleWeaponComponent::IsLocal() const
+{
+	const ENetMode NetMode = GetNetMode();
+	const auto Owner=GetOwner();
+	if (NetMode == NM_Standalone)
+	{
+		// Not networked.
+		return true;
+	}
+	
+	if (NetMode == NM_Client &&Owner-> GetLocalRole() == ROLE_AutonomousProxy)
+	{
+		// Networked client in control.
+		return true;
+	}
+
+	if(NetMode==NM_ListenServer&&GetWorld()->GetFirstPlayerController()==GetOwningPawn()->GetController())
+	{
+		return true;
+	}
+
+
+
+
+	return false;
+}
 
 
 void UVehicleWeaponComponent::ServerSetControlRotation_Implementation(FVector In)

@@ -462,7 +462,7 @@ public:
 	//Custom camera for aiming
 	UPROPERTY(BlueprintReadWrite, Category=Weapon)
 	UCameraComponent* OverrideAimCamera = nullptr;
-
+	bool IsLocal() const;
 
 	float LastDirectionChange;
 	UPROPERTY(BlueprintReadOnly,Category=Recoil)

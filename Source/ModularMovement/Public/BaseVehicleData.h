@@ -15,13 +15,7 @@ enum  EModularSteerType
 	Tank,
 };
 
-UENUM(BlueprintType)
-enum EVehicleNetworkMode
-{	ClientPredictive,
-	ServerAuthoritative,
-	ClientAuthoritative,
-	 
-};
+
 
 
 /**
