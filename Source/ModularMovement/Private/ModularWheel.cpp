@@ -459,14 +459,17 @@ void UModularWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* 
 
 	for (USceneComponent* Mesh : ChildWheels)
 	{
-		if (Mesh->IsA(UMeshComponent::StaticClass()))
+		if(Mesh)
 		{
-			Rotation = (Rotation.Quaternion().Rotator());
-			Mesh->SetRelativeRotation(Rotation);
-
-			if(!SuspensionConstraint)
+			if (Mesh->IsA(UMeshComponent::StaticClass()))
 			{
-				Mesh->SetWorldLocation(Location);
+				Rotation = (Rotation.Quaternion().Rotator());
+				Mesh->SetRelativeRotation(Rotation);
+
+				if(!SuspensionConstraint)
+				{
+					Mesh->SetWorldLocation(Location);
+				}
 			}
 		}
 	}
@@ -654,23 +657,32 @@ void UModularWheel::AddForceAtPosition(UPrimitiveComponent* Component, FVector P
 }
 
 void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponent, UPrimitiveComponent* ParentBody,
-                                     UPrimitiveComponent* WheelOrDifferential, UPrimitiveComponent* InWheelCollision,bool IsAxle)
+                                     UPrimitiveComponent* WheelOrDifferential, UPrimitiveComponent* InWheelCollision,UPhysicsConstraintComponent* InOptionalConstraint,bool IsAxle)
 {
-	if (SuspensionConstraint)
+	if(InOptionalConstraint)
 	{
-		SuspensionConstraint->DestroyComponent();
+		SuspensionConstraint=InOptionalConstraint;
+	}else
+	{
+		if (SuspensionConstraint)
+		{
+			SuspensionConstraint->DestroyComponent();
+		}
 	}
 	auto WheelSetup = GetWheelSetup();
 	if (WheelSetup)
 	{
 		if (WheelSetup->SuspensionType == Constraint)
 		{
+			if(!InOptionalConstraint){
 			const FTransform WheelTransform = GetComponentTransform();
 			const FTransform ParentTransform = MovementComponent->GetOwner()->GetTransform();
 			const FTransform RelativeTransform = WheelTransform.GetRelativeTransform(ParentTransform);
 			auto Comp = MovementComponent->GetOwner()->AddComponentByClass(
 				UPhysicsConstraintComponent::StaticClass(), false, RelativeTransform, false);
+	
 			SuspensionConstraint = Cast<UPhysicsConstraintComponent>(Comp);
+			}
 			SuspensionConstraint->SetConstrainedComponents(WheelOrDifferential, NAME_None, ParentBody, NAME_None);
 			ConstraintParent=WheelOrDifferential;
 			// Set up the constraint properties here
@@ -721,10 +733,7 @@ void UModularWheel::SetupCustomConstraint(UModularMovementComponent* MovementCom
 {
 
 
-	if(SuspensionConstraint)
-	{
-		SuspensionConstraint->DestroyComponent();
-	}
+	
 	SuspensionConstraint=ConstraintComponent;
 	
 	SuspensionConstraint->SetConstrainedComponents(WheelOrDifferential, NAME_None, ParentBody, NAME_None);
