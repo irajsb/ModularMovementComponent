@@ -49,7 +49,7 @@ public:
 	UPROPERTY(EditAnywhere,Category=AdvancedTire)
 	bool UseCombinedFrictionWhenHandBraking=true;
 	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
-	                              UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
+	                              UPrimitiveComponent* Mesh, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 	{
 		WheelOwner = Wheel;
 	};

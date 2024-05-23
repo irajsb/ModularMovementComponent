@@ -56,7 +56,12 @@ public:
 	//Is gearbox Manual
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission)
 	bool IsManual;
-
+	//Can skip gears to desired gear 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission)
+	bool CanSkipGears;
+	//Desired ideal rpm for this vehicle
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission,meta=(EditCondition=CanSkipGears))
+	float IdealRPMRatio=0.3;
 	
 
 	// Time required to change gears
@@ -88,6 +93,7 @@ public:
 	float GearBoxRPMRatio=0.f;
 	// Sets the target gear, either immediately or not, depending on 'bImmediate'
 	void SetTargetGear(int32 GearNum, bool bImmediate, class UModularMovementComponent* MovementComponent);
+	void CalculateIdealGear(float IdealGearRatio, int& ClosestGearIndex,int DefaultGear);
 
 	// Update function to be called every frame or tick
 	void Update(float DeltaTime, class UModularMovementComponent* MovementComponent);

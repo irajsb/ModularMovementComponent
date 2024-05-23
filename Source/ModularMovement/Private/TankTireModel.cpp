@@ -7,18 +7,17 @@
 #include "ModularWheel.h"
 
 void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
-                                      UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
+                                      UPrimitiveComponent* Mesh, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 {
-	Super::UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, Wheel);
+	Super::UpdateSimulation(DeltaTime, FinalForceVector, Mesh, ModularMovementComponent, Wheel);
 
 	if(!Wheel||!ModularMovementComponent)
 	{
 		return;
 	}
 	
-	const UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
-	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
-		GetNumberOfWheels());
+
+	const float MassPerWheel = ModularMovementComponent->GetMassPerWheel();
 	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*10.f:Wheel->WheelState.WheelLoad.Size() ;
 
 	const float TrackInput=Wheel->WheelState.InitialLocalLocation.Y>0.f?ModularMovementComponent->VehicleState.TrackRight.TorqueTransfer

@@ -51,6 +51,9 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	// Suspension force in other directions rather than Z . This is necessary to allow natural twists of suspension
 	UPROPERTY(EditAnywhere,AdvancedDisplay,BlueprintReadWrite,Category=Essential,meta=(EditCondition="SuspensionType==Constraint",EditConditionHides))
 	float NonZForceMultiplier=5.f;
+	//to allow solid axle drop there should be move limit in other axis
+	UPROPERTY(EditAnywhere,AdvancedDisplay,BlueprintReadWrite,Category=Essential,meta=(EditCondition="SuspensionType==Constraint",EditConditionHides))
+	float XYAxisMoveLimit=5.f;
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelWidth=30;

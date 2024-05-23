@@ -7,9 +7,9 @@
 #include "ModularWheel.h"
 
 void UBlueprintableTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
-                                               UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
+                                               UPrimitiveComponent* Mesh, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 {
-	Super::UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, Wheel);
+	Super::UpdateSimulation(DeltaTime, FinalForceVector, Mesh, ModularMovementComponent, Wheel);
 
 	const FTransform WorldTransform = ModularMovementComponent->GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
 	const float SteerAngleDegrees = Wheel->WheelState.SteerAngle;

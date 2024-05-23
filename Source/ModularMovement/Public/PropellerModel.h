@@ -47,7 +47,8 @@ public:
 	float PropellerRadius=1.f;
 	
 	static double CalculateThrust(double Ct, double rho, double A, double omega);
-	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel) override;
+	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UPrimitiveComponent* Mesh, UModularMovementComponent*
+	                              ModularMovementComponent, UModularWheel* Wheel) override;
 
 	virtual FString GetTireDebugData(FVector2f& SlipData) override;
 	FVector TireForceNormalized;

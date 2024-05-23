@@ -3,6 +3,7 @@
 
 #include "VehicleAudioComponent.h"
 
+#include "ModularGearBox.h"
 #include "ModularMovementComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -35,10 +36,11 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			{
 				const auto RPMRatio=MC->VehicleState.CurrentRpm/MC->VehicleState.VehicleData->GetMaxRPM();
 				const float RPMChange=RPMRatio-RPM;
+				const bool GearChanging=MC->GetSetup()->GetGearBox()->IsChangingGear();
 				RPM=UKismetMathLibrary::FInterpTo_Constant(RPM,RPMRatio,DeltaTime,RPMInterpolationSpeed);
 				SetFloatParameter("RPM",RPM*RPMMultiplier);
 
-				const float NewLoad=((FMath::Abs(MC->ThrottleInput)/2)+(RPMChange > 0.05) )? 0.5f : 0.0f;
+				const float NewLoad=GearChanging?0.f:((FMath::Abs(MC->ThrottleInput)/2)+(RPMChange > 0.05) )? 0.5f : 0.0f;
 				Load=UKismetMathLibrary::FInterpTo_Constant(Load,NewLoad,DeltaTime,LoadInterpolationSpeed);
 				SetFloatParameter("Load",Load*LoadMultiplier);
 

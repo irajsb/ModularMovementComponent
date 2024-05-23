@@ -38,6 +38,7 @@ FORCEINLINE float RPMToOmega(float RPM)
 {
 	return RPM * PI / 30.f;
 }
+
 UModularMovementComponent::UModularMovementComponent()
 {
 	SetIsReplicatedByDefault(true);
@@ -83,18 +84,18 @@ void UModularMovementComponent::UpdateComponents(const TArray<UModularWheel*> Ad
 	}
 	Components = TempComponents;
 
-	auto Diffs=Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData;
-	for(auto Wheel :Components)
+	auto Diffs = Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData;
+	for (auto Wheel : Components)
 	{
-		if(Wheel->WheelState.ApplyDriveForce)
+		if (Wheel->WheelState.ApplyDriveForce)
 		{
-			if(Diffs.IsValidIndex(Wheel->DifferentialIndex))
+			if (Diffs.IsValidIndex(Wheel->DifferentialIndex))
 			{
 				Diffs[Wheel->DifferentialIndex].Wheels.Add(Wheel);
 			}
 		}
 	}
-	Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData=Diffs;
+	Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData = Diffs;
 }
 
 
@@ -118,9 +119,8 @@ UBaseVehicleData* UModularMovementComponent::GetSetup() const
 void UModularMovementComponent::SetThrottleInput(float Input)
 {
 	//Setting RawThrottleInput
-	
-		RawThrottleInput = FMath::Clamp<float>(Input, -1.f, 1.f);
-	
+
+	RawThrottleInput = FMath::Clamp<float>(Input, -1.f, 1.f);
 }
 
 void UModularMovementComponent::SetSteeringInput(float Input)
@@ -159,63 +159,61 @@ float UModularMovementComponent::GetRPMRatio()
 	                                           GetSetup()->GetMaxRPM(), 0, 1);
 }
 
-void UModularMovementComponent::HoldStarter( float StartTime)
+void UModularMovementComponent::HoldStarter(float StartTime)
 {
-	auto StaterFinish=[this,StartTime]()
+	auto StaterFinish = [this,StartTime]()
 	{
 		// if no fuel keep the loop going else start engine 
-		HoldStarter(VehicleState.CurrentFuel==0.f?StartTime: 0.f);
+		HoldStarter(VehicleState.CurrentFuel == 0.f ? StartTime : 0.f);
 	};
-	if(StartTime==0.f)
+	if (StartTime == 0.f)
 	{
-		VehicleState.IsEngineOn=true;
-		
+		VehicleState.IsEngineOn = true;
+
 		StarterTimerHandle.Invalidate();
-		
-		OnEngineStateChange.Broadcast(true,false);
+
+		OnEngineStateChange.Broadcast(true, false);
 		return;
-		
 	}
-	GetWorld()->GetTimerManager().SetTimer(StarterTimerHandle,StaterFinish,StartTime,false);
-	OnEngineStateChange.Broadcast(false,true);
-	
+	GetWorld()->GetTimerManager().SetTimer(StarterTimerHandle, StaterFinish, StartTime, false);
+	OnEngineStateChange.Broadcast(false, true);
 }
 
 void UModularMovementComponent::ReleaseStarter()
 {
-	if(StarterTimerHandle.IsValid())
+	if (StarterTimerHandle.IsValid())
 	{
 		GetWorld()->GetTimerManager().ClearTimer(StarterTimerHandle);
-		OnEngineStateChange.Broadcast(VehicleState.IsEngineOn,false);
+		OnEngineStateChange.Broadcast(VehicleState.IsEngineOn, false);
 	}
 }
 
 void UModularMovementComponent::StopEngine()
 {
-	if(VehicleState.IsEngineOn)
+	if (VehicleState.IsEngineOn)
 	{
-		VehicleState.IsEngineOn=false;
-		OnEngineStateChange.Broadcast(false,false);
+		VehicleState.IsEngineOn = false;
+		OnEngineStateChange.Broadcast(false, false);
 	}
 }
 
 void UModularMovementComponent::AddFuel(float Amount)
 {
-	VehicleState.CurrentFuel=FMath::Min(VehicleState.CurrentFuel+Amount,GetSetup()->GetTankCapacity());
+	VehicleState.CurrentFuel = FMath::Min(VehicleState.CurrentFuel + Amount, GetSetup()->GetTankCapacity());
 }
 
 void UModularMovementComponent::SetFuel(float Amount)
 {
-	VehicleState.CurrentFuel=FMath::Min(Amount,GetSetup()->GetTankCapacity());
+	VehicleState.CurrentFuel = FMath::Min(Amount, GetSetup()->GetTankCapacity());
 }
 
 float UModularMovementComponent::GetFuelRatio()
 {
-	if(!GetSetup())
+	if (!GetSetup())
 	{
 		return 0.f;
 	}
-	return VehicleState.CurrentFuel/ GetSetup()->GetTankCapacity();
+	return VehicleState.CurrentFuel / GetSetup()->GetTankCapacity();
 }
 
 
@@ -227,7 +225,6 @@ void UModularMovementComponent::InitializeComponent()
 	{
 		return ShowSetupError("No Mesh Found at root component of the vehicle");
 	}
-	
 
 
 	if (VehicleState.VehicleDataClass.LoadSynchronous())
@@ -257,19 +254,19 @@ void UModularMovementComponent::InitializeComponent()
 
 	//Setup Mesh
 
-if(ApplyRecommendedMeshProperties)
-{
-	MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
-	MeshComponent->BodyInstance.bSimulatePhysics = true;
-	if (MeshComponent->GetCollisionObjectType())
-
+	if (ApplyRecommendedMeshProperties)
 	{
-		MeshComponent->BodyInstance.bNotifyRigidBodyCollision = true;
+		MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
+		MeshComponent->BodyInstance.bSimulatePhysics = true;
+		if (MeshComponent->GetCollisionObjectType())
+
+		{
+			MeshComponent->BodyInstance.bNotifyRigidBodyCollision = true;
+		}
+		MeshComponent->BodyInstance.bUseCCD = true;
+		MeshComponent->SetGenerateOverlapEvents(true);
+		MeshComponent->SetCanEverAffectNavigation(false);
 	}
-	MeshComponent->BodyInstance.bUseCCD = true;
-	MeshComponent->SetGenerateOverlapEvents(true);
-	MeshComponent->SetCanEverAffectNavigation(false);
-}
 
 	//Calculate Constants
 	AirDragConstant = GetSetup()->GetAirDragConstant();
@@ -284,27 +281,27 @@ if(ApplyRecommendedMeshProperties)
 
 void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* BodyInstance)
 {
-
-	
-	
 	MODULAR_CYCLE_COUNTER(STAT_ModularTickComponent)
 	const float fDeltaTime = FMath::Min<float>(DeltaTime, 0.0633);
-	
 
+	if(!IsActive())
+	{
+		return;
+	}
+	float WheelTorque = 0.f;
 	if (ShouldProcessPhysics())
 	{
-		SteeringInput = CalcSteeringInput(DeltaTime);
-		ThrottleInput = CalcThrottleInput(DeltaTime);
-		BrakeInput = CalcBrakeInput();
-		float WheelTorque = 0.f;
-
-		UpdateAirDrag();
-		UpdateEngine(fDeltaTime, WheelTorque);
+		if (!IsTrailer)
+		{
+			SteeringInput = CalcSteeringInput(DeltaTime);
+			ThrottleInput = CalcThrottleInput(DeltaTime);
+			BrakeInput = CalcBrakeInput();
 
 
+			UpdateAirDrag();
+			UpdateEngine(fDeltaTime, WheelTorque);
+		}
 		UpdateWheels(fDeltaTime, WheelTorque);
-
-		
 	}
 	else
 	{
@@ -367,6 +364,10 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	if(!IsActive())
+	{
+		return;
+	}
 	//Check data 
 	if (!GetSetup())
 	{
@@ -406,27 +407,28 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	CaptureState(DeltaTime);
 
 
-	if(NetworkMode==Default)
+	if (NetworkMode == Default)
 	{
-		if (GetOwnerRole()<ROLE_Authority)
+		if (GetOwnerRole() < ROLE_Authority)
 		{
-
 			ApplyBodyInstanceData();
 		}
-	}else
+	}
+	else
 	{
-		if(!IsLocal())
+		if (!IsLocal())
 		{
 			ApplyBodyInstanceData();
-		}else
+		}
+		else
 		{
 			SetCosmeticDataOnServer(RepCosmeticData);
 		}
 	}
 
-	if(TerrainInteractionComponent)
+	if (TerrainInteractionComponent)
 	{
-		TerrainInteractionComponent->Update(DeltaTime,this,Components);
+		TerrainInteractionComponent->Update(DeltaTime, this, Components);
 	}
 }
 
@@ -455,31 +457,31 @@ void UModularMovementComponent::BeginPlay()
 
 	GetSetup()->GetGearBox()->SetupGearBox();
 
-	
+
 	GetMesh()->SetSimulatePhysics(true);
 
-	if(NetworkMode==Default)
+	if (NetworkMode == Default)
 	{
 		if (GetOwnerRole() < ROLE_AutonomousProxy)
 		{
 			GetMesh()->SetEnableGravity(false);
 		}
-	}else
+	}
+	else
 	{
-		if(!IsLocal())
+		if (!IsLocal())
 		{
 			GetMesh()->SetEnableGravity(false);
-			
 		}
 	}
 
-	if(!VehicleState.IsEngineOn&&!SpawnWithTurnedOffEngine)
+	if (!VehicleState.IsEngineOn && !SpawnWithTurnedOffEngine)
 	{
 		HoldStarter(0.f);
 	}
 
-	VehicleState.CurrentFuel=GetSetup()->GetTankCapacity();
-	TerrainInteractionComponent=GetTerrainInteractionComponent();
+	VehicleState.CurrentFuel = GetSetup()->GetTankCapacity();
+	TerrainInteractionComponent = GetTerrainInteractionComponent();
 }
 
 void UModularMovementComponent::CaptureState(float DeltaTime)
@@ -521,20 +523,23 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 			AxleRPM = ComponentOmega;
 		}
 	}
-	if(!VehicleState.IsEngineOn)
+	if (!VehicleState.IsEngineOn)
 	{
-		AxleRPM=0.f;
+		AxleRPM = 0.f;
 	}
 
-	const float MaxRads=RPMToOmega(VehicleState.VehicleData->GetMaxRPM());
-	const float MinRads=VehicleState.IsEngineOn?RPMToOmega(VehicleState.VehicleData->GetIdleRPM()):0.f;
-	const float TargetRPM =GetSetup()->GetGearBox()->GetDriveRatio()==0?ThrottleInput*MaxRads: FMath::Clamp<float>(AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio(),MinRads, MaxRads);
+	const float MaxRads = RPMToOmega(VehicleState.VehicleData->GetMaxRPM());
+	const float MinRads = VehicleState.IsEngineOn ? RPMToOmega(VehicleState.VehicleData->GetIdleRPM()) : 0.f;
+	const float DriveRPM= GetSetup()->GetGearBox()->GetDriveRatio() == 0?ThrottleInput * MaxRads:AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio();
+	const float TargetRPM =UKismetMathLibrary::MapRangeClamped(DriveRPM,0,MaxRads,MinRads,MaxRads);
+		
 
-	VehicleState.EngineRads = FMath::FInterpConstantTo(VehicleState.EngineRads, TargetRPM, DeltaTime,0.1 * VehicleState.VehicleData->GetMaxRPM());
-	
+	VehicleState.EngineRads = FMath::FInterpConstantTo(VehicleState.EngineRads, TargetRPM, DeltaTime,
+	                                                   0.1 * VehicleState.VehicleData->GetMaxRPM());
+
 
 	VehicleState.CurrentRpm = OmegaToRPM(VehicleState.EngineRads);
-	
+
 
 	//TODO Refactor
 	if (GetSetup()->ShouldZeroRpmWhenShifting() && GetSetup()->GetGearBox()->IsChangingGear())
@@ -553,27 +558,27 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 		//Use curve 
-		const float EngineTorque = VehicleState.IsEngineOn?ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm):0;
-		
+		const float EngineTorque = VehicleState.IsEngineOn
+			                           ? ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm)
+			                           : 0;
+
 		//Gearbox 
 		const float TransmissionTorque = GetSetup()->GetGearBox()->GetDriveRatio();
-		
+
 
 		//Fuel
-		const float RPMRatio=GetRPMRatio();
+		const float RPMRatio = GetRPMRatio();
 
-		const float FuelConsumption=VehicleState.VehicleData->GetFuelConsumption(RPMRatio);
+		const float FuelConsumption = VehicleState.VehicleData->GetFuelConsumption(RPMRatio);
 
-		if(VehicleState.IsEngineOn)
+		if (VehicleState.IsEngineOn)
 		{
-			VehicleState.CurrentFuel=FMath::Max(0, VehicleState.CurrentFuel-FuelConsumption*DeltaTime);
-			if(VehicleState.CurrentFuel==0.f)
+			VehicleState.CurrentFuel = FMath::Max(0, VehicleState.CurrentFuel - FuelConsumption * DeltaTime);
+			if (VehicleState.CurrentFuel == 0.f)
 			{
 				StopEngine();
 			}
 		}
-
-		
 
 
 		WheelTorque = EngineTorque * TransmissionTorque;
@@ -603,7 +608,7 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 
 
 	const float UseSteeringValue = SteeringInput;
-	
+
 
 	if (VehicleState.VehicleData->GetSteerType() == Tank)
 	{
@@ -626,27 +631,26 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 				RawThrottleInput) + RightTrackInput;
 		}
 
-		if(RawThrottleInput==0.f&&RawSteeringInput==0.f)
+		if (RawThrottleInput == 0.f && RawSteeringInput == 0.f)
 		{
-			VehicleState.TrackRight.TorqueTransfer=VehicleState.TrackLeft.TorqueTransfer=-1.f*BrakeInput*FMath::Sign(VehicleState.ForwardSpeed);
-			
-			
+			VehicleState.TrackRight.TorqueTransfer = VehicleState.TrackLeft.TorqueTransfer = -1.f * BrakeInput *
+				FMath::Sign(VehicleState.ForwardSpeed);
 		}
 		// In some rare cases where ground is perfectly flat and vehicle is perfectly still track forces can cancel each other so pr  that here
-		if(FMath::Abs(VehicleState.ForwardSpeed)<10.f&&VehicleState.TrackRight.TorqueTransfer!=VehicleState.TrackLeft.TorqueTransfer)
+		if (FMath::Abs(VehicleState.ForwardSpeed) < 10.f && VehicleState.TrackRight.TorqueTransfer != VehicleState.
+			TrackLeft.TorqueTransfer)
 		{
-			if(VehicleState.TrackRight.TorqueTransfer<VehicleState.TrackLeft.TorqueTransfer)
+			if (VehicleState.TrackRight.TorqueTransfer < VehicleState.TrackLeft.TorqueTransfer)
 			{
-				VehicleState.TrackRight.TorqueTransfer=0;
-				VehicleState.TrackLeft.TorqueTransfer=VehicleState.TrackLeft.TorqueTransfer*2;
-			}else
-			{
-				VehicleState.TrackLeft.TorqueTransfer=0;
-				VehicleState.TrackRight.TorqueTransfer=VehicleState.TrackRight.TorqueTransfer*2;
+				VehicleState.TrackRight.TorqueTransfer = 0;
+				VehicleState.TrackLeft.TorqueTransfer = VehicleState.TrackLeft.TorqueTransfer * 2;
 			}
-			
+			else
+			{
+				VehicleState.TrackLeft.TorqueTransfer = 0;
+				VehicleState.TrackRight.TorqueTransfer = VehicleState.TrackRight.TorqueTransfer * 2;
+			}
 		}
-		
 	}
 
 
@@ -654,8 +658,6 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 	{
 		if (Component->WheelState.WheelSetup)
 		{
-			
-
 			Component->WheelState.BrakeTorque = BrakeInput * Component->WheelState.WheelSetup->BrakeTorque;
 			Component->WheelState.IsHandBrakeTorque = false;
 			if (HandBrakeInput)
@@ -672,11 +674,12 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 			Component->UpdateSuspension(DeltaTime, this);
 			//Apply Steering
 			Component->UpdateSteering(DeltaTime, this, UseSteeringValue);
-			if(!Component->WheelState.ApplyDriveForce||Component->DifferentialIndex==255)
+			if (!Component->WheelState.ApplyDriveForce || Component->DifferentialIndex == 255)
 			{
-				Component->UpdateForces(DeltaTime,this);
+				Component->UpdateForces(DeltaTime, this);
 			}
-		}else
+		}
+		else
 		{
 			UModularVehicleFunctionLibrary::NotifyError(
 				"Wheel Setup class is missing in wheel" + Component->GetName() + " . Please create and assign one !");
@@ -684,25 +687,25 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 	}
 
 
-	float TempDiffRatio=-1.f;
-	for(auto Diff:Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData)
+	float TempDiffRatio = -1.f;
+	for (auto Diff : Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData)
 	{
-		if(!Diff.Wheels.IsEmpty())
+		if (!Diff.Wheels.IsEmpty())
 		{
-			if(TempDiffRatio<0.f)
+			if (TempDiffRatio < 0.f)
 			{
 				//initialize
-				TempDiffRatio=Diff.DifferentialRatio;
+				TempDiffRatio = Diff.DifferentialRatio;
 			}
-			if(TempDiffRatio!=Diff.DifferentialRatio)
+			if (TempDiffRatio != Diff.DifferentialRatio)
 			{
-				UE_LOG(LogModularVehicle,Error,TEXT("Found two active diffs with different ratios.This can cause unexpected behaviour"))
+				UE_LOG(LogModularVehicle, Error,
+				       TEXT("Found two active diffs with different ratios.This can cause unexpected behaviour"))
 			}
-			ApplyDifferential( Diff,WheelTorque*Diff.TorqueTransferRatio,DeltaTime);
+			ApplyDifferential(Diff, WheelTorque * Diff.TorqueTransferRatio, DeltaTime);
 		}
 	}
-	CurrentDifferentialRatio=TempDiffRatio;
-	
+	CurrentDifferentialRatio = TempDiffRatio;
 }
 
 
@@ -881,41 +884,35 @@ float UModularMovementComponent::CmToM(float In)
 }
 
 
-bool UModularMovementComponent::ShouldProcessPhysics() 
+bool UModularMovementComponent::ShouldProcessPhysics()
 {
 	if (GetNetMode() == NM_Standalone)
 	{
 		return true;
 	}
-	if(NetworkMode==Default)
+	if (NetworkMode == Default)
 	{
 		return GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
-	}else
-	{
-		return IsLocal();
 	}
+	return IsLocal();
 }
 
-bool UModularMovementComponent::ShouldProcessCosmetics() 
+bool UModularMovementComponent::ShouldProcessCosmetics()
 {
-	if(NetworkMode==Default)
+	if (NetworkMode == Default)
 	{
-		return GetOwnerRole()<ROLE_AutonomousProxy;
-	}else
-	{
-		return !IsLocal();
+		return GetOwnerRole() < ROLE_AutonomousProxy;
 	}
+	return !IsLocal();
 }
 
 bool UModularMovementComponent::ShouldReplicateInput() const
 {
-	if(NetworkMode==Default)
+	if (NetworkMode == Default)
 	{
 		return (GetPawnOwner()->GetLocalRole() != ROLE_Authority && GetPawnOwner()->IsLocallyControlled());
-	}else
-	{
-		return false;
 	}
+	return false;
 }
 
 
@@ -939,11 +936,10 @@ void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuanti
 
 UTerrainInteraction* UModularMovementComponent::GetTerrainInteractionComponent()
 {
-	if(GetOwner())
+	if (GetOwner())
 	{
-		auto Comp=	GetOwner()->GetComponentByClass(UTerrainInteraction::StaticClass());
-		TerrainInteractionComponent=Cast<UTerrainInteraction>(Comp);
-		
+		auto Comp = GetOwner()->GetComponentByClass(UTerrainInteraction::StaticClass());
+		TerrainInteractionComponent = Cast<UTerrainInteraction>(Comp);
 	}
 	return TerrainInteractionComponent;
 }
@@ -964,13 +960,11 @@ float UModularMovementComponent::CalcSteeringInput(float DeltaTime)
 	return SteeringInput;
 }
 
-float UModularMovementComponent::CalcBrakeInput() 
+float UModularMovementComponent::CalcBrakeInput()
 {
-	float NewBrakeInput =VehicleState.IsEngineOn? 0.0f:GetSetup()->GetIdleBrakeInput();
+	float NewBrakeInput = VehicleState.IsEngineOn ? 0.0f : GetSetup()->GetIdleBrakeInput();
 	if (GetSetup()->ShouldReverseAsBrake())
 	{
-		
-
 		// if player wants to move forwards...
 		if (RawThrottleInput > 0.f)
 		{
@@ -994,28 +988,28 @@ float UModularMovementComponent::CalcBrakeInput()
 		else
 		{
 			if (FMath::Abs(VehicleState.ForwardSpeed) < GetSetup()->GetStopThreshold())
-				
+
 			{
 				NewBrakeInput = 1.f;
 			}
 			else
 			{
 				NewBrakeInput = GetSetup()->GetIdleBrakeInput();
-			
 			}
 		}
 
-		NewBrakeInput= FMath::Clamp<float>(NewBrakeInput, 0.0, 1.0);
-	}else
+		NewBrakeInput = FMath::Clamp<float>(NewBrakeInput, 0.0, 1.0);
+	}
+	else
 	{
-		if(RawBrakeInput==0&&RawThrottleInput<0)
+		if (RawBrakeInput == 0 && RawThrottleInput < 0)
 		{
-			NewBrakeInput=RawThrottleInput;
-		}else
+			NewBrakeInput = RawThrottleInput;
+		}
+		else
 		{
 			NewBrakeInput = FMath::Abs(RawBrakeInput);
 		}
-		
 	}
 
 	// if player isn't pressing forward or backwards...
@@ -1035,16 +1029,16 @@ float UModularMovementComponent::CalcBrakeInput()
 float UModularMovementComponent::CalcThrottleInput(float DeltaTime) const
 {
 	float NewThrottleInput = RawThrottleInput;
-	const bool IsInReverse=GetSetup()->GetGearBox()->IsInReverse();
+	const bool IsInReverse = GetSetup()->GetGearBox()->IsInReverse();
 	if (GetSetup()->ShouldReverseAsBrake())
 	{
-		if (RawBrakeInput > 0.f &&IsInReverse )
+		if (RawBrakeInput > 0.f && IsInReverse)
 		{
 			NewThrottleInput = RawBrakeInput;
 		}
 		else
 		//If the user is changing direction we should really be braking first and not applying any gas, so wait until they've changed gears
-			if (RawThrottleInput > 0.f && IsInReverse || RawThrottleInput < 0.f&& !IsInReverse)
+			if (RawThrottleInput > 0.f && IsInReverse || RawThrottleInput < 0.f && !IsInReverse)
 			{
 				NewThrottleInput = 0.f;
 			}
@@ -1056,18 +1050,19 @@ float UModularMovementComponent::CalcThrottleInput(float DeltaTime) const
 		NewThrottleInput = FMath::Clamp(FMath::Abs(RawThrottleInput) + FMath::Abs(SteeringInput), 0.f, 1.f);
 	}
 
-	if(!GetSetup()->ShouldReverseAsBrake()&&IsInReverse)
+	if (!GetSetup()->ShouldReverseAsBrake() && IsInReverse)
 	{
-			if(NewThrottleInput>0)
+		if (NewThrottleInput > 0)
+		{
+			NewThrottleInput *= -1;
+		}
+		else
+		{
+			if (NewThrottleInput < 0)
 			{
-				NewThrottleInput*=-1;
-			}else
-			{
-				if(NewThrottleInput<0)
-				{
-					NewThrottleInput=0;
-				}
+				NewThrottleInput = 0;
 			}
+		}
 	}
 	return NewThrottleInput;
 }
@@ -1075,7 +1070,7 @@ float UModularMovementComponent::CalcThrottleInput(float DeltaTime) const
 
 void UModularMovementComponent::UpdateReplicatedCosmeticData()
 {
-	if(NetworkMode==Default)
+	if (NetworkMode == Default)
 	{
 		if (GetOwnerRole() < ROLE_Authority)
 		{
@@ -1085,10 +1080,10 @@ void UModularMovementComponent::UpdateReplicatedCosmeticData()
 	RepCosmeticData.EngineRPM = GetRPMRatio() * 255.f;
 	RepCosmeticData.CurrentGear = GetSetup()->GetGearBox()->CurrentGear;
 	RepCosmeticData.SteeringInput = SteeringInput;
-	RepCosmeticData.CurrentFuel=VehicleState.CurrentFuel;
-	RepCosmeticData.EngineOn=VehicleState.IsEngineOn;
+	RepCosmeticData.CurrentFuel = VehicleState.CurrentFuel;
+	RepCosmeticData.EngineOn = VehicleState.IsEngineOn;
 	const auto BI = GetMesh()->GetBodyInstance();
-	
+
 	BI->GetRigidBodyState(RepCosmeticData.RigidBodyState);
 
 	RepCosmeticData.WheelRepCosmeticDatas.Reset();
@@ -1102,13 +1097,12 @@ void UModularMovementComponent::UpdateReplicatedCosmeticData()
 
 void UModularMovementComponent::OnRep_RepCosmeticData()
 {
-
-	CosmeticDataInitialized=true;
-	if(NetworkMode==ClientAuthoritative&&IsLocal())
+	CosmeticDataInitialized = true;
+	if (NetworkMode == ClientAuthoritative && IsLocal())
 	{
 		return;
 	}
-	if (GetOwnerRole() == ROLE_SimulatedProxy||NetworkMode==ClientAuthoritative)
+	if (GetOwnerRole() == ROLE_SimulatedProxy || NetworkMode == ClientAuthoritative)
 	{
 		VehicleState.CurrentRpm = UKismetMathLibrary::MapRangeClamped(RepCosmeticData.EngineRPM, 0, 255,
 		                                                              GetSetup()->GetIdleRPM(),
@@ -1120,7 +1114,7 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 			GetSetup()->GetGearBox()->SetCurrentGear(RepCosmeticData.CurrentGear);
 		}
 		SteeringInput = RepCosmeticData.SteeringInput;
-		
+
 		for (int Index = 0; Index != Components.Num(); Index++)
 		{
 			if (RepCosmeticData.WheelRepCosmeticDatas.IsValidIndex(Index))
@@ -1132,24 +1126,23 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 		}
 	}
 
-	VehicleState.CurrentFuel=RepCosmeticData.CurrentFuel;
-	if(VehicleState.IsEngineOn!=RepCosmeticData.EngineOn)
+	VehicleState.CurrentFuel = RepCosmeticData.CurrentFuel;
+	if (VehicleState.IsEngineOn != RepCosmeticData.EngineOn)
 	{
-		VehicleState.IsEngineOn=RepCosmeticData.EngineOn;
-		OnEngineStateChange.Broadcast(VehicleState.IsEngineOn,false);
+		VehicleState.IsEngineOn = RepCosmeticData.EngineOn;
+		OnEngineStateChange.Broadcast(VehicleState.IsEngineOn, false);
 	}
-	
-	NewestBodyInstance=RepCosmeticData.RigidBodyState;
-	if(!IsLocal())
+
+	NewestBodyInstance = RepCosmeticData.RigidBodyState;
+	if (!IsLocal())
 	{
 		ApplyBodyInstanceData();
 	}
-	
 }
 
 void UModularMovementComponent::SetCosmeticDataOnServer_Implementation(FRepCosmeticData Data)
 {
-	RepCosmeticData=Data;
+	RepCosmeticData = Data;
 	OnRep_RepCosmeticData();
 }
 
@@ -1157,62 +1150,57 @@ void UModularMovementComponent::ShowSetupError(FString Error)
 {
 	UE_LOG(LogModularVehicle, Error, TEXT("%s"), *Error)
 #if WITH_EDITOR
-	FMessageDialog::Open( EAppMsgType::Ok, FText::FromString(Error));
+	FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(Error));
 #endif
-	
 }
 
 void UModularMovementComponent::ApplyBodyInstanceData() const
 {
-
-
-	if (GetMesh() == nullptr||!CosmeticDataInitialized)
+	if (GetMesh() == nullptr || !CosmeticDataInitialized)
 	{
-		return ;
+		return;
 	}
 	FBodyInstance* BI = GetMesh()->GetBodyInstance();
-	
 
 
-	
 	if (BI && BI->IsInstanceSimulatingPhysics())
 	{
-		
 		FRigidBodyState CurrentState;
 		GetMesh()->GetRigidBodyState(CurrentState);
-		
-		
-		const bool bShouldSleep = false;
 
-		
+
+		constexpr bool bShouldSleep = false;
+
+
 		//BI->SetLinearVelocity(CurrentState.LinVel + FixLinVel, false);
 		/////// POSITION CORRECTION ///////
 
 		// Find out how much of a correction we are making
 		const FVector DeltaPos = NewestBodyInstance.Position - CurrentState.Position;
-		const float DeltaSize=DeltaPos.Size();
-	
+		const float DeltaSize = DeltaPos.Size();
+
 
 		// Snap position by default (big correction, or we are moving too slowly)
 		FVector UpdatedPos = CurrentState.Position;
 		FVector FixLinVel = FVector::ZeroVector;
 
-		
+
 		// If its a small correction and velocity is above threshold, only make a partial correction,
 		// and calculate a velocity that would fix it over 'fixTime'.
-		if (ErrorCorrection.MinDistanceToFix<DeltaSize&&DeltaSize<ErrorCorrection.MaxDistanceToFix)
+		if (ErrorCorrection.MinDistanceToFix < DeltaSize && DeltaSize < ErrorCorrection.MaxDistanceToFix)
 		{
-			const float LerpAlpha=UKismetMathLibrary::MapRangeClamped(DeltaSize,ErrorCorrection.MinDistanceToFix,ErrorCorrection.MaxDistanceToFix,0,ErrorCorrection.MaxAlpha);
+			const float LerpAlpha = UKismetMathLibrary::MapRangeClamped(DeltaSize, ErrorCorrection.MinDistanceToFix,
+			                                                            ErrorCorrection.MaxDistanceToFix, 0,
+			                                                            ErrorCorrection.MaxAlpha);
 			UpdatedPos = FMath::Lerp(CurrentState.Position, NewestBodyInstance.Position, LerpAlpha);
 			FixLinVel = (NewestBodyInstance.Position - UpdatedPos) * ErrorCorrection.SpeedFactor;
-			FixLinVel=FixLinVel.GetClampedToMaxSize(CurrentState.LinVel.Size());
-			
-		}else if(DeltaSize > ErrorCorrection.MaxDistanceToFix)
+			FixLinVel = FixLinVel.GetClampedToMaxSize(CurrentState.LinVel.Size());
+		}
+		else if (DeltaSize > ErrorCorrection.MaxDistanceToFix)
 		{
-			UpdatedPos=NewestBodyInstance.Position;
+			UpdatedPos = NewestBodyInstance.Position;
 		}
 
-		
 
 		/////// ORIENTATION CORRECTION ///////
 		// Get quaternion that takes us from old to new
@@ -1228,31 +1216,33 @@ void UModularMovementComponent::ApplyBodyInstanceData() const
 		FQuat UpdatedQuat = CurrentState.Quaternion;
 		FVector FixAngVel = FVector::ZeroVector; // degrees per second
 
-	
+
 		// If the error is small, and we are moving, try to move smoothly to it
-		if (ErrorCorrection.MinAngleToFix<FMath::Abs(DeltaAng)  &&FMath::Abs(DeltaAng) < ErrorCorrection.MaxAngleToFix)
+		if (ErrorCorrection.MinAngleToFix < FMath::Abs(DeltaAng) && FMath::Abs(DeltaAng) < ErrorCorrection.
+			MaxAngleToFix)
 		{
-			const float LerpAlpha=UKismetMathLibrary::MapRangeClamped(FMath::Abs(DeltaAng),ErrorCorrection.MinAngleToFix,ErrorCorrection.MaxAngleToFix,0,ErrorCorrection.MaxAngularAlpha);
-			UpdatedQuat = FMath::Lerp(CurrentState.Quaternion, NewestBodyInstance.Quaternion,LerpAlpha);
+			const float LerpAlpha = UKismetMathLibrary::MapRangeClamped(
+				FMath::Abs(DeltaAng), ErrorCorrection.MinAngleToFix, ErrorCorrection.MaxAngleToFix, 0,
+				ErrorCorrection.MaxAngularAlpha);
+			UpdatedQuat = FMath::Lerp(CurrentState.Quaternion, NewestBodyInstance.Quaternion, LerpAlpha);
 			FixAngVel = DeltaAxis.GetSafeNormal() * FMath::RadiansToDegrees(DeltaAng) * (1.f - LerpAlpha);
-		
-		}else if(FMath::Abs(DeltaAng) > ErrorCorrection.MaxAngleToFix)
+		}
+		else if (FMath::Abs(DeltaAng) > ErrorCorrection.MaxAngleToFix)
 		{
-			UpdatedQuat=NewestBodyInstance.Quaternion;
+			UpdatedQuat = NewestBodyInstance.Quaternion;
 		}
 
-	
 
 		/////// BODY UPDATE ///////
 		BI->SetBodyTransform(FTransform(UpdatedQuat, UpdatedPos), ETeleportType::TeleportPhysics);
 		BI->SetLinearVelocity(CurrentState.LinVel + FixLinVel, false);
-		
-		BI->SetAngularVelocityInRadians(FVector(0,0,0), false);
+
+		BI->SetAngularVelocityInRadians(FVector(0, 0, 0), false);
 
 		// state is restored when no velocity corrections are required
 		bool bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() <
 			KINDA_SMALL_NUMBER);
-	
+
 
 		/////// SLEEP UPDATE ///////
 		const bool bIsAwake = BI->IsInstanceAwake();
@@ -1260,16 +1250,14 @@ void UModularMovementComponent::ApplyBodyInstanceData() const
 		{
 			BI->PutInstanceToSleep();
 		}
-		else if (!bIsAwake)
+		if (!bIsAwake)
 		{
 			BI->WakeInstance();
 		}
 	}
-
-
 }
 
-bool UModularMovementComponent::IsLocal() 
+bool UModularMovementComponent::IsLocal()
 {
 	// Check if the cached result is available
 	if (CachedIsLocal)
@@ -1308,57 +1296,56 @@ bool UModularMovementComponent::IsLocal()
 	return false;
 }
 
+float UModularMovementComponent::GetMassPerWheel() const
+{
+	return GetMesh()->GetMass()/Components.Num();
+}
+
 
 void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UModularMovementComponent, RepCosmeticData);
-	
 }
 
 
-
-void UModularMovementComponent::ApplyDifferential( FDifferentialData DiffData, float EngineTorque, float DeltaTime)
+void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, float EngineTorque, float DeltaTime)
 {
-
-
-	
-	
 	// Open differential: Equal torque distribution, but account for wheel slip
 	float TotalAngularVelocity = 0.0f;
-	float MinVelocity=BIG_NUMBER;
-	float MaxVelocity=-BIG_NUMBER;
-	const int WheelCount=DiffData.Wheels.Num();
+	float MinVelocity = BIG_NUMBER;
+	float MaxVelocity = -BIG_NUMBER;
+	const int WheelCount = DiffData.Wheels.Num();
 	for (UModularWheel* Wheel : DiffData.Wheels)
 	{
-		const float AngularVelocity=Wheel->WheelState.AngularVelocity;
+		const float AngularVelocity = Wheel->WheelState.AngularVelocity;
 		TotalAngularVelocity += FMath::Abs(AngularVelocity);
-		if(AngularVelocity<MinVelocity)
+		if (AngularVelocity < MinVelocity)
 		{
-			MinVelocity=AngularVelocity;
+			MinVelocity = AngularVelocity;
 		}
-		if(AngularVelocity>MaxVelocity)
+		if (AngularVelocity > MaxVelocity)
 		{
-			MaxVelocity=AngularVelocity;
+			MaxVelocity = AngularVelocity;
 		}
 	}
 
-	const float Slip=DiffData.DifferentialType==Locked?1.f: UKismetMathLibrary::MapRangeClamped(FMath::Abs(MaxVelocity-MinVelocity),DiffData.MinSlip,DiffData.MaxSlip,0,1);
+	const float Slip = DiffData.DifferentialType == Locked
+		                   ? 1.f
+		                   : UKismetMathLibrary::MapRangeClamped(FMath::Abs(MaxVelocity - MinVelocity),
+		                                                         DiffData.MinSlip, DiffData.MaxSlip, 0, 1);
 	switch (DiffData.DifferentialType)
 	{
-
-	case EModularDifferentialType::Simple:
+	case Simple:
 		{
 			for (UModularWheel* Wheel : DiffData.Wheels)
 			{
-				Wheel->SetDriveTorqueOnWheels(EngineTorque/WheelCount);
+				Wheel->SetDriveTorqueOnWheels(EngineTorque / WheelCount);
 			}
 		}
 		break;
-	case EModularDifferentialType::Open:
+	case Open:
 		{
-			
-
 			for (UModularWheel* Wheel : DiffData.Wheels)
 			{
 				if (TotalAngularVelocity > SMALL_NUMBER)
@@ -1376,17 +1363,16 @@ void UModularMovementComponent::ApplyDifferential( FDifferentialData DiffData, f
 			}
 			break;
 		}
-	case EModularDifferentialType::LimitedSlip:
+	case LimitedSlip:
 		{
-			
 			for (UModularWheel* Wheel : DiffData.Wheels)
 			{
 				if (TotalAngularVelocity > SMALL_NUMBER)
 				{
 					const float SlipRatio = FMath::Abs(Wheel->WheelState.AngularVelocity) / TotalAngularVelocity;
-					float LockedWheelTorque = EngineTorque /WheelCount;
+					float LockedWheelTorque = EngineTorque / WheelCount;
 					float WheelTorque = SlipRatio * EngineTorque;
-					Wheel->SetDriveTorqueOnWheels(FMath::Lerp(WheelTorque,LockedWheelTorque,Slip));
+					Wheel->SetDriveTorqueOnWheels(FMath::Lerp(WheelTorque, LockedWheelTorque, Slip));
 				}
 				else
 				{
@@ -1397,46 +1383,43 @@ void UModularMovementComponent::ApplyDifferential( FDifferentialData DiffData, f
 			}
 		}
 		break;
-	case EModularDifferentialType::Locked:
+	case Locked:
 		{
 			for (UModularWheel* Wheel : DiffData.Wheels)
 			{
-				Wheel->SetDriveTorqueOnWheels(EngineTorque/WheelCount);
-				
+				Wheel->SetDriveTorqueOnWheels(EngineTorque / WheelCount);
 			}
 		}
 		break;
 	default:
-		UE_LOG(LogModularVehicle,Error,TEXT("Unimplemented differential Setup"));
+		UE_LOG(LogModularVehicle, Error, TEXT("Unimplemented differential Setup"));
 	}
 
-	
-	float AverageSpeed=0.f;
+
+	float AverageSpeed = 0.f;
 	for (UModularWheel* Wheel : DiffData.Wheels)
 	{
 		//Apply those torques 
 		Wheel->UpdateForces(DeltaTime, this);
-		AverageSpeed+=Wheel->WheelState.AngularVelocity;
+		AverageSpeed += Wheel->WheelState.AngularVelocity;
 	}
-	AverageSpeed=AverageSpeed/WheelCount;
+	AverageSpeed = AverageSpeed / WheelCount;
 	//Post Update
 
-	
 
-	
-		for (UModularWheel* Wheel : DiffData.Wheels)
+	for (UModularWheel* Wheel : DiffData.Wheels)
+	{
+		if (DiffData.DifferentialType == Locked || DiffData.DifferentialType == LimitedSlip)
 		{
-			if(DiffData.DifferentialType==Locked||DiffData.DifferentialType==LimitedSlip)
-			{
-			Wheel->WheelState.AngularVelocity=FMath::Lerp(Wheel->WheelState.AngularVelocity,AverageSpeed,Slip) ;
-			}
-			const float MaxWheelAngularVelocity = (GetSetup()->GetMaxRPM() * GetSetup()->GetGearBox()->GetDriveRatio() * 2 * PI) / 60 * Wheel->WheelState.WheelSetup->WheelRadius / 100;;
+			Wheel->WheelState.AngularVelocity = FMath::Lerp(Wheel->WheelState.AngularVelocity, AverageSpeed, Slip);
+		}
+		const float MaxWheelAngularVelocity = (GetSetup()->GetMaxRPM() * GetSetup()->GetGearBox()->GetDriveRatio() * 2 *
+			PI) / 60 * Wheel->WheelState.WheelSetup->WheelRadius / 100;
 
 
-			Wheel->WheelState.AngularVelocity=FMath::Clamp(Wheel->WheelState.AngularVelocity,-MaxWheelAngularVelocity,MaxWheelAngularVelocity);
+		Wheel->WheelState.AngularVelocity = FMath::Clamp(Wheel->WheelState.AngularVelocity, -MaxWheelAngularVelocity,
+		                                                 MaxWheelAngularVelocity);
 	}
-
-	
 }
 
 

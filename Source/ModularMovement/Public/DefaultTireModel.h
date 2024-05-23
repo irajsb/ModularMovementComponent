@@ -62,7 +62,7 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
-	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel) override;
+	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector,UPrimitiveComponent* Mesh, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel) override;
 	virtual FString GetTireDebugData(FVector2f& SlipData) override;
 	virtual void SetupWheels() override;
 

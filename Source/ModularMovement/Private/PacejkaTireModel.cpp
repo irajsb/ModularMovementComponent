@@ -13,11 +13,11 @@ UPacejkaTireModel::UPacejkaTireModel(): LastFX(0), LastFY(0), Speak(0), SideSlip
 }
 
 void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
-                                         UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
+                                         UPrimitiveComponent* Mesh, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 {
-	Super::UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, Wheel);
+	Super::UpdateSimulation(DeltaTime, FinalForceVector, Mesh, ModularMovementComponent, Wheel);
 	// Gather necessary data
-	const UPrimitiveComponent* Mesh=ModularMovementComponent->GetMesh();
+	
 	if(Wheel->ParentBodyOverride)
 	{
 		Mesh=Wheel->ParentBodyOverride;
@@ -38,8 +38,7 @@ void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	const float WheelVelocity = Wheel->WheelState.AngularVelocity * WheelRadius;
 
 
-	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
-		GetNumberOfWheels());
+	const float MassPerWheel = ModularMovementComponent->GetMassPerWheel();
 	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*10.f:Wheel->WheelState.WheelLoad.Size() ;
 
 

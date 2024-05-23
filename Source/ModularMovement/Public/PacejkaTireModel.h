@@ -55,7 +55,8 @@ public:
 	
 
 	
-	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel) override;
+	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UPrimitiveComponent* Mesh, UModularMovementComponent*
+	                              ModularMovementComponent, UModularWheel* Wheel) override;
 	virtual float GetTireStress() override;
 	virtual void SetupWheels() override;
 	FVector2f TireForceNormalized;

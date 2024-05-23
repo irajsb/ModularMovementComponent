@@ -15,12 +15,12 @@ double UPropellerModel::CalculateThrust(double Ct, double rho, double A, double 
 }
 
 void UPropellerModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
-	UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
+                                       UPrimitiveComponent* Mesh, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 {
 
 
 	Wheel->WheelState.HitResult.TraceStart=Wheel->GetComponentLocation();
-	Super::UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, Wheel);
+	Super::UpdateSimulation(DeltaTime, FinalForceVector, Mesh, ModularMovementComponent, Wheel);
 
 
 	const float SteerAngleDegrees = Wheel->WheelState.SteerAngle;

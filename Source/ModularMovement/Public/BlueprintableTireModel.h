@@ -14,7 +14,8 @@ class MODULARMOVEMENT_API UBlueprintableTireModel : public UBaseTireModel
 {
 	GENERATED_BODY()
 
-	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel) override;
+	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UPrimitiveComponent* Mesh, UModularMovementComponent*
+	                              ModularMovementComponent, UModularWheel* Wheel) override;
 
 	virtual void SetupWheels() override;
 

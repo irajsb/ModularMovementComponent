@@ -265,11 +265,19 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		return;
 	}
 
+	UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
+	if (ParentBodyOverride)
+	{
+		Mesh = ParentBodyOverride;
+	}else if(ConstraintParent)
+	{
+		Mesh=ConstraintParent;
+	}
 
 	FVector FinalForceVector = FVector::ZeroVector;
 
 
-	WheelState.WheelSetup->TireModel->UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, this);
+	WheelState.WheelSetup->TireModel->UpdateSimulation(DeltaTime, FinalForceVector, Mesh, ModularMovementComponent, this);
 
 
 	WheelState.AngularPosition += WheelState.AngularVelocity * DeltaTime;
@@ -298,17 +306,13 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 
 		//Calculate direction of force
 
-		UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
-		if (ParentBodyOverride)
-		{
-			Mesh = ParentBodyOverride;
-		}
+		
 
 		
 		if (!FrictionForceVector.ContainsNaN())
 		{
 
-			if(1){
+			if(!ConstraintParent){
 			AddForceAtPosition(Mesh, WheelState.HitResult.TraceStart, FrictionForceVector, NAME_None);
 
 			}else
@@ -649,6 +653,8 @@ void UModularWheel::AddForceAtPosition(UPrimitiveComponent* Component, FVector P
 {
 	if (Chaos::FRigidBodyHandle_Internal* RigidHandle = GetInternalHandle(Component, BoneName))
 	{
+	//	DrawDebugLine(GetWorld(),Position,Position+Force/1000,FColor::Red,false,-1,0);
+	
 		const Chaos::FVec3 WorldCOM = Chaos::FParticleUtilitiesGT::GetCoMWorldPosition(RigidHandle);
 		const Chaos::FVec3 WorldTorque = Chaos::FVec3::CrossProduct(Position - WorldCOM, Force);
 		RigidHandle->AddForce(Force, false);
@@ -686,8 +692,8 @@ void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponen
 			SuspensionConstraint->SetConstrainedComponents(WheelOrDifferential, NAME_None, ParentBody, NAME_None);
 			ConstraintParent=WheelOrDifferential;
 			// Set up the constraint properties here
-			SuspensionConstraint->SetLinearXLimit(IsAxle?LCM_Limited:LCM_Locked, 1.f);
-			SuspensionConstraint->SetLinearYLimit(IsAxle?LCM_Limited:LCM_Locked, 1.f);
+			SuspensionConstraint->SetLinearXLimit(IsAxle?LCM_Limited:LCM_Locked,WheelSetup-> XYAxisMoveLimit);
+			SuspensionConstraint->SetLinearYLimit(IsAxle?LCM_Limited:LCM_Locked,WheelSetup-> XYAxisMoveLimit);
 			SuspensionConstraint->SetLinearZLimit(LCM_Limited, WheelSetup->SuspensionLength);
 			
 			SuspensionConstraint->SetAngularTwistLimit(IsAxle?ACM_Free:ACM_Locked, 0);

@@ -29,15 +29,15 @@ void UDefaultTireModel::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 
 #endif
 void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
-                                        UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
+                                         UPrimitiveComponent* Mesh, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 {
 
-	Super::UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, Wheel);
+	Super::UpdateSimulation(DeltaTime, FinalForceVector, Mesh, ModularMovementComponent, Wheel);
 	// Gather necessary data 
-	const FTransform WorldTransform = ModularMovementComponent->GetMesh()->GetBodyInstance()->GetUnrealWorldTransform();
+	const FTransform WorldTransform = Mesh->GetBodyInstance()->GetUnrealWorldTransform();
 	const float SteerAngleDegrees = Wheel->WheelState.SteerAngle;
 	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
-	 FVector WorldMeshVelocity = ModularMovementComponent->GetMesh()->GetBodyInstance()->
+	 FVector WorldMeshVelocity = Mesh->GetBodyInstance()->
 	                                                            GetUnrealWorldVelocityAtPoint(
 		                                                            Wheel->WheelState.HitResult.TraceStart);
 	
@@ -50,9 +50,7 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	const float WheelVelocity = Wheel->WheelState.AngularVelocity * WheelRadius;
 
 	const bool Combine=UseCombinedFriction||(Wheel->WheelState.IsHandBrakeTorque&&UseCombinedFrictionWhenHandBraking);
-	const UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
-	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
-		GetNumberOfWheels());
+	const float MassPerWheel = ModularMovementComponent->GetMassPerWheel();
 	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*10.f:Wheel->WheelState.WheelLoad.Size() ;
 
 	float SlipForward, SlipLateral;

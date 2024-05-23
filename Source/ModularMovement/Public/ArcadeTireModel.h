@@ -50,7 +50,7 @@ public:
 #endif
 
 	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
-	                              UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel) override;
+	                              UPrimitiveComponent* Mesh, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel) override;
 	virtual FString GetTireDebugData(FVector2f& SlipData) override;
 
 	FVector2f TireForceNormalized;

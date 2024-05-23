@@ -41,7 +41,8 @@ public:
 	GENERATED_BODY()
 
 	// Function to update the tire simulation.
-	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel) override;
+	virtual void UpdateSimulation(float DeltaTime, FVector& FinalForceVector, UPrimitiveComponent* Mesh, UModularMovementComponent*
+	                              ModularMovementComponent, UModularWheel* Wheel) override;
 
 	// Function to retrieve debug data for the tire.
 	virtual FString GetTireDebugData(FVector2f& SlipData) override;

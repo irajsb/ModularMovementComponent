@@ -209,7 +209,7 @@ public:
 
 
 	//actors to ignore for wheel trace. collected here because wheels can have different owners (such as a semi truck)
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite,Category="Trace")
 	TArray<AActor*> ActorsToIgnore;
 
 	//Wheels
@@ -297,7 +297,9 @@ public:
 
 	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
 	TEnumAsByte<EVehicleNetworkMode> NetworkMode;
-	
+	//Trailers  only handle suspension and friction until their wheels are moved to a  vehicle's movement component 
+	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
+	bool IsTrailer;
 	UPROPERTY()
 	UTerrainInteraction* TerrainInteractionComponent=nullptr;
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
@@ -443,4 +445,6 @@ public:
 	bool IsLocal();
 	 bool CachedIsLocal = false;
 	 bool CachedIsLocalValue = false;
+
+	float GetMassPerWheel()const ;
 };

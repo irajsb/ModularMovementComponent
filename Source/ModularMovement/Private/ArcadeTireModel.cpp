@@ -19,11 +19,11 @@ void UArcadeTireModel::PostEditChangeProperty(FPropertyChangedEvent& PropertyCha
 #endif
 
 void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector,
-                                        UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
+                                        UPrimitiveComponent* Mesh, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 {
-	Super::UpdateSimulation(DeltaTime, FinalForceVector, ModularMovementComponent, Wheel);
+	Super::UpdateSimulation(DeltaTime, FinalForceVector, Mesh, ModularMovementComponent, Wheel);
 	//Gather necessary data
-	const UPrimitiveComponent* Mesh = ModularMovementComponent->GetMesh();
+	
 	if (Wheel->ParentBodyOverride)
 	{
 		Mesh = Wheel->ParentBodyOverride;
@@ -40,8 +40,7 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 	
 	const float WheelRadiusM = Wheel->WheelState.WheelSetup->WheelRadius / 100.f;
 
-	const float MassPerWheel = (Mesh->GetMass() / ModularMovementComponent->
-		GetNumberOfWheels());
+	const float MassPerWheel = ModularMovementComponent->GetMassPerWheel();
 	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*10.f:Wheel->WheelState.WheelLoad.Size() ;
 
 	bool Locked = false;
