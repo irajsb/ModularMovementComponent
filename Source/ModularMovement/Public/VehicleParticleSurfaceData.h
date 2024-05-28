@@ -52,17 +52,20 @@ class MODULARMOVEMENT_API UVehicleParticleSurfaceData : public UObject
 
 	UPROPERTY(EditAnywhere,Category = "Setup")
 	float MaxAngularSpeedInRadian=5.f;
+	// time to  keep emitter alive for so they finish up the last sprites 
+	UPROPERTY(EditAnywhere,Category = "Setup")
+	float CleanupTime=3.f;
 	
 public:
-	void UpdateParticleForWheel(UModularWheel* Wheel);
+	void UpdateParticleForWheel(float DeltaTime,UModularWheel* Wheel);
 
 private:
-	void HandleParticle(UModularWheel* Wheel,UParticleSystem* Particle);
-	void HandleNiagaraParticle(UModularWheel* Wheel,UNiagaraSystem* Particle);
+	void HandleParticle(const UModularWheel* Wheel,UParticleSystem* Particle);
+	void HandleNiagaraParticle(const UModularWheel* Wheel,UNiagaraSystem* Particle);
 
 
 	UPROPERTY()
 	UObject* CurrentEmitter;
 
-	
+	TArray<TPair<USceneComponent*,float>>GarbageEmitters;
 };

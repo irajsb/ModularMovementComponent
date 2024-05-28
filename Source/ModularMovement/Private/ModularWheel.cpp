@@ -56,7 +56,7 @@ void UModularWheel::TickComponent(float DeltaTime, ELevelTick TickType, FActorCo
 
 	if(SurfaceData)
 	{
-		SurfaceData->UpdateParticleForWheel(this);
+		SurfaceData->UpdateParticleForWheel(DeltaTime,this);
 	}
 }
 
@@ -764,4 +764,10 @@ void UModularWheel::CallCustomEvent(uint8 Index)
 	{
 		MovementComponentRef->OnCustomEvent.Broadcast(Index,this);
 	}
+}
+
+UPhysicalMaterial* UModularWheel::GetActivePhysicalMaterial()
+{
+	const auto PhysMat=PhysicalMaterialOverride?PhysicalMaterialOverride:WheelState.HitResult.PhysMaterial.Get();
+	return PhysMat;
 }

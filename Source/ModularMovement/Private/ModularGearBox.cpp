@@ -9,7 +9,8 @@
 #include "Kismet/KismetMathLibrary.h"
 
 
-UModularGearBox::UModularGearBox()
+UModularGearBox::UModularGearBox(): IsManual(false), CanSkipGears(false), IdleGear(0), CurrentGear(0), TargetGear(0),
+                                    MC(nullptr)
 {
 	//reverse
 	Gears.Add(FModularGearInfo(3));

@@ -142,7 +142,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void CallCustomEvent(uint8 Index);
 
+
+
+
 public:
+	UFUNCTION(BlueprintCallable,BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
+	UPhysicalMaterial* GetActivePhysicalMaterial();
+	
 	UPROPERTY(BlueprintReadOnly,Category=Constraint)
 	UPhysicsConstraintComponent* SuspensionConstraint=nullptr;
 	UPROPERTY()
@@ -162,4 +168,8 @@ public:
 
 	UPROPERTY(Transient)
 	UModularMovementComponent* MovementComponentRef;
+
+	//this will override whatever phys mat returned by trace 
+	UPROPERTY(Transient,BlueprintReadWrite,Category="Wheel")
+	UPhysicalMaterial* PhysicalMaterialOverride;
 };

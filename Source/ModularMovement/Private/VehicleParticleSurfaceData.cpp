@@ -10,16 +10,16 @@
 #include "Engine/World.h"
 #include "Particles/ParticleSystemComponent.h"
 
-void UVehicleParticleSurfaceData::UpdateParticleForWheel(UModularWheel* Wheel)
+void UVehicleParticleSurfaceData::UpdateParticleForWheel(float DeltaTime,UModularWheel* Wheel)
 {
 
 	
 	bool Found=false;
-	if(Wheel->WheelState.HitResult.PhysMaterial.IsValid())
+	if(const auto PhysMat=Wheel->GetActivePhysicalMaterial())
 	{
-		for(auto Surface:SurfaceParticleCouples)
+		for(const auto Surface:SurfaceParticleCouples)
 		{
-			if(Surface.MaterialClass==Wheel->WheelState.HitResult.PhysMaterial.Get())
+			if(Surface.MaterialClass==PhysMat)
 			{
 				if(Surface.Particle)
 				{
@@ -44,9 +44,29 @@ void UVehicleParticleSurfaceData::UpdateParticleForWheel(UModularWheel* Wheel)
 			HandleNiagaraParticle(Wheel,DefaultNiagaraSystem);
 		}
 	}
+
+	//Update garbage emitters
+
+	for (int Index = GarbageEmitters.Num() - 1; Index >= 0; Index--)
+	{
+		auto& Garbage = GarbageEmitters[Index];
+		if (Garbage.Value > CleanupTime)
+		{
+			if (Garbage.Key)
+			{
+				Garbage.Key->DestroyComponent();
+				GarbageEmitters.RemoveAtSwap(Index);
+				
+			}
+		}
+		else
+		{
+			Garbage.Value += DeltaTime;
+		}
+	}
 }
 
-void UVehicleParticleSurfaceData::HandleParticle(UModularWheel* Wheel, UParticleSystem* Particle)
+void UVehicleParticleSurfaceData::HandleParticle(const UModularWheel* Wheel, UParticleSystem* Particle)
 {
 
 	const float Velocity=FMath::Abs(Wheel->WheelState.AngularVelocity);
@@ -61,16 +81,19 @@ void UVehicleParticleSurfaceData::HandleParticle(UModularWheel* Wheel, UParticle
 	
 	if(const auto Comp=Cast<UNiagaraComponent>(CurrentEmitter))
 	{
-		Comp->DestroyComponent();
+		GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+		Comp->SetFloatParameter("Strength",0.f);
 	}
 
 	if(const auto Comp=Cast<UParticleSystemComponent>(CurrentEmitter))
 	{
 		if(Comp->Template.Get()!=Particle)
 		{
-			Comp->SetTemplate(Particle);
-			
-			
+			//Comp->SetActive(false);
+			GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+			Comp->SetFloatParameter("Strength",0.f);
+			CurrentEmitter=	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(),Particle,Wheel->WheelState.HitResult.ImpactPoint);
+			return;
 		}
 		Comp->SetWorldLocation(Wheel->WheelState.HitResult.ImpactPoint);
 		Comp->SetFloatParameter("Strength",Rate);
@@ -88,7 +111,7 @@ void UVehicleParticleSurfaceData::HandleParticle(UModularWheel* Wheel, UParticle
 	
 }
 
-void UVehicleParticleSurfaceData::HandleNiagaraParticle(UModularWheel* Wheel, UNiagaraSystem* Particle)
+void UVehicleParticleSurfaceData::HandleNiagaraParticle(const UModularWheel* Wheel, UNiagaraSystem* Particle)
 {
 	const float Velocity=FMath::Abs(Wheel->WheelState.AngularVelocity);
 
@@ -100,15 +123,19 @@ void UVehicleParticleSurfaceData::HandleNiagaraParticle(UModularWheel* Wheel, UN
 	
 	if (const auto Comp = Cast<UParticleSystemComponent>(CurrentEmitter))
 	{
-		Comp->DestroyComponent();
+		GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+		Comp->SetFloatParameter("Strength",0.f);
 	}
 
 	if (const auto Comp = Cast<UNiagaraComponent>(CurrentEmitter))
 	{
 		if (Comp->GetAsset() != Particle)
 		{
-			Comp->SetAsset(Particle);
 			
+			GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+			Comp->SetFloatParameter("Strength",0.f);
+			CurrentEmitter = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),Particle ,Wheel->WheelState.HitResult.ImpactPoint);
+			return;
 			
 		}
 		Comp->SetWorldLocation(Wheel->WheelState.HitResult.ImpactPoint);

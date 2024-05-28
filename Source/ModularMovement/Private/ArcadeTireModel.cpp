@@ -61,9 +61,9 @@ void UArcadeTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVect
 		//Surface friction
 		float SurfaceFriction = 1.f;
 
-		if (Wheel->WheelState.HitResult.PhysMaterial.IsValid())
+		if (const auto PhysMat=Wheel->GetActivePhysicalMaterial())
 		{
-			SurfaceFriction = Wheel->WheelState.HitResult.PhysMaterial->Friction;
+			SurfaceFriction = PhysMat->Friction;
 		}
 		
 		//Friction of phys mat is default 0.7

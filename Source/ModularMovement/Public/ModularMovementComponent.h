@@ -19,6 +19,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange, int, CurrentGear, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEngineStateChange, bool, IsEngineOn,bool, IsStarting);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCustomEvent, uint8, EventType,UModularWheel*, Wheel);
 
+
 struct FModularVehicleDebugParams
 {
 	int ShowSuspensionDebug = false;
@@ -156,6 +157,8 @@ struct FVehicleState
 	// Side speed of the vehicle
 	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
 	float SideSpeed=0.f;
+	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+	float WheelTorque;
 
 	// Desired speed for the vehicle
 	float DesiredSpeed=0.f;
@@ -261,6 +264,8 @@ public:
 	// Public properties representing air drag and rolling resistance constants for the vehicle.
 	public:
 	float AirDragConstant;
+	bool UseCustomDrag=false;
+	float CustomDragCoefficient=0.f;
 	float RollingResistanceConstant;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
@@ -297,13 +302,16 @@ public:
 
 	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
 	TEnumAsByte<EVehicleNetworkMode> NetworkMode;
+	//Optimzations can reduce load on cpu
+	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
+	bool SubstepEngine=true;
+	//Optimzations can reduce load on cpu
+	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
+	bool SubStepSuspension=true;
 	//Trailers  only handle suspension and friction until their wheels are moved to a  vehicle's movement component 
 	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
 	bool IsTrailer;
-	UPROPERTY()
-	UTerrainInteraction* TerrainInteractionComponent=nullptr;
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	UTerrainInteraction* GetTerrainInteractionComponent();
+
 	/** Compute steering input */
 	float CalcSteeringInput(float DeltaTime);
 
@@ -347,7 +355,7 @@ public:
 	virtual void InitializeComponent() override;
 
 
-	void VehicleTick(float DeltaTime, FBodyInstance* BodyInstance);
+	void VehicleTick(float DeltaTime,  bool SubstepTick);
 
 	void PreTick(FPhysScene_Chaos* Scene, float DeltaTime);
 	void PhysicsCallBack(float DeltaTime);
@@ -364,8 +372,9 @@ public:
 	void UpdateEngine(float DeltaTime, float& WheelTorque);
 	//Apply Air Drag
 	void UpdateAirDrag() const;
+	void UpdateTankSteering(float UseSteeringValue);
 	//Update each Wheel
-	void UpdateWheels(float DeltaTime, float WheelTorque);
+	void UpdateWheels(float DeltaTime, float WheelTorque, bool SubstepTick);
 	//Determine vehicle state in AI Pawns
 
 	EAIVehicleState DetermineAIState(float ForwardFactor, float DeltaTime);
@@ -443,8 +452,10 @@ public:
 	FOnCustomEvent OnCustomEvent;
 
 	bool IsLocal();
-	 bool CachedIsLocal = false;
-	 bool CachedIsLocalValue = false;
 
+
+	TOptional<bool> CachedIsLocal;
+	TOptional<bool> CachedShouldProcessPhysics;
+	TOptional<bool> CachedShouldProcessCosmetics;
 	float GetMassPerWheel()const ;
 };

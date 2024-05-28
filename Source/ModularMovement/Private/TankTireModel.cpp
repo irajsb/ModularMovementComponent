@@ -24,7 +24,11 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	:ModularMovementComponent->VehicleState.TrackLeft.TorqueTransfer;
 
 	const float TotalTracksInput=FMath::Abs(ModularMovementComponent->VehicleState.TrackLeft.TorqueTransfer)+FMath::Abs(ModularMovementComponent->VehicleState.TrackRight.TorqueTransfer);
-	const float SurfaceFriction=Wheel->WheelState.HitResult.PhysMaterial.IsValid()?Wheel->WheelState.HitResult.PhysMaterial->Friction:0.7;
+	float SurfaceFriction=1.f;
+	if (const auto PhysMat=Wheel->GetActivePhysicalMaterial())
+	{
+		SurfaceFriction = PhysMat->Friction;
+	}
 	if(Wheel->ParentBodyOverride)
 	{
 		Mesh=Wheel->ParentBodyOverride;

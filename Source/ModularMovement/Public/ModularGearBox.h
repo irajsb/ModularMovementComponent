@@ -96,7 +96,7 @@ public:
 	void CalculateIdealGear(float IdealGearRatio, int& ClosestGearIndex,int DefaultGear);
 
 	// Update function to be called every frame or tick
-	void Update(float DeltaTime, class UModularMovementComponent* MovementComponent);
+	virtual void Update(float DeltaTime, class UModularMovementComponent* MovementComponent);
 
 	// Function to get the ratio of the current gear
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Transmission)

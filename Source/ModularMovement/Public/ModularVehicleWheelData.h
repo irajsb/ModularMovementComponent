@@ -198,7 +198,10 @@ struct FWheelState{
 	float DampingForce=0.f;
 	
 
-
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
+	FTransform LastAnimTransform;
+	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
+	FTransform CurrentAnimTransform;
 	
 };
 

@@ -16,7 +16,6 @@
 #include "ModularVehicleFunctionLibrary.h"
 #include "GameFramework/Pawn.h"
 #include "PBDRigidsSolver.h"
-#include "TerrainInteraction.h"
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 #include "Physics/Experimental/PhysScene_Chaos.h"
@@ -279,7 +278,7 @@ void UModularMovementComponent::InitializeComponent()
 		GetOwner()->GetComponentByClass(UModularVehicleDebugger::StaticClass()));
 }
 
-void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* BodyInstance)
+void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 {
 	MODULAR_CYCLE_COUNTER(STAT_ModularTickComponent)
 	const float fDeltaTime = FMath::Min<float>(DeltaTime, 0.0633);
@@ -288,20 +287,19 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, FBodyInstance* Body
 	{
 		return;
 	}
-	float WheelTorque = 0.f;
 	if (ShouldProcessPhysics())
 	{
+		
 		if (!IsTrailer)
 		{
-			SteeringInput = CalcSteeringInput(DeltaTime);
-			ThrottleInput = CalcThrottleInput(DeltaTime);
-			BrakeInput = CalcBrakeInput();
-
-
-			UpdateAirDrag();
-			UpdateEngine(fDeltaTime, WheelTorque);
+		
+			if(SubstepEngine==SubstepTick)
+			{
+				UpdateAirDrag();
+				UpdateEngine(fDeltaTime, VehicleState.WheelTorque);
+			}
 		}
-		UpdateWheels(fDeltaTime, WheelTorque);
+		UpdateWheels(fDeltaTime, VehicleState.WheelTorque, SubstepTick);
 	}
 	else
 	{
@@ -356,7 +354,7 @@ void UModularMovementComponent::PreTick(FPhysScene_Chaos* Scene, float DeltaTime
 
 void UModularMovementComponent::PhysicsCallBack(float DeltaTime)
 {
-	VehicleTick(DeltaTime, nullptr);
+	VehicleTick(DeltaTime, true);
 }
 
 void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -378,6 +376,10 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		return;
 	}
 
+	
+	SteeringInput = CalcSteeringInput(DeltaTime);
+	ThrottleInput = CalcThrottleInput(DeltaTime);
+	BrakeInput = CalcBrakeInput();
 
 	if (ShouldReplicateInput())
 	{
@@ -426,10 +428,12 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		}
 	}
 
-	if (TerrainInteractionComponent)
-	{
-		TerrainInteractionComponent->Update(DeltaTime, this, Components);
+	//if everything is stepped then skip this tick 
+	if(!(SubstepEngine&&SubStepSuspension))
+	{	
+		VehicleTick(DeltaTime, false);
 	}
+	
 }
 
 void UModularMovementComponent::BeginPlay()
@@ -481,7 +485,7 @@ void UModularMovementComponent::BeginPlay()
 	}
 
 	VehicleState.CurrentFuel = GetSetup()->GetTankCapacity();
-	TerrainInteractionComponent = GetTerrainInteractionComponent();
+	
 }
 
 void UModularMovementComponent::CaptureState(float DeltaTime)
@@ -545,6 +549,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 	if (GetSetup()->ShouldZeroRpmWhenShifting() && GetSetup()->GetGearBox()->IsChangingGear())
 	{
 		VehicleState.CurrentRpm = 0;
+		WheelTorque=0.f;
 	}
 	else
 	{
@@ -595,21 +600,15 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 void UModularMovementComponent::UpdateAirDrag() const
 {
+	const float DragConstant=UseCustomDrag?CustomDragCoefficient:AirDragConstant;
 	const FVector BodyVelocity = GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity() / 100.f; //CM/s To Meter/s
-	const FVector DragForce = BodyVelocity * BodyVelocity.Size() * AirDragConstant * -1;
+	const FVector DragForce = BodyVelocity * BodyVelocity.Size() * DragConstant * -1;
 	GetMesh()->GetBodyInstance()->AddForceAtPosition(
 		SIForceToUnrealForce(DragForce), GetMesh()->GetCenterOfMass(), true);
 }
 
-void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
+void UModularMovementComponent::UpdateTankSteering(const float UseSteeringValue)
 {
-	//Capturing inputs
-	//Steer
-
-
-	const float UseSteeringValue = SteeringInput;
-
-
 	if (VehicleState.VehicleData->GetSteerType() == Tank)
 	{
 		const float LeftTrackInput = UseSteeringValue;
@@ -652,6 +651,17 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 			}
 		}
 	}
+}
+
+void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque, bool SubstepTick)
+{
+	//Capturing inputs
+	//Steer
+
+
+	const float UseSteeringValue = SteeringInput;
+	
+	UpdateTankSteering(UseSteeringValue);
 
 
 	for (UModularWheel* Component : Components)
@@ -670,13 +680,22 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 				}
 			}
 
-			//calc and Apply Suspension forces 
-			Component->UpdateSuspension(DeltaTime, this);
-			//Apply Steering
-			Component->UpdateSteering(DeltaTime, this, UseSteeringValue);
-			if (!Component->WheelState.ApplyDriveForce || Component->DifferentialIndex == 255)
+			if(SubstepTick==SubStepSuspension)
 			{
-				Component->UpdateForces(DeltaTime, this);
+				
+				//calc and Apply Suspension forces 
+				Component->UpdateSuspension(DeltaTime, this);
+				//Apply Steering
+				Component->UpdateSteering(DeltaTime, this, UseSteeringValue);
+				
+			}
+			
+			if(SubstepTick)
+			{
+				if (!Component->WheelState.ApplyDriveForce || Component->DifferentialIndex == 255)
+				{
+					Component->UpdateForces(DeltaTime, this);
+				}
 			}
 		}
 		else
@@ -684,6 +703,12 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 			UModularVehicleFunctionLibrary::NotifyError(
 				"Wheel Setup class is missing in wheel" + Component->GetName() + " . Please create and assign one !");
 		}
+	}
+	
+	if(!SubstepTick)
+	{
+		//only tire model needs to be always substepped
+		return;
 	}
 
 
@@ -886,24 +911,41 @@ float UModularMovementComponent::CmToM(float In)
 
 bool UModularMovementComponent::ShouldProcessPhysics()
 {
+	if(CachedShouldProcessPhysics.IsSet())
+	{
+		
+		return CachedShouldProcessPhysics.GetValue();
+	}
 	if (GetNetMode() == NM_Standalone)
 	{
+		CachedShouldProcessPhysics=true;
 		return true;
 	}
 	if (NetworkMode == Default)
 	{
-		return GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
+		CachedShouldProcessPhysics= GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
+		return CachedShouldProcessPhysics.GetValue();
+		
 	}
-	return IsLocal();
+	CachedShouldProcessPhysics= IsLocal();
+	return CachedShouldProcessPhysics.GetValue();
 }
 
 bool UModularMovementComponent::ShouldProcessCosmetics()
 {
+	if(CachedShouldProcessCosmetics.IsSet())
+	{
+		return CachedShouldProcessCosmetics.GetValue();
+	}
 	if (NetworkMode == Default)
 	{
-		return GetOwnerRole() < ROLE_AutonomousProxy;
+		CachedShouldProcessCosmetics= GetOwnerRole() < ROLE_AutonomousProxy;
+		return CachedShouldProcessCosmetics.GetValue();
 	}
-	return !IsLocal();
+	
+	CachedShouldProcessCosmetics= !IsLocal();
+	return CachedShouldProcessCosmetics.GetValue();
+	
 }
 
 bool UModularMovementComponent::ShouldReplicateInput() const
@@ -934,15 +976,7 @@ void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuanti
 }
 
 
-UTerrainInteraction* UModularMovementComponent::GetTerrainInteractionComponent()
-{
-	if (GetOwner())
-	{
-		auto Comp = GetOwner()->GetComponentByClass(UTerrainInteraction::StaticClass());
-		TerrainInteractionComponent = Cast<UTerrainInteraction>(Comp);
-	}
-	return TerrainInteractionComponent;
-}
+
 
 float UModularMovementComponent::CalcSteeringInput(float DeltaTime)
 {
@@ -1260,9 +1294,9 @@ void UModularMovementComponent::ApplyBodyInstanceData() const
 bool UModularMovementComponent::IsLocal()
 {
 	// Check if the cached result is available
-	if (CachedIsLocal)
+	if (CachedIsLocal.IsSet())
 	{
-		return CachedIsLocalValue;
+		return CachedIsLocal.GetValue();
 	}
 
 	const ENetMode NetMode = GetNetMode();
@@ -1270,8 +1304,8 @@ bool UModularMovementComponent::IsLocal()
 	if (NetMode == NM_Standalone)
 	{
 		// Not networked.
+	
 		CachedIsLocal = true;
-		CachedIsLocalValue = true;
 		return true;
 	}
 
@@ -1279,20 +1313,18 @@ bool UModularMovementComponent::IsLocal()
 	{
 		// Networked client in control.
 		CachedIsLocal = true;
-		CachedIsLocalValue = true;
 		return true;
 	}
 
 	if (NetMode == NM_ListenServer && GetWorld()->GetFirstPlayerController() == GetPawnOwner()->GetController())
 	{
 		CachedIsLocal = true;
-		CachedIsLocalValue = true;
+		
 		return true;
 	}
 
 	// If none of the conditions are met, the result is false
 	CachedIsLocal = true;
-	CachedIsLocalValue = false;
 	return false;
 }
 
@@ -1420,7 +1452,12 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 		Wheel->WheelState.AngularVelocity = FMath::Clamp(Wheel->WheelState.AngularVelocity, -MaxWheelAngularVelocity,
 		                                                 MaxWheelAngularVelocity);
 	}
+	
 }
 
 
 #undef LOCTEXT_NAMESPACE
+
+
+
+

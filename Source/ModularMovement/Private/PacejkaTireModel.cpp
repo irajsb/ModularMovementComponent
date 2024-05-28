@@ -4,6 +4,7 @@
 #include "PacejkaTireModel.h"
 
 #include "ModularMovementComponent.h"
+#include "ModularMovementPhysicalMaterial.h"
 #include "ModularWheel.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -112,12 +113,28 @@ void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 
 	//Surface friction
 	float SurfaceFriction = 1.f;
-
-	if (Wheel->WheelState.HitResult.PhysMaterial.IsValid())
+	
+	if (const auto PhysMat=Wheel->GetActivePhysicalMaterial())
 	{
-		SurfaceFriction = Wheel->WheelState.HitResult.PhysMaterial->Friction;
-	}
+		
+		SurfaceFriction =PhysMat->Friction;
+		if(const UModularMovementPhysicalMaterial* Material=Cast<UModularMovementPhysicalMaterial>(PhysMat))
+		{
+			const float AngularVelocity= Wheel->WheelState.AngularVelocity;
+			const float LinearVelocity = AngularVelocity * WheelRadius;
+			const float  DragForce = 0.5f * Material->DragCoefficient  * LinearVelocity * LinearVelocity;
+			
+			Wheel->WheelState.BrakeTorque+= DragForce * WheelRadius;
 
+			ModularMovementComponent->UseCustomDrag=true;
+			ModularMovementComponent->CustomDragCoefficient=Material->BodyDragCoefficient;
+			ModularMovementComponent->UpdateAirDrag();
+		}
+		else
+		{
+			ModularMovementComponent->UseCustomDrag=false;
+		}
+	}
 	FinalForceVector.X *=WheelLoad* SurfaceFriction;
 	FinalForceVector.Y *=WheelLoad* SurfaceFriction;
 
