@@ -283,7 +283,25 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 	MODULAR_CYCLE_COUNTER(STAT_ModularTickComponent)
 	const float fDeltaTime = FMath::Min<float>(DeltaTime, 0.0633);
 
-	if(!IsActive())
+	if(AllowSleep)
+	{
+		// Wake if control input pressed
+		if (VehicleState.bSleeping && RawThrottleInput!=0.f)
+		{
+			SetSleeping(false);
+		}else if (VehicleState.DriveWheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->GetSleepSlope()))
+		{
+			float SpeedSqr = GetMesh()->GetPhysicsLinearVelocity().SizeSquared();
+			const float SleepThreshold=GetSetup()->GetSleepThreshold();
+			if (SpeedSqr < (SleepThreshold * SleepThreshold))
+			{
+				
+				SetSleeping(true);
+			}
+		}
+	}
+	
+	if(!IsActive()||VehicleState.bSleeping)
 	{
 		return;
 	}
@@ -362,7 +380,10 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if(!IsActive())
+
+
+
+	if(!IsActive()||VehicleState.bSleeping)
 	{
 		return;
 	}
@@ -513,14 +534,19 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 	float AxleRPM = 0;
-	VehicleState.DriveWheelsOnGround = 0;
+	VehicleState.DriveWheelsOnGround =VehicleState.WheelsOnGround = 0;
+
 	//Get fastest wheel that is attached to engine 
 	for (UModularWheel* Component : Components)
 	{
 		const float ComponentOmega = FMath::Abs(Component->GetFastestWheelOmegaSpeed());
-		if (Component->GetWheelState()->HitResult.bBlockingHit && Component->WheelState.ApplyDriveForce)
+		if (Component->GetWheelState()->HitResult.bBlockingHit )
 		{
-			VehicleState.DriveWheelsOnGround++;
+			VehicleState.WheelsOnGround++;
+			if(Component->WheelState.ApplyDriveForce)
+			{
+				VehicleState.DriveWheelsOnGround++;
+			}
 		}
 		if (ComponentOmega > AxleRPM)
 		{
@@ -1333,6 +1359,36 @@ float UModularMovementComponent::GetMassPerWheel() const
 	return GetMesh()->GetMass()/Components.Num();
 }
 
+void UModularMovementComponent::SetSleepOnBody(UPrimitiveComponent* PrimitiveComponent, bool Sleep)
+{
+	if(const auto SK=Cast<USkeletalMeshComponent>(PrimitiveComponent))
+	{
+		for(auto Body:SK->Bodies)
+		{
+			if(Sleep)
+			{
+				Body->PutInstanceToSleep();
+			}else
+			{
+				Body->WakeInstance();
+			}
+		}
+	}else
+	{
+		if(const auto SM=Cast<UStaticMeshComponent>(PrimitiveComponent))
+		{
+			auto Body=	SM->BodyInstance;
+			if(Sleep)
+			{
+				Body.PutInstanceToSleep();
+			}else
+			{
+				Body.WakeInstance();
+			}
+		}
+	}
+}
+
 
 void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -1453,6 +1509,24 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 		                                                 MaxWheelAngularVelocity);
 	}
 	
+}
+
+
+
+void UModularMovementComponent::SetSleeping(bool bEnableSleep)
+{
+	VehicleState.bSleeping=bEnableSleep;
+	OnSleepChange.Broadcast(bEnableSleep);
+	SetSleepOnBody(GetMesh(),bEnableSleep);
+	for(auto Comp:Components)
+	{
+		if(Comp->ConstraintParent)
+		{
+			SetSleepOnBody(Comp->ConstraintParent,bEnableSleep);
+			SetSleepOnBody(Comp->WheelCollision,bEnableSleep);
+			
+		}
+	}
 }
 
 

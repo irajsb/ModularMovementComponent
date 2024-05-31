@@ -116,6 +116,12 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 
 		
 			FinalForceVector.X = LongitudinalGripCurve.GetRichCurve()->Eval(FMath::Abs(Sx_modified))*FMath::Sign(SlipForward);
+
+			const float LatMultiplier=LateralGripCurve.GetRichCurve()->Eval(FMath::Abs(Wheel->WheelState.SlipAngle));
+			
+		
+		
+			
 			FinalForceVector.Y =LateralGripCurve.GetRichCurve()->Eval(alpha_modified)*FMath::Sign(Wheel->WheelState.SlipAngle);
 
 			FinalForceVector.X = FinalForceVector.X * (Sx_normalized / S_star);
@@ -127,6 +133,9 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 		}
 	
 	}
+
+
+	
 
 	//Surface friction
 	float SurfaceFriction = 1.f;
@@ -155,8 +164,8 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	FinalForceVector.X *= WheelLoad * SurfaceFriction;
 	FinalForceVector.Y *= WheelLoad* SurfaceFriction;
 
-	RELAXATION2(FinalForceVector.X, LastFX, 30.0f);
-	RELAXATION2(FinalForceVector.Y, LastFY, 50.0f);
+	//RELAXATION2(FinalForceVector.X, LastFX, 50.0f);
+	//RELAXATION2(FinalForceVector.Y, LastFY, 50.0f);
 
 
 	FinalForceVector *= -1.f;

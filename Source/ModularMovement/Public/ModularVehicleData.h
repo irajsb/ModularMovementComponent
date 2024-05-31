@@ -116,6 +116,10 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	//Brake input will put vehicle to reverse once vehicle has stopped
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = Advanced)
 	bool bReverseAsBrake=true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = Advanced)
+	float SleepThreshold=10.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = Advanced)
+	float SleepSlopeLimit=0.866f;;
 	
 
 	// Auto-brake when vehicle forward speed is opposite of player input by at least this much (cm/s)
@@ -230,4 +234,8 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 
 	virtual float GetTankCapacity() const override;
 	virtual float GetFuelConsumption(float RPMRatio) const override;
+
+	virtual float GetSleepSlope() const override;
+
+	virtual float GetSleepThreshold() const override;
 };

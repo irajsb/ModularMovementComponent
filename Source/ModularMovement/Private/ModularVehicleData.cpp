@@ -227,3 +227,13 @@ float UModularVehicleData::GetFuelConsumption(float RPMRatio) const
 {
 	return  FMath::Lerp(EngineFuelConsumptionIdle,EngineFuelConsumptionMaxRPM,RPMRatio);
 }
+
+float UModularVehicleData::GetSleepSlope() const
+{
+	return  SleepSlopeLimit;
+}
+
+float UModularVehicleData::GetSleepThreshold() const
+{
+	return  SleepThreshold;
+}

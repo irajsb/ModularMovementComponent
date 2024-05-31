@@ -33,7 +33,7 @@ FString Path=IPluginManager::Get().FindPlugin(TEXT("ModularMovement"))->GetBaseD
 
 
 	const auto  Settings=UPhysicsSettings::Get();
-	if(!Settings->bSubstepping&&!GetMutableDefault<UModularMovementSettings>()->SubstepShown)
+	if(!(Settings->bSubstepping||Settings->bSubsteppingAsync)&&!GetMutableDefault<UModularMovementSettings>()->SubstepShown)
 	{
 		FNotificationInfo Info(LOCTEXT("SubStepSettings", "Modular Movement Requires Substepping"));
 		Info.ExpireDuration = 120.0f;

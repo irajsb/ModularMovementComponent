@@ -51,6 +51,7 @@ public:
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel)
 	FRuntimeFloatCurve LateralGripCurve;
 
+
 	float LastSlipX;
 	FVector2f TireForceNormalized;
 	float LastFX, LastFY, Speak, SideSlipPeak;

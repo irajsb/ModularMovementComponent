@@ -121,4 +121,6 @@ public:
 	virtual float GetDesireSpeedTurningAround()const{return 0.f;};
 	virtual float GetFullThrottleSpeed()const{return 0.f;};
 	virtual float GetAIMaxSteerMultiplier()const{return 0.f;};
+	virtual float GetSleepThreshold()const{return 0.f;}
+	virtual float GetSleepSlope()const{return 0.f;}
 };

@@ -17,6 +17,7 @@ class UModularVehicleDebugger;
 //Cosmetic delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange, int, CurrentGear, int, TargetGear, bool, Finished);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEngineStateChange, bool, IsEngineOn,bool, IsStarting);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSleepChange, bool, Sleep);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCustomEvent, uint8, EventType,UModularWheel*, Wheel);
 
 
@@ -178,6 +179,8 @@ struct FVehicleState
 	// Number of drive wheels on the ground
 	int DriveWheelsOnGround=0;
 
+	int WheelsOnGround=0;
+
 	// Information about the left track of the vehicle
 	FModularTrackInfo TrackLeft;
 
@@ -193,6 +196,10 @@ struct FVehicleState
 
 	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
 	bool IsEngineOn=false;
+
+
+	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+	bool bSleeping=false;
 	
 };
 
@@ -295,7 +302,8 @@ public:
 	FVehicleState VehicleState;
 	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
 	bool ApplyRecommendedMeshProperties=true;
-
+	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
+	bool AllowSleep=false;
 	//Vehicle will spawn with off engine
 	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
 	bool SpawnWithTurnedOffEngine=false;
@@ -427,6 +435,8 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnGearChange OnGearChange;
 	UPROPERTY(BlueprintAssignable)
+	FOnSleepChange OnSleepChange;
+	UPROPERTY(BlueprintAssignable)
 	FOnEngineStateChange OnEngineStateChange;
 	//debug
 
@@ -440,7 +450,8 @@ public:
 	
 	
 	void ApplyDifferential( FDifferentialData DiffData, float EngineTorque, float DeltaTime);
-	
+	void SetSleeping(bool bEnableSleep);
+
 
 	static void ShowSetupError( FString Error);
 
@@ -458,4 +469,10 @@ public:
 	TOptional<bool> CachedShouldProcessPhysics;
 	TOptional<bool> CachedShouldProcessCosmetics;
 	float GetMassPerWheel()const ;
+
+	UFUNCTION(BlueprintCallable,Category=Sleep)
+	static void SetSleepOnBody(UPrimitiveComponent* PrimitiveComponent, bool Sleep);
+
+
+	
 };

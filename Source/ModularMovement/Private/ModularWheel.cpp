@@ -312,7 +312,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		if (!FrictionForceVector.ContainsNaN())
 		{
 
-			if(!ConstraintParent){
+			if(1){
 			AddForceAtPosition(Mesh, WheelState.HitResult.TraceStart, FrictionForceVector, NAME_None);
 
 			}else
