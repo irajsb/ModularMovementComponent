@@ -200,6 +200,10 @@ struct FVehicleState
 
 	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
 	bool bSleeping=false;
+
+
+	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+	float  AxleRPM=0.f;
 	
 };
 
@@ -450,6 +454,7 @@ public:
 	
 	
 	void ApplyDifferential( FDifferentialData DiffData, float EngineTorque, float DeltaTime);
+	UFUNCTION(BlueprintCallable,Category="Sleep")
 	void SetSleeping(bool bEnableSleep);
 
 
@@ -473,6 +478,12 @@ public:
 	UFUNCTION(BlueprintCallable,Category=Sleep)
 	static void SetSleepOnBody(UPrimitiveComponent* PrimitiveComponent, bool Sleep);
 
+
+	UFUNCTION()
+	void HandleComponentWake(UPrimitiveComponent* WakingComponent, FName BoneName)
+	{
+		SetSleeping(false);
+	}
 
 	
 };

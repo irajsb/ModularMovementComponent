@@ -92,14 +92,11 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	}
 	else
 	{
-		const float NewStress=UKismetMathLibrary::MapRangeClamped(TotalSlip,0.5,1,0,1);
-		if(NewStress>Wheel->WheelState.TireStress)
-		{
-			Wheel->WheelState.TireStress =UKismetMathLibrary::FInterpTo_Constant(Wheel->WheelState.TireStress, NewStress,DeltaTime,1);
-		}else
-		{
+		
+		const float NewStress=UKismetMathLibrary::MapRangeClamped(TotalSlip,0.3,0.6,0,1);
+		
 			Wheel->WheelState.TireStress=NewStress;
-		}
+		
 	}
 	if(TotalSlip>0.00001)
 	{

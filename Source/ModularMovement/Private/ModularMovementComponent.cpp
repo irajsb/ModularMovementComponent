@@ -17,6 +17,7 @@
 #include "GameFramework/Pawn.h"
 #include "PBDRigidsSolver.h"
 #include "TimerManager.h"
+#include "VehicleParticleSurfaceData.h"
 #include "Net/UnrealNetwork.h"
 #include "Physics/Experimental/PhysScene_Chaos.h"
 
@@ -283,25 +284,17 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 	MODULAR_CYCLE_COUNTER(STAT_ModularTickComponent)
 	const float fDeltaTime = FMath::Min<float>(DeltaTime, 0.0633);
 
-	if(AllowSleep)
+	// if not active skip sleep calcuate
+	if(!IsActive())
 	{
-		// Wake if control input pressed
-		if (VehicleState.bSleeping && RawThrottleInput!=0.f)
-		{
-			SetSleeping(false);
-		}else if (VehicleState.DriveWheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->GetSleepSlope()))
-		{
-			float SpeedSqr = GetMesh()->GetPhysicsLinearVelocity().SizeSquared();
-			const float SleepThreshold=GetSetup()->GetSleepThreshold();
-			if (SpeedSqr < (SleepThreshold * SleepThreshold))
-			{
-				
-				SetSleeping(true);
-			}
-		}
+		return;
+	}
+	if(SubstepEngine==SubstepTick)
+	{	//same cond as engine 
+		CaptureState(DeltaTime);
 	}
 	
-	if(!IsActive()||VehicleState.bSleeping)
+	if(VehicleState.bSleeping)
 	{
 		return;
 	}
@@ -383,69 +376,68 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 
 
-	if(!IsActive()||VehicleState.bSleeping)
+	if(IsActive()&&!VehicleState.bSleeping)
 	{
-		return;
-	}
-	//Check data 
-	if (!GetSetup())
-	{
-		UE_LOG(LogModularVehicle, Error, TEXT("Assign The Vehicle DataAsset "));
-		UModularVehicleFunctionLibrary::NotifyError(
-			"No Vehicle Data class in movement component. Please assign one in the details panel");
-		PrimaryComponentTick.bCanEverTick = false;
-		return;
-	}
+		//Check data 
+		if (!GetSetup())
+		{
+			UE_LOG(LogModularVehicle, Error, TEXT("Assign The Vehicle DataAsset "));
+			UModularVehicleFunctionLibrary::NotifyError(
+				"No Vehicle Data class in movement component. Please assign one in the details panel");
+			PrimaryComponentTick.bCanEverTick = false;
+			return;
+		}
 
 	
-	SteeringInput = CalcSteeringInput(DeltaTime);
-	ThrottleInput = CalcThrottleInput(DeltaTime);
-	BrakeInput = CalcBrakeInput();
+		SteeringInput = CalcSteeringInput(DeltaTime);
+		ThrottleInput = CalcThrottleInput(DeltaTime);
+		BrakeInput = CalcBrakeInput();
 
-	if (ShouldReplicateInput())
-	{
-		//code from Prv Vehicle
-		const int32 QThrottleInput = FMath::FloorToInt(RawThrottleInput * 127.f) & 0xFF;
-		const int32 QSteeringInput = (FMath::FloorToInt(RawSteeringInput * 63.f) & 0x7F) << 8;
-		const int32 QHandbrakeInput = HandBrakeInput ? (1 << 15) : 0;
-		const uint16 NewQuantizeInput = QHandbrakeInput | QSteeringInput | QThrottleInput;
-
-		if (QuantizeInput != NewQuantizeInput)
+		if (ShouldReplicateInput())
 		{
-			QuantizeInput = NewQuantizeInput;
-			ServerUpdateState(QuantizeInput);
+			//code from Prv Vehicle
+			const int32 QThrottleInput = FMath::FloorToInt(RawThrottleInput * 127.f) & 0xFF;
+			const int32 QSteeringInput = (FMath::FloorToInt(RawSteeringInput * 63.f) & 0x7F) << 8;
+			const int32 QHandbrakeInput = HandBrakeInput ? (1 << 15) : 0;
+			const uint16 NewQuantizeInput = QHandbrakeInput | QSteeringInput | QThrottleInput;
+
+			if (QuantizeInput != NewQuantizeInput)
+			{
+				QuantizeInput = NewQuantizeInput;
+				ServerUpdateState(QuantizeInput);
+			}
 		}
-	}
 
-	if (ShouldProcessPhysics())
-	{
-		GetSetup()->GetGearBox()->Update(DeltaTime, this);
-		UpdateReplicatedCosmeticData();
-	}
-
-	for (UModularWheel* Component : Components)
-	{
-		Component->UpdateAnimation(DeltaTime, this);
-	}
-	CaptureState(DeltaTime);
-
-
-	if (NetworkMode == Default)
-	{
-		if (GetOwnerRole() < ROLE_Authority)
+		if (ShouldProcessPhysics())
 		{
-			ApplyBodyInstanceData();
+			GetSetup()->GetGearBox()->Update(DeltaTime, this);
+			UpdateReplicatedCosmeticData();
 		}
-	}
-	else
-	{
-		if (!IsLocal())
+
+		for (UModularWheel* Component : Components)
 		{
-			ApplyBodyInstanceData();
+			Component->UpdateAnimation(DeltaTime, this);
+		}
+	
+
+
+		if (NetworkMode == Default)
+		{
+			if (GetOwnerRole() < ROLE_Authority)
+			{
+				ApplyBodyInstanceData();
+			}
 		}
 		else
 		{
-			SetCosmeticDataOnServer(RepCosmeticData);
+			if (!IsLocal())
+			{
+				ApplyBodyInstanceData();
+			}
+			else
+			{
+				SetCosmeticDataOnServer(RepCosmeticData);
+			}
 		}
 	}
 
@@ -471,6 +463,10 @@ void UModularMovementComponent::BeginPlay()
 		return;
 	}
 
+	GetMesh()->GetBodyInstance()->bGenerateWakeEvents=true;
+	FScriptDelegate Delegate;
+	
+	GetMesh()->OnComponentWake.AddDynamic(this,&UModularMovementComponent::HandleComponentWake);
 	GetWorld()->GetPhysicsScene()->OnPhysSceneStep.AddUObject(this, &UModularMovementComponent::PreTick);
 
 
@@ -511,31 +507,12 @@ void UModularMovementComponent::BeginPlay()
 
 void UModularMovementComponent::CaptureState(float DeltaTime)
 {
-	VehicleState.DriveWheelsOnGround = 0;
-	for (const UModularWheel* Component : Components)
-	{
-		if (Component->WheelState.HitResult.bBlockingHit && Component->WheelState.ApplyDriveForce)
-		{
-			VehicleState.DriveWheelsOnGround += 1;
-		}
-	}
-
-	VehicleState.ForwardSpeed = FVector::DotProduct(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity(),
-	                                                GetMesh()->GetForwardVector());
-
-	VehicleState.SideSpeed = FVector::DotProduct(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity(),
-	                                             GetMesh()->GetRightVector());
-}
 
 
-void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque)
-{
-	MODULAR_CYCLE_COUNTER(STAT_ModularEngine)
 
-
-	float AxleRPM = 0;
 	VehicleState.DriveWheelsOnGround =VehicleState.WheelsOnGround = 0;
 
+	VehicleState.AxleRPM=0.f;
 	//Get fastest wheel that is attached to engine 
 	for (UModularWheel* Component : Components)
 	{
@@ -548,19 +525,55 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 				VehicleState.DriveWheelsOnGround++;
 			}
 		}
-		if (ComponentOmega > AxleRPM)
+		if (ComponentOmega > VehicleState.AxleRPM)
 		{
-			AxleRPM = ComponentOmega;
+			VehicleState.AxleRPM = ComponentOmega;
 		}
 	}
 	if (!VehicleState.IsEngineOn)
 	{
-		AxleRPM = 0.f;
+		VehicleState.AxleRPM = 0.f;
 	}
+	
+	VehicleState.ForwardSpeed = FVector::DotProduct(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity(),
+	                                                GetMesh()->GetForwardVector());
+
+	VehicleState.SideSpeed = FVector::DotProduct(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity(),
+	                                             GetMesh()->GetRightVector());
+
+	if(AllowSleep)
+	{
+		// Wake if control input pressed
+		if (VehicleState.bSleeping && RawThrottleInput!=0.f)
+		{
+			
+			SetSleeping(false);
+		}else if (VehicleState.WheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->GetSleepSlope()))
+		{
+			
+			float SpeedSqr = GetMesh()->GetPhysicsLinearVelocity().SizeSquared();
+			
+			const float SleepThreshold=GetSetup()->GetSleepThreshold();
+			if (SpeedSqr < (SleepThreshold * SleepThreshold))
+			{
+				
+				SetSleeping(true);
+			}
+		}
+	}
+}
+
+
+void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque)
+{
+	MODULAR_CYCLE_COUNTER(STAT_ModularEngine)
+
+
+
 
 	const float MaxRads = RPMToOmega(VehicleState.VehicleData->GetMaxRPM());
 	const float MinRads = VehicleState.IsEngineOn ? RPMToOmega(VehicleState.VehicleData->GetIdleRPM()) : 0.f;
-	const float DriveRPM= GetSetup()->GetGearBox()->GetDriveRatio() == 0?ThrottleInput * MaxRads:AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio();
+	const float DriveRPM= GetSetup()->GetGearBox()->GetDriveRatio() == 0?ThrottleInput * MaxRads:VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio();
 	const float TargetRPM =UKismetMathLibrary::MapRangeClamped(DriveRPM,0,MaxRads,MinRads,MaxRads);
 		
 
@@ -1526,7 +1539,12 @@ void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 			SetSleepOnBody(Comp->WheelCollision,bEnableSleep);
 			
 		}
+		if(Comp->SurfaceData)
+		{
+			Comp->SurfaceData->OnSleep();
+		}
 	}
+	
 }
 
 

@@ -50,6 +50,18 @@ void UModularWheel::BeginPlay()
 	}
 }
 
+void UModularWheel::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	
+	Super::EndPlay(EndPlayReason);
+	if(SurfaceData)
+	{
+		SurfaceData->ConditionalBeginDestroy();
+		SurfaceData=nullptr;
+	}
+}
+
+
 void UModularWheel::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);

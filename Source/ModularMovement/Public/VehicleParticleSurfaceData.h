@@ -27,6 +27,11 @@ struct FSurfaceParticleCouple
 
 	UPROPERTY(EditAnywhere,Category = "Setup")
 	UNiagaraSystem* NiagaraSystem=nullptr;
+
+	UPROPERTY(EditAnywhere,Category = "Setup")
+	TObjectPtr<USoundBase> Sound;
+
+	
 	
 };
 UCLASS(Blueprintable,BlueprintType)
@@ -34,12 +39,11 @@ class MODULARMOVEMENT_API UVehicleParticleSurfaceData : public UObject
 {
 	GENERATED_BODY()
 
-	//Default particle to use . Set one of the two defaults 
+
+	// Default Particle
 	UPROPERTY(EditAnywhere,Category = "Setup")
-	UParticleSystem* DefaultParticle=nullptr;
-	//Default particle to use . Set one of the two defaults 
-	UPROPERTY(EditAnywhere,Category = "Setup")
-	UNiagaraSystem* DefaultNiagaraSystem=nullptr;
+	FSurfaceParticleCouple DefaultParticle;
+	
 	UPROPERTY(EditAnywhere,Category = "Setup")
 	TArray<FSurfaceParticleCouple> SurfaceParticleCouples;
 	UPROPERTY(EditAnywhere,Category = "Setup")
@@ -52,20 +56,39 @@ class MODULARMOVEMENT_API UVehicleParticleSurfaceData : public UObject
 
 	UPROPERTY(EditAnywhere,Category = "Setup")
 	float MaxAngularSpeedInRadian=5.f;
+
+	UPROPERTY(EditAnywhere,Category = "Audio")
+    	float MinAngularSpeedInRadianAudio=1.f;
+    
+	UPROPERTY(EditAnywhere,Category = "Audio")
+	float MaxAngularSpeedInRadianAudio=25.f;
+	UPROPERTY(EditAnywhere,Category = "Audio")
+	float InputRiseInterpolationSpeed=5.f;
+	UPROPERTY(EditAnywhere,Category = "Audio")
+	float InputFallInterpolationSpeed=1.f;
 	// time to  keep emitter alive for so they finish up the last sprites 
 	UPROPERTY(EditAnywhere,Category = "Setup")
 	float CleanupTime=3.f;
+
+	UPROPERTY(EditAnywhere,Category = "Setup")
+	USoundAttenuation* SoundAttenuation;
 	
 public:
 	void UpdateParticleForWheel(float DeltaTime,UModularWheel* Wheel);
 
+	void OnSleep() const;
 private:
-	void HandleParticle(const UModularWheel* Wheel,UParticleSystem* Particle);
-	void HandleNiagaraParticle(const UModularWheel* Wheel,UNiagaraSystem* Particle);
+	void HandleParticle(const UModularWheel* Wheel,const FSurfaceParticleCouple& ParticleCouple);
+	void HandleNiagaraParticle(const UModularWheel* Wheel,const FSurfaceParticleCouple& ParticleCouple);
+	void HandleSound(const UModularWheel* Wheel, const FSurfaceParticleCouple& ParticleCouple, float DeltaTime);
 
-
-	UPROPERTY()
+	UPROPERTY(Transient)
 	UObject* CurrentEmitter;
+
+	UPROPERTY(Transient)
+	UAudioComponent* AudioComponent;
+
+	virtual void BeginDestroy() override;
 
 	TArray<TPair<USceneComponent*,float>>GarbageEmitters;
 };
