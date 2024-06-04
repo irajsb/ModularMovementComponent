@@ -1,4 +1,4 @@
-//Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
+// Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only
 
 #pragma once
 
@@ -9,481 +9,479 @@
 #include "GameFramework/PawnMovementComponent.h"
 #include "ModularMovementComponent.generated.h"
 
+// Macro to convert SI force to Unreal force
+#define SIForceToUnrealForce(In) In * 100.0f
 
-#define SIForceToUnrealForce(In) In*100.0f
 class UTerrainInteraction;
 class UModularWheel;
 class UModularVehicleDebugger;
-//Cosmetic delegates
+
+// Cosmetic delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange, int, CurrentGear, int, TargetGear, bool, Finished);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEngineStateChange, bool, IsEngineOn,bool, IsStarting);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEngineStateChange, bool, IsEngineOn, bool, IsStarting);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSleepChange, bool, Sleep);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCustomEvent, uint8, EventType,UModularWheel*, Wheel);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCustomEvent, uint8, EventType, UModularWheel*, Wheel);
 
-
+// Debug parameters structure
 struct FModularVehicleDebugParams
 {
-	int ShowSuspensionDebug = false;
-	int ShowInputProcessingDebug = false;
-	int ShowGearboxLog = false;
-	int ShowDrawFriction = false;
-	int AIDebug = false;
+    // Show suspension debug information
+    int ShowSuspensionDebug = false;
+    // Show input processing debug information
+    int ShowInputProcessingDebug = false;
+    // Show gearbox log information
+    int ShowGearboxLog = false;
+    // Show draw friction information
+    int ShowDrawFriction = false;
+    // Show AI debug information
+    int AIDebug = false;
 };
 
+// Enum for vehicle network mode
 UENUM(BlueprintType)
 enum EVehicleNetworkMode
-{	
-	Default,
-	ClientAuthoritative,
-	 
+{
+    Default,
+    ClientAuthoritative,
 };
 
+// Structure for old rigid body error correction
 USTRUCT()
 struct FOldRigidBodyErrorCorrection
 {
-	GENERATED_USTRUCT_BODY()
+    GENERATED_USTRUCT_BODY()
 
+    // Maximum alpha value for error correction
+    UPROPERTY(EditAnywhere, Category = Network)
+    float MaxAlpha;
 
-	//
+    // Minimum distance to fix error
+    UPROPERTY(EditAnywhere, Category = Network)
+    float MinDistanceToFix;
 
+    // Maximum distance to fix error
+    UPROPERTY(EditAnywhere, Category = Network)
+    float MaxDistanceToFix;
 
-	UPROPERTY(EditAnywhere,Category=Network)
-	float MaxAlpha;
-	UPROPERTY(EditAnywhere,Category=Network)
-	float MinDistanceToFix;
-	UPROPERTY(EditAnywhere,Category=Network)
-	float MaxDistanceToFix;
-	UPROPERTY(EditAnywhere,Category=Network)
-	float SpeedFactor;
-	
-	UPROPERTY(EditAnywhere,Category=Network)
-	float MaxAngularAlpha;
-	UPROPERTY(EditAnywhere,Category=Network)
-	float MinAngleToFix;
-	UPROPERTY(EditAnywhere,Category=Network)
-	float MaxAngleToFix;
+    // Speed factor for error correction
+    UPROPERTY(EditAnywhere, Category = Network)
+    float SpeedFactor;
 
+    // Maximum angular alpha value for error correction
+    UPROPERTY(EditAnywhere, Category = Network)
+    float MaxAngularAlpha;
 
+    // Minimum angle to fix error
+    UPROPERTY(EditAnywhere, Category = Network)
+    float MinAngleToFix;
 
-	FOldRigidBodyErrorCorrection(): MaxAlpha(0.5), MinDistanceToFix(0), MaxDistanceToFix(2000), SpeedFactor(0.001),
-	                                MaxAngularAlpha(0.1),
-	                                MinAngleToFix(0),
-	                                MaxAngleToFix(1.1775)
-	{
-	}
+    // Maximum angle to fix error
+    UPROPERTY(EditAnywhere, Category = Network)
+    float MaxAngleToFix;
+
+    FOldRigidBodyErrorCorrection() : MaxAlpha(0.5), MinDistanceToFix(0), MaxDistanceToFix(2000), SpeedFactor(0.001),
+                                     MaxAngularAlpha(0.1), MinAngleToFix(0), MaxAngleToFix(1.1775)
+    {
+    }
 };
 
+// Enum for AI vehicle state
 UENUM()
-enum EAIVehicleState { /*target is in front*/Neutral,/*target is in back*/TurningAround };
+enum EAIVehicleState { Neutral, TurningAround };
 
+// Structure for wheel representation cosmetic data
 USTRUCT()
 struct FWheelRepCosmeticData
 {
-	GENERATED_USTRUCT_BODY()
-public:
-	UPROPERTY()
-	float Slip=0.f;
-	UPROPERTY()
-	float AngularVelocity=0.f;
+    GENERATED_USTRUCT_BODY()
 
-	FWheelRepCosmeticData(float InSlip,float InAngularVelocity)
-	{
-		Slip=InSlip;
-		AngularVelocity=InAngularVelocity;
-	}
-	FWheelRepCosmeticData()
-	{
-		Slip=0.f;
-		AngularVelocity=0.f;
-	};
+public:
+    // Slip value for the wheel
+    UPROPERTY()
+    float Slip = 0.f;
+
+    // Angular velocity of the wheel
+    UPROPERTY()
+    float AngularVelocity = 0.f;
+
+    FWheelRepCosmeticData(float InSlip, float InAngularVelocity)
+    {
+        Slip = InSlip;
+        AngularVelocity = InAngularVelocity;
+    }
+
+    FWheelRepCosmeticData()
+    {
+        Slip = 0.f;
+        AngularVelocity = 0.f;
+    };
 };
+
+// Structure for representation cosmetic data
 USTRUCT()
 struct FRepCosmeticData
 {
-	GENERATED_USTRUCT_BODY()
+    GENERATED_USTRUCT_BODY()
 
-	/** Engine RPM */
-	UPROPERTY()
-	uint8 EngineRPM=0.f;
-	UPROPERTY()
-	uint8 CurrentGear = 0;
-	UPROPERTY()
-	float SteeringInput=0.f;
-	UPROPERTY()
-	TArray<FWheelRepCosmeticData> WheelRepCosmeticDatas;
-	UPROPERTY()
-	FRigidBodyState RigidBodyState;
-	
-	UPROPERTY()
-	float CurrentFuel;
-	UPROPERTY()
-	bool EngineOn;
-	FRepCosmeticData(): CurrentFuel(0), EngineOn(0)
-	{
-		EngineRPM = 0;
-		CurrentGear = 0;
-	}
+    // Engine RPM
+    UPROPERTY()
+    uint8 EngineRPM = 0.f;
+
+    // Current gear
+    UPROPERTY()
+    uint8 CurrentGear = 0;
+
+    // Steering input
+    UPROPERTY()
+    float SteeringInput = 0.f;
+
+    // Array of wheel representation cosmetic data
+    UPROPERTY()
+    TArray<FWheelRepCosmeticData> WheelRepCosmeticDatas;
+
+    // Rigid body state
+    UPROPERTY()
+    FRigidBodyState RigidBodyState;
+
+    // Current fuel level
+    UPROPERTY()
+    float CurrentFuel;
+
+    // Engine state
+    UPROPERTY()
+    bool EngineOn;
+
+    FRepCosmeticData() : CurrentFuel(0), EngineOn(0)
+    {
+        EngineRPM = 0;
+        CurrentGear = 0;
+    }
 };
 
+// Structure for modular track information
 USTRUCT()
 struct FModularTrackInfo
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-	float TorqueTransfer;
+    // Torque transfer for the track
+    float TorqueTransfer;
 };
 
-// A structure representing the state of a vehicle
+// Structure representing the state of a vehicle
 USTRUCT(BlueprintType)
 struct FVehicleState
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-	// Class pointer to the vehicle data asset
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Setup)
-	TSoftClassPtr<UBaseVehicleData> VehicleDataClass;
+    // Class pointer to the vehicle data asset
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Setup)
+    TSoftClassPtr<UBaseVehicleData> VehicleDataClass;
 
-	// Pointer to the vehicle data
-	UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
-	UBaseVehicleData* VehicleData=nullptr;
+    // Pointer to the vehicle data
+    UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
+    UBaseVehicleData* VehicleData = nullptr;
 
-	// Current RPM (Revolutions Per Minute) of the vehicle's engine
-	UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
-	float CurrentRpm=0.f;
+    // Current RPM (Revolutions Per Minute) of the vehicle's engine
+    UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
+    float CurrentRpm = 0.f;
 
-	// Forward speed of the vehicle
-	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	float ForwardSpeed=0.f;
+    // Forward speed of the vehicle
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    float ForwardSpeed = 0.f;
 
-	// Side speed of the vehicle
-	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	float SideSpeed=0.f;
-	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	float WheelTorque;
+    // Side speed of the vehicle
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    float SideSpeed = 0.f;
 
-	// Desired speed for the vehicle
-	float DesiredSpeed=0.f;
+    // Wheel torque
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    float WheelTorque;
 
-	// Previous throttle input for AI control
-	float AIPreviousThrottle=0.f;
+    // Desired speed for the vehicle
+    float DesiredSpeed = 0.f;
 
-	// State of the AI-controlled vehicle
-	EAIVehicleState AIState;
+    // Previous throttle input for AI control
+    float AIPreviousThrottle = 0.f;
 
-	// Flag indicating whether the vehicle is controlled by AI
-	bool IsAIVehicle=false;
+    // State of the AI-controlled vehicle
+    EAIVehicleState AIState;
 
-	// Delta for locking the current state
-	float LockCurrentStateDelta=0.f;
+    // Flag indicating whether the vehicle is controlled by AI
+    bool IsAIVehicle = false;
 
-	// Number of drive wheels on the ground
-	int DriveWheelsOnGround=0;
+    // Delta for locking the current state
+    float LockCurrentStateDelta = 0.f;
 
-	int WheelsOnGround=0;
+    // Number of drive wheels on the ground
+    int DriveWheelsOnGround = 0;
 
-	// Information about the left track of the vehicle
-	FModularTrackInfo TrackLeft;
+    // Number of wheels on the ground
+    int WheelsOnGround = 0;
 
-	// Information about the right track of the vehicle
-	FModularTrackInfo TrackRight;
+    // Information about the left track of the vehicle
+    FModularTrackInfo TrackLeft;
 
-	// Engine revolutions per second
-	float EngineRads=0.f;
+    // Information about the right track of the vehicle
+    FModularTrackInfo TrackRight;
 
+    // Engine revolutions per second
+    float EngineRads = 0.f;
 
-	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	float CurrentFuel=0.f;
+    // Current fuel level
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    float CurrentFuel = 0.f;
 
-	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	bool IsEngineOn=false;
+    // Engine state
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    bool IsEngineOn = false;
 
+    // Sleep state
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    bool bSleeping = false;
 
-	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	bool bSleeping=false;
-
-
-	UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
-	float  AxleRPM=0.f;
-	
+    // Axle RPM
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    float AxleRPM = 0.f;
 };
 
-
-UCLASS(meta=(BlueprintSpawnableComponent))
+UCLASS(meta = (BlueprintSpawnableComponent))
 class MODULARMOVEMENT_API UModularMovementComponent : public UPawnMovementComponent
 {
 public:
-	GENERATED_BODY()
-	friend class UModularWheel;
-	//Constructor
-	UModularMovementComponent();
+    GENERATED_BODY()
+    friend class UModularWheel;
 
-	//Gather wheels . Can be used to attach additional wheels such as semi truck trailers
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement", meta=(AutoCreateRefTerm="AdditionalWheels"))
-	void UpdateComponents(TArray<UModularWheel*> AdditionalWheels);
+    // Constructor
+    UModularMovementComponent();
 
+    // Gather wheels. Can be used to attach additional wheels such as semi truck trailers
+    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement", meta = (AutoCreateRefTerm = "AdditionalWheels"))
+    void UpdateComponents(TArray<UModularWheel*> AdditionalWheels);
 
-	//actors to ignore for wheel trace. collected here because wheels can have different owners (such as a semi truck)
-	UPROPERTY(BlueprintReadWrite,Category="Trace")
-	TArray<AActor*> ActorsToIgnore;
+    // Actors to ignore for wheel trace. Collected here because wheels can have different owners (such as a semi truck)
+    UPROPERTY(BlueprintReadWrite, Category = "Trace")
+    TArray<AActor*> ActorsToIgnore;
 
-	//Wheels
-	UPROPERTY()
-	TArray<UModularWheel*> Components;
+    // Wheels
+    UPROPERTY()
+    TArray<UModularWheel*> Components;
 
 public:
-	//Get List of wheels
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
-	TArray<UModularWheel*> GetWheels();
+    // Get List of wheels
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
+    TArray<UModularWheel*> GetWheels();
 
-	//Return Mesh
-	UMeshComponent* GetMesh() const;
+    // Return Mesh
+    UMeshComponent* GetMesh() const;
 
+    // Input values and constants for a vehicle
+    UPROPERTY(Transient, BlueprintReadOnly, Category = Input)
+    float ThrottleInput;
 
-	// These properties represent various input values and constants for a vehicle.
+    UPROPERTY(Transient)
+    float RawBrakeInput;
 
-	// Transient throttle input value (acceleration pedal)
-	UPROPERTY(Transient, BlueprintReadOnly, Category = Input)
-	float ThrottleInput;
+    UPROPERTY(Transient)
+    float RawSteeringInput;
 
-	// Transient raw brake input value (brake pedal)
-	UPROPERTY(Transient)
-	float RawBrakeInput;
+    UPROPERTY(Transient)
+    float SteeringInput;
 
-	// Transient raw steering input value (-1 for left, 1 for right)
-	UPROPERTY(Transient)
-	float RawSteeringInput;
+    UPROPERTY(Transient)
+    float BrakeInput;
 
-	// Transient steering input value (-1 for left, 1 for right)
-	UPROPERTY(Transient)
-	float SteeringInput;
+    UPROPERTY(Transient, BlueprintReadOnly, Category = Input)
+    float RawThrottleInput;
 
-	// Transient brake input value
-	UPROPERTY(Transient)
-	float BrakeInput;
+    UPROPERTY(Transient)
+    bool HandBrakeInput;
 
-	// Transient raw throttle input value (-1 for release, 0 for neutral, 1 for full throttle)
-	UPROPERTY(Transient,BlueprintReadOnly,Category=Input)
-	float RawThrottleInput;
+    UPROPERTY(Transient)
+    float CurrentDifferentialRatio;
 
-	// Transient handbrake input status (true if engaged)
-	UPROPERTY(Transient)
-	bool HandBrakeInput;
+    // Air drag and rolling resistance constants for the vehicle
+    float AirDragConstant;
+    bool UseCustomDrag = false;
+    float CustomDragCoefficient = 0.f;
+    float RollingResistanceConstant;
 
+    // Get vehicle setup
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
+    UBaseVehicleData* GetSetup() const;
 
-	UPROPERTY(Transient)
-	float CurrentDifferentialRatio;
-	// Public properties representing air drag and rolling resistance constants for the vehicle.
-	public:
-	float AirDragConstant;
-	bool UseCustomDrag=false;
-	float CustomDragCoefficient=0.f;
-	float RollingResistanceConstant;
+    // Set input functions
+    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void SetThrottleInput(float Input);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
-	UBaseVehicleData* GetSetup() const;
-	/*Set throttle Input
-	 *Range -1,1
-	 * No Need for replication
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void SetThrottleInput(float Input);
-	/*Set Steering Input
-	*Range -1,1
-	* No Need for replication
-	*/
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void SetSteeringInput(float Input);
-	/** Set the user input for the vehicle Brake [range 0 to 1] set it if you've turned off reverse as brake */
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void SetBrakeInput(float Brake);
-	/*Set HandBrakeInput
-	* No Need for replication
-	*/
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void SetHandBrakeInput(bool Brake);
-	//Data holder
-	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly, meta=(ShowOnlyInnerProperties ))
-	FVehicleState VehicleState;
-	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
-	bool ApplyRecommendedMeshProperties=true;
-	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
-	bool AllowSleep=false;
-	//Vehicle will spawn with off engine
-	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
-	bool SpawnWithTurnedOffEngine=false;
+    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void SetSteeringInput(float Input);
 
-	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
-	TEnumAsByte<EVehicleNetworkMode> NetworkMode;
-	//Optimzations can reduce load on cpu
-	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
-	bool SubstepEngine=true;
-	//Optimzations can reduce load on cpu
-	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
-	bool SubStepSuspension=true;
-	//Trailers  only handle suspension and friction until their wheels are moved to a  vehicle's movement component 
-	UPROPERTY(Category=Setup, EditAnywhere, BlueprintReadOnly)
-	bool IsTrailer;
+    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void SetBrakeInput(float Brake);
 
-	/** Compute steering input */
-	float CalcSteeringInput(float DeltaTime);
+    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void SetHandBrakeInput(bool Brake);
 
-	/** Compute brake input */
-	float CalcBrakeInput() ;
+    // Data holder
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly, meta = (ShowOnlyInnerProperties))
+    FVehicleState VehicleState;
 
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
+    bool ApplyRecommendedMeshProperties = true;
 
-	float CalcThrottleInput(float DeltaTime) const;
-	//Engine
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
+    bool AllowSleep = false;
 
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
+    bool SpawnWithTurnedOffEngine = false;
 
-	//Get Number of wheels
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
-	int GetNumberOfWheels() const;
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
-	int GetNumberOfDriveWheelsTouchingGround() const;
-	//Get RPM is scale from 0-1
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
-	float GetRPMRatio();
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
+    TEnumAsByte<EVehicleNetworkMode> NetworkMode;
 
-	// 0 for instant start
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void HoldStarter(float StartTime);
-	//Release starter after its on or cancel starting if its in middle of it 
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void ReleaseStarter();
-	//Stop engine if its on
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void StopEngine();
-	//Fuel
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void AddFuel(float Amount);
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
+    bool SubstepEngine = true;
 
-	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	void SetFuel(float Amount);
-	// Get fuel range 0-1
-	UFUNCTION(BlueprintCallable,BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
-	float GetFuelRatio();
-	FTimerHandle StarterTimerHandle;
-	//We setup wheels here
-	virtual void InitializeComponent() override;
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
+    bool SubStepSuspension = true;
 
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
+    bool IsTrailer;
 
-	void VehicleTick(float DeltaTime,  bool SubstepTick);
+    // Calculate input functions
+    float CalcSteeringInput(float DeltaTime);
+    float CalcBrakeInput();
+    float CalcThrottleInput(float DeltaTime) const;
 
-	void PreTick(FPhysScene_Chaos* Scene, float DeltaTime);
-	void PhysicsCallBack(float DeltaTime);
-	class FModularAsyncCallBack* AsyncCallBack;
+    // Engine functions
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
+    int GetNumberOfWheels() const;
 
-	//Main updates happen here
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
-	                           FActorComponentTickFunction* ThisTickFunction) override;
-	virtual void BeginPlay() override;
-	//Captures some basic info from wheels for feature processes 
-	void CaptureState(float DeltaTime);
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
+    int GetNumberOfDriveWheelsTouchingGround() const;
 
-	//Calculate RPM And torque
-	void UpdateEngine(float DeltaTime, float& WheelTorque);
-	//Apply Air Drag
-	void UpdateAirDrag() const;
-	void UpdateTankSteering(float UseSteeringValue);
-	//Update each Wheel
-	void UpdateWheels(float DeltaTime, float WheelTorque, bool SubstepTick);
-	//Determine vehicle state in AI Pawns
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
+    float GetRPMRatio();
 
-	EAIVehicleState DetermineAIState(float ForwardFactor, float DeltaTime);
+    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void HoldStarter(float StartTime);
 
+    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void ReleaseStarter();
 
-	//AI movement
-	virtual void RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed) override;
-	virtual void StopActiveMovement() override;
+    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void StopEngine();
 
+    // Fuel functions
+    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void AddFuel(float Amount);
 
-	//ChaosDefault
-	static float CmToM(float In);
+    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
+    void SetFuel(float Amount);
 
-	///replication
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
+    float GetFuelRatio();
 
+    FTimerHandle StarterTimerHandle;
 
-	bool ShouldProcessPhysics() ;
-	bool ShouldProcessCosmetics() ;
-	bool ShouldReplicateInput() const;
+    // Component initialization
+    virtual void InitializeComponent() override;
 
+    // Tick functions
+    void VehicleTick(float DeltaTime, bool SubstepTick);
+    void PreTick(FPhysScene_Chaos* Scene, float DeltaTime);
+    void PhysicsCallBack(float DeltaTime);
 
-	/** Pack cosmetic data into optimized replicated variable */
-	void UpdateReplicatedCosmeticData();
+    class FModularAsyncCallBack* AsyncCallBack;
 
-	/** Replicated cosmetic data  */
-	UPROPERTY(Transient, ReplicatedUsing = OnRep_RepCosmeticData)
-	FRepCosmeticData RepCosmeticData;
-	
-	bool CosmeticDataInitialized=false;
+    // Main updates happen here
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+    virtual void BeginPlay() override;
 
+    // Capture state and update functions
+    void CaptureState(float DeltaTime);
+    void UpdateEngine(float DeltaTime, float& WheelTorque);
+    void UpdateAirDrag() const;
+    void UpdateTankSteering(float UseSteeringValue);
+    void UpdateWheels(float DeltaTime, float WheelTorque, bool SubstepTick);
 
+    // AI movement functions
+    EAIVehicleState DetermineAIState(float ForwardFactor, float DeltaTime);
+    virtual void RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed) override;
+    virtual void StopActiveMovement() override;
 
+    // ChaosDefault function
+    static float CmToM(float In);
 
-	UFUNCTION()
-	void OnRep_RepCosmeticData();
-	UFUNCTION(Server,Reliable)
-	void SetCosmeticDataOnServer(FRepCosmeticData Data);
+    // Replication functions
+    bool ShouldProcessPhysics();
+    bool ShouldProcessCosmetics();
+    bool ShouldReplicateInput() const;
+    void UpdateReplicatedCosmeticData();
 
-	/** Pass current state to server */
-	UFUNCTION(reliable, server, WithValidation)
-	void ServerUpdateState(uint16 InQuantizeInput);
-	/** Contains: throttle (1), steering (2), handbrake(3). 
-	*  3222 2222 1111 1111
-	*/
-	UPROPERTY(Transient)
-	uint16 QuantizeInput;
+    // Replicated cosmetic data
+    UPROPERTY(Transient, ReplicatedUsing = OnRep_RepCosmeticData)
+    FRepCosmeticData RepCosmeticData;
 
+    bool CosmeticDataInitialized = false;
 
-	//Delegates
-	UPROPERTY(BlueprintAssignable)
-	FOnGearChange OnGearChange;
-	UPROPERTY(BlueprintAssignable)
-	FOnSleepChange OnSleepChange;
-	UPROPERTY(BlueprintAssignable)
-	FOnEngineStateChange OnEngineStateChange;
-	//debug
+    UFUNCTION()
+    void OnRep_RepCosmeticData();
 
+    UFUNCTION(Server, Reliable)
+    void SetCosmeticDataOnServer(FRepCosmeticData Data);
 
-	UPROPERTY()
-	UModularVehicleDebugger* ModularVehicleDebugger;
+    UFUNCTION(reliable, server, WithValidation)
+    void ServerUpdateState(uint16 InQuantizeInput);
 
-	/** Correction thresholds cached info */
-	UPROPERTY(EditAnywhere,Category=Network)
-	FOldRigidBodyErrorCorrection ErrorCorrection;
-	
-	
-	void ApplyDifferential( FDifferentialData DiffData, float EngineTorque, float DeltaTime);
-	UFUNCTION(BlueprintCallable,Category="Sleep")
-	void SetSleeping(bool bEnableSleep);
+    UPROPERTY(Transient)
+    uint16 QuantizeInput;
 
+    // Delegates
+    UPROPERTY(BlueprintAssignable)
+    FOnGearChange OnGearChange;
 
-	static void ShowSetupError( FString Error);
+    UPROPERTY(BlueprintAssignable)
+    FOnSleepChange OnSleepChange;
 
-	FRigidBodyState NewestBodyInstance;
-	
-	void ApplyBodyInstanceData() const;
+    UPROPERTY(BlueprintAssignable)
+    FOnEngineStateChange OnEngineStateChange;
 
-	UPROPERTY(BlueprintAssignable)
-	FOnCustomEvent OnCustomEvent;
+    // Debug
+    UPROPERTY()
+    UModularVehicleDebugger* ModularVehicleDebugger;
 
-	bool IsLocal();
+    UPROPERTY(EditAnywhere, Category = Network)
+    FOldRigidBodyErrorCorrection ErrorCorrection;
 
+    void ApplyDifferential(FDifferentialData DiffData, float EngineTorque, float DeltaTime);
 
-	TOptional<bool> CachedIsLocal;
-	TOptional<bool> CachedShouldProcessPhysics;
-	TOptional<bool> CachedShouldProcessCosmetics;
-	float GetMassPerWheel()const ;
+    UFUNCTION(BlueprintCallable, Category = "Sleep")
+    void SetSleeping(bool bEnableSleep);
 
-	UFUNCTION(BlueprintCallable,Category=Sleep)
-	static void SetSleepOnBody(UPrimitiveComponent* PrimitiveComponent, bool Sleep);
+    static void ShowSetupError(FString Error);
 
+    FRigidBodyState NewestBodyInstance;
 
-	UFUNCTION()
-	void HandleComponentWake(UPrimitiveComponent* WakingComponent, FName BoneName)
-	{
-		SetSleeping(false);
-	}
+    void ApplyBodyInstanceData() const;
 
-	
+    UPROPERTY(BlueprintAssignable)
+    FOnCustomEvent OnCustomEvent;
+
+    bool IsLocal();
+
+    TOptional<bool> CachedIsLocal;
+    TOptional<bool> CachedShouldProcessPhysics;
+    TOptional<bool> CachedShouldProcessCosmetics;
+
+    float GetMassPerWheel() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Sleep")
+    static void SetSleepOnBody(UPrimitiveComponent* PrimitiveComponent, bool Sleep);
+
+    UFUNCTION()
+    void HandleComponentWake(UPrimitiveComponent* WakingComponent, FName BoneName)
+    {
+        SetSleeping(false);
+    }
 };

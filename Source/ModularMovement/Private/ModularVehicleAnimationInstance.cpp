@@ -65,8 +65,10 @@
 				FModularWheelAnimationData& WheelInstance = WheelInstances[WheelIndex];
 				UModularWheel* Wheel = WheeledVehicleComponent->Components[WheelIndex];
 				
-				
-				WheelInstance.BoneName=Wheel->GetFName();
+				if(Wheel)
+				{
+					WheelInstance.BoneName=Wheel->GetFName();
+				}
 				
 			}
 		}
@@ -102,7 +104,10 @@
 				UModularVehicleFunctionLibrary::	GetWheelAnimationData(Wheel,Location, Rotation,DeltaSeconds);
 				WheelInstance.LocOffset=Location;
 				WheelInstance.RotOffset=Rotation;
-				WheelInstance.BoneName=Wheel->GetFName();
+				if(Wheel)
+				{
+					WheelInstance.BoneName=Wheel->GetFName();
+				}
 			}
 		}
 	}

@@ -283,7 +283,7 @@ void UVehicleParticleSurfaceData::BeginDestroy()
 
 	if(CurrentEmitter)
 	{
-		Cast<UActorComponent>(CurrentEmitter)->DestroyComponent();
+		CurrentEmitter->DestroyComponent();
 	}
 	if(AudioComponent)
 	{

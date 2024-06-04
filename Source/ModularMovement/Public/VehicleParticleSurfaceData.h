@@ -83,7 +83,7 @@ private:
 	void HandleSound(const UModularWheel* Wheel, const FSurfaceParticleCouple& ParticleCouple, float DeltaTime);
 
 	UPROPERTY(Transient)
-	UObject* CurrentEmitter;
+	USceneComponent* CurrentEmitter;
 
 	UPROPERTY(Transient)
 	UAudioComponent* AudioComponent;

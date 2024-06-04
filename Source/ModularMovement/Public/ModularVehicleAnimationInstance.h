@@ -92,7 +92,7 @@ public:
 		return WheeledVehicleComponent;
 	}
 
-private:
+
 	/** UAnimInstance interface begin*/
 	virtual void NativeInitializeAnimation() override;
 	virtual FAnimInstanceProxy* CreateAnimInstanceProxy() override;
