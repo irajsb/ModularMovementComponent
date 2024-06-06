@@ -690,6 +690,8 @@ void UModularMovementComponent::UpdateTankSteering(const float UseSteeringValue)
 			}
 		}
 	}
+
+	
 }
 
 void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque, bool SubstepTick)
@@ -1355,7 +1357,7 @@ bool UModularMovementComponent::IsLocal()
 		return true;
 	}
 
-	if (NetMode == NM_ListenServer && GetWorld()->GetFirstPlayerController() == GetPawnOwner()->GetController())
+	if (NetMode == NM_ListenServer &&static_cast<AController*>( GetWorld()->GetFirstPlayerController()) == GetPawnOwner()->GetController())
 	{
 		CachedIsLocal = true;
 		

@@ -52,7 +52,7 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	//Check if braking or idle braking
 
 	const float WrongDirectionThreshold=ModularMovementComponent->VehicleState.VehicleData->GetWrongDirectionThreshold();
-	const bool Braking =FMath::Abs(GroundVelocityVector.X)>WrongDirectionThreshold&&( FMath::Sign(GroundVelocityVector.X)*FMath::Sign(TrackInput)==-1.f||TrackInput==0.f);
+	const bool Braking =ModularMovementComponent->HandBrakeInput||FMath::Abs(GroundVelocityVector.X)>WrongDirectionThreshold&&( FMath::Sign(GroundVelocityVector.X)*FMath::Sign(TrackInput)==-1.f||TrackInput==0.f);
 
 	
 	//Clamp for friction 
@@ -82,9 +82,16 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 				}
 			}
 
+			float BrakeTorque=Wheel->WheelState.WheelSetup->BrakeTorque ;
+
+			if(ModularMovementComponent->HandBrakeInput)
+			{
+				BrakeTorque=Wheel->WheelState.WheelSetup->HandBrakeTorque;
+			}
+
 			
 			//Clamp brake torque to force required to bring to stop, helps in lower speeds
-			FinalForceVector.X =FMath::Clamp(BrakeInput*Wheel->WheelState.WheelSetup->BrakeTorque *ReverseVelocitySign /WheelRadiusM,-ForceRequiredToBringToStop,ForceRequiredToBringToStop); 
+			FinalForceVector.X =FMath::Clamp(BrakeInput*BrakeTorque*ReverseVelocitySign /WheelRadiusM,-ForceRequiredToBringToStop,ForceRequiredToBringToStop); 
 			
 			
 			//if ABS enabled we allow unrealistic brake torque because of arcade tire model 
