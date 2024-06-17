@@ -63,21 +63,35 @@ void UVehicleParticleSurfaceData::UpdateParticleForWheel(float DeltaTime,UModula
 
 	//Update garbage emitters
 
+	TArray<USceneComponent*> ComponentsToDestroy;
+
 	for (int Index = GarbageEmitters.Num() - 1; Index >= 0; Index--)
 	{
-		auto& Garbage = GarbageEmitters[Index];
-		if (Garbage.Value > CleanupTime)
+		if(GarbageEmitters.IsValidIndex(Index))
 		{
-			if (Garbage.Key)
+			auto& Garbage = GarbageEmitters[Index];
+    
+			if (Garbage.Value > CleanupTime)
 			{
-				Garbage.Key->DestroyComponent();
-				GarbageEmitters.RemoveAtSwap(Index);
-				
+				if (Garbage.Key != nullptr)
+				{
+					ComponentsToDestroy.Add(Garbage.Key);
+					GarbageEmitters.RemoveAtSwap(Index);
+				}
+			}
+			else
+			{
+				Garbage.Value += DeltaTime;
 			}
 		}
-		else
+	}
+
+	// Destroy components after iteration
+	for (USceneComponent* Component : ComponentsToDestroy)
+	{
+		if (Component)
 		{
-			Garbage.Value += DeltaTime;
+			Component->DestroyComponent();
 		}
 	}
 }
@@ -137,7 +151,9 @@ void UVehicleParticleSurfaceData::HandleParticle(const UModularWheel* Wheel,cons
 		if(Comp->Template.Get()!=ParticleCouple.Particle)
 		{
 			//Comp->SetActive(false);
-			GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+			
+				GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+			
 			Comp->SetFloatParameter("Strength",0.f);
 			Comp->SetFloatParameter("Stress",0.f);
 			CurrentEmitter=	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(),ParticleCouple.Particle,Wheel->WheelState.HitResult.ImpactPoint);
