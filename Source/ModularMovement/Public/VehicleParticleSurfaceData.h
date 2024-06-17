@@ -6,6 +6,8 @@
 #include "Particles/ParticleEmitter.h"
 #include "UObject/NoExportTypes.h"
 #include "NiagaraSystem.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundAttenuation.h"
 #include "VehicleParticleSurfaceData.generated.h"
 
 /**

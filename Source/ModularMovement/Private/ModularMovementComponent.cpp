@@ -18,7 +18,9 @@
 #include "PBDRigidsSolver.h"
 #include "TimerManager.h"
 #include "VehicleParticleSurfaceData.h"
+#include "Components/StaticMeshComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/PlayerController.h"
 #include "Physics/Experimental/PhysScene_Chaos.h"
 
 

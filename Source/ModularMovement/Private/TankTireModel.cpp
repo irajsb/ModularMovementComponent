@@ -52,7 +52,7 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 	//Check if braking or idle braking
 
 	const float WrongDirectionThreshold=ModularMovementComponent->VehicleState.VehicleData->GetWrongDirectionThreshold();
-	const bool Braking =ModularMovementComponent->HandBrakeInput||FMath::Abs(GroundVelocityVector.X)>WrongDirectionThreshold&&( FMath::Sign(GroundVelocityVector.X)*FMath::Sign(TrackInput)==-1.f||TrackInput==0.f);
+	const bool Braking =ModularMovementComponent->HandBrakeInput||(FMath::Abs(GroundVelocityVector.X)>WrongDirectionThreshold&&( FMath::Sign(GroundVelocityVector.X)*FMath::Sign(TrackInput)==-1.f||TrackInput==0.f));
 
 	
 	//Clamp for friction 
@@ -86,6 +86,7 @@ void UTankTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVector
 
 			if(ModularMovementComponent->HandBrakeInput)
 			{
+				BrakeInput=1.f;
 				BrakeTorque=Wheel->WheelState.WheelSetup->HandBrakeTorque;
 			}
 

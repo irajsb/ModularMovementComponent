@@ -7,6 +7,8 @@ public class ModularMovement : ModuleRules
 	public ModularMovement(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		//PCHUsage = ModuleRules.PCHUsageMode.NoPCHs;
+		//bUseUnity = false;
 		
         
 		PublicIncludePaths.AddRange(
@@ -26,7 +28,7 @@ public class ModularMovement : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core", "Engine", "AnimGraphRuntime", "ChaosVehiclesCore", "Niagara",
+				"Core", "Engine", "AnimGraphRuntime", "ChaosVehiclesCore", "Niagara","AudioExtensions"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

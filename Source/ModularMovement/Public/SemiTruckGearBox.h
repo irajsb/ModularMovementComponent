@@ -15,7 +15,7 @@ class MODULARMOVEMENT_API USemiTruckGearBox : public UModularGearBox
 	GENERATED_BODY()
 
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(Category="Setup",EditAnywhere)
 	float Cooldown=3.f;
 	
 	float CurrentCooldown;
