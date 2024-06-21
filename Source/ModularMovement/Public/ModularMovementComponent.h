@@ -150,6 +150,8 @@ struct FRepCosmeticData
     // Engine state
     UPROPERTY()
     bool EngineOn;
+    UPROPERTY()
+    bool IsSleep;
 
     FRepCosmeticData() : CurrentFuel(0), EngineOn(0)
     {
@@ -241,6 +243,8 @@ struct FVehicleState
     // Sleep state
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     bool bSleeping = false;
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    float SleepTimer=0.f;
 
     // Axle RPM
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
@@ -333,7 +337,10 @@ public:
     bool ApplyRecommendedMeshProperties = true;
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
-    bool AllowSleep = false;
+    float SleepDelay=0.2;
+    
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
+    bool AllowSleep = true;
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool SpawnWithTurnedOffEngine = false;
@@ -349,6 +356,7 @@ public:
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool IsTrailer;
+   
 
     // Calculate input functions
     float CalcSteeringInput(float DeltaTime);
@@ -465,7 +473,7 @@ public:
 
     FRigidBodyState NewestBodyInstance;
 
-    void ApplyBodyInstanceData() const;
+    void ApplyBodyInstanceData() ;
 
     UPROPERTY(BlueprintAssignable)
     FOnCustomEvent OnCustomEvent;

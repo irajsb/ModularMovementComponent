@@ -6,10 +6,12 @@
 #include "ModularWheel.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Async/Async.h"
 #include "Components/AudioComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Audio/SoundParameterControllerInterface.h"
 #include "Particles/ParticleSystemComponent.h"
 
 void UVehicleParticleSurfaceData::UpdateParticleForWheel(float DeltaTime,UModularWheel* Wheel)
