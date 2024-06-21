@@ -283,6 +283,12 @@ void UModularMovementComponent::InitializeComponent()
 
 void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 {
+
+	if(GetOwnerRole()==ROLE_AutonomousProxy)
+	{
+		DrawDebugSphere(GetWorld(), GetOwner()->GetActorLocation(), 150, 12, FColor::Green,false, -1, 1, 0);
+		DrawDebugSphere(GetWorld(), RepCosmeticData.RigidBodyState.Position, 150, 12, FColor::Red,false, -1, 1, 0);
+	}
 	MODULAR_CYCLE_COUNTER(STAT_ModularTickComponent)
 	const float fDeltaTime = FMath::Min<float>(DeltaTime, 0.0633);
 
@@ -423,26 +429,28 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	
 
 
-		if (NetworkMode == Default)
+		
+	}
+
+	if (NetworkMode == Default)
+	{
+		if (GetOwnerRole() < ROLE_Authority)
 		{
-			if (GetOwnerRole() < ROLE_Authority)
-			{
-				ApplyBodyInstanceData();
-			}
+			ApplyBodyInstanceData();
+		}
+	}
+	else
+	{
+		if (!IsLocal())
+		{
+			ApplyBodyInstanceData();
 		}
 		else
 		{
-			if (!IsLocal())
-			{
-				ApplyBodyInstanceData();
-			}
-			else
-			{
-				SetCosmeticDataOnServer(RepCosmeticData);
-			}
+			SetCosmeticDataOnServer(RepCosmeticData);
 		}
 	}
-
+	
 	//if everything is stepped then skip this tick 
 	if(!(SubstepEngine&&SubStepSuspension))
 	{	
@@ -550,17 +558,26 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 		{
 			
 			SetSleeping(false);
+			VehicleState.SleepTimer=0.f;
 		}else if (VehicleState.WheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->GetSleepSlope()))
 		{
-			
-			float SpeedSqr = GetMesh()->GetPhysicsLinearVelocity().SizeSquared();
-			
-			const float SleepThreshold=GetSetup()->GetSleepThreshold();
-			if (SpeedSqr < (SleepThreshold * SleepThreshold))
+			if(VehicleState.SleepTimer>SleepDelay)
 			{
+				float SpeedSqr = GetMesh()->GetPhysicsLinearVelocity().SizeSquared();
+			
+				const float SleepThreshold=GetSetup()->GetSleepThreshold();
+				if (SpeedSqr < (SleepThreshold * SleepThreshold))
+				{
 				
-				SetSleeping(true);
+					SetSleeping(true);
+				}
+			}else
+			{
+				VehicleState.SleepTimer+=DeltaTime;
 			}
+		}else
+		{
+			VehicleState.SleepTimer=0.f;
 		}
 	}
 }
@@ -1159,6 +1176,7 @@ void UModularMovementComponent::UpdateReplicatedCosmeticData()
 	RepCosmeticData.SteeringInput = SteeringInput;
 	RepCosmeticData.CurrentFuel = VehicleState.CurrentFuel;
 	RepCosmeticData.EngineOn = VehicleState.IsEngineOn;
+	RepCosmeticData.IsSleep=VehicleState.bSleeping;
 	const auto BI = GetMesh()->GetBodyInstance();
 
 	BI->GetRigidBodyState(RepCosmeticData.RigidBodyState);
@@ -1231,8 +1249,9 @@ void UModularMovementComponent::ShowSetupError(FString Error)
 #endif
 }
 
-void UModularMovementComponent::ApplyBodyInstanceData() const
+void UModularMovementComponent::ApplyBodyInstanceData() 
 {
+	
 	if (GetMesh() == nullptr || !CosmeticDataInitialized)
 	{
 		return;
@@ -1246,7 +1265,7 @@ void UModularMovementComponent::ApplyBodyInstanceData() const
 		GetMesh()->GetRigidBodyState(CurrentState);
 
 
-		constexpr bool bShouldSleep = false;
+		
 
 
 		//BI->SetLinearVelocity(CurrentState.LinVel + FixLinVel, false);
@@ -1322,15 +1341,12 @@ void UModularMovementComponent::ApplyBodyInstanceData() const
 
 
 		/////// SLEEP UPDATE ///////
-		const bool bIsAwake = BI->IsInstanceAwake();
-		if (bIsAwake && (bShouldSleep && bRestoredState))
+		
+		if ( (RepCosmeticData.IsSleep!=VehicleState.bSleeping &&( bRestoredState||VehicleState.bSleeping)))
 		{
-			BI->PutInstanceToSleep();
+			SetSleeping(RepCosmeticData.IsSleep);
 		}
-		if (!bIsAwake)
-		{
-			BI->WakeInstance();
-		}
+	
 	}
 }
 
