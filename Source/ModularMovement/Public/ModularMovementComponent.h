@@ -214,9 +214,11 @@ struct FVehicleState
     float LockCurrentStateDelta = 0.f;
 
     // Number of drive wheels on the ground
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     int DriveWheelsOnGround = 0;
 
     // Number of wheels on the ground
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     int WheelsOnGround = 0;
 
     // Information about the left track of the vehicle
