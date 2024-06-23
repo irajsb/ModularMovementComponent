@@ -972,7 +972,7 @@ float UModularMovementComponent::CmToM(float In)
 
 bool UModularMovementComponent::ShouldProcessPhysics()
 {
-	if(CachedShouldProcessPhysics.IsSet()&&0)
+	if(CachedShouldProcessPhysics.IsSet())
 	{
 		
 		return CachedShouldProcessPhysics.GetValue();
@@ -994,7 +994,7 @@ bool UModularMovementComponent::ShouldProcessPhysics()
 
 bool UModularMovementComponent::ShouldProcessCosmetics()
 {
-	if(CachedShouldProcessCosmetics.IsSet()&&0)
+	if(CachedShouldProcessCosmetics.IsSet())
 	{
 		return CachedShouldProcessCosmetics.GetValue();
 	}
@@ -1132,11 +1132,10 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 {
 	
 
-	if (GetMesh() == nullptr)
+	if (GetMesh() == nullptr || !CosmeticDataInitialized)
 	{
-		return ;
+		return;
 	}
-
 
 	FBodyInstance* BI = GetMesh()->GetBodyInstance();
 	if (BI && BI->IsInstanceSimulatingPhysics())
@@ -1213,16 +1212,15 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 			KINDA_SMALL_NUMBER);
 	
 
+		
 		/////// SLEEP UPDATE ///////
-		const bool bIsAwake = BI->IsInstanceAwake();
-		if (bIsAwake && (bShouldSleep && bRestoredState))
+		
+		if ( (RepCosmeticData.IsSleep!=VehicleState.bSleeping &&( bRestoredState||VehicleState.bSleeping)))
 		{
-			BI->PutInstanceToSleep();
+			SetSleeping(RepCosmeticData.IsSleep);
 		}
-		else if (!bIsAwake)
-		{
-			BI->WakeInstance();
-		}
+	
+
 	}
 
 
@@ -1428,6 +1426,11 @@ void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 	VehicleState.bSleeping=bEnableSleep;
 	OnSleepChange.Broadcast(bEnableSleep);
 	VehicleState.CurrentRpm=GetSetup()->GetIdleRPM();
+
+	for (const auto Comp:Components)
+	{
+		Comp->WheelState.AngularVelocity=0.f;
+	}
 	SetSleepOnBody(GetMesh(),bEnableSleep);
 	for(auto Comp:Components)
 	{
