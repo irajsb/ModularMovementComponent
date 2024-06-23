@@ -338,11 +338,15 @@ public:
     bool ApplyRecommendedMeshProperties = true;
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
-    float SleepDelay=0.2;
+    float SleepDelay=0.4;
     
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool AllowSleep = true;
 
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
+    bool AllowTankSleep = false;
+
+    
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool SpawnWithTurnedOffEngine = false;
 

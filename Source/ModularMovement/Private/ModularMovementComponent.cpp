@@ -284,11 +284,7 @@ void UModularMovementComponent::InitializeComponent()
 void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 {
 
-	if(GetOwnerRole()==ROLE_AutonomousProxy)
-	{
-		DrawDebugSphere(GetWorld(), GetOwner()->GetActorLocation(), 150, 12, FColor::Green,false, -1, 1, 0);
-		DrawDebugSphere(GetWorld(), RepCosmeticData.RigidBodyState.Position, 150, 12, FColor::Red,false, -1, 1, 0);
-	}
+
 	MODULAR_CYCLE_COUNTER(STAT_ModularTickComponent)
 	const float fDeltaTime = FMath::Min<float>(DeltaTime, 0.0633);
 
@@ -551,7 +547,8 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 	VehicleState.SideSpeed = FVector::DotProduct(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity(),
 	                                             GetMesh()->GetRightVector());
 
-	if(AllowSleep)
+	const auto TankSteering=GetSetup()->GetSteerType()==Tank;
+	if((AllowSleep&&!TankSteering)||(AllowTankSleep&&TankSteering))
 	{
 		// Wake if control input pressed
 		if (VehicleState.bSleeping && RawThrottleInput!=0.f)
@@ -975,7 +972,7 @@ float UModularMovementComponent::CmToM(float In)
 
 bool UModularMovementComponent::ShouldProcessPhysics()
 {
-	if(CachedShouldProcessPhysics.IsSet())
+	if(CachedShouldProcessPhysics.IsSet()&&0)
 	{
 		
 		return CachedShouldProcessPhysics.GetValue();
@@ -997,7 +994,7 @@ bool UModularMovementComponent::ShouldProcessPhysics()
 
 bool UModularMovementComponent::ShouldProcessCosmetics()
 {
-	if(CachedShouldProcessCosmetics.IsSet())
+	if(CachedShouldProcessCosmetics.IsSet()&&0)
 	{
 		return CachedShouldProcessCosmetics.GetValue();
 	}
@@ -1134,51 +1131,48 @@ void UModularMovementComponent::ShowSetupError(FString Error)
 void UModularMovementComponent::ApplyBodyInstanceData() 
 {
 	
-	if (GetMesh() == nullptr || !CosmeticDataInitialized)
+
+	if (GetMesh() == nullptr)
 	{
-		return;
+		return ;
 	}
+
+
 	FBodyInstance* BI = GetMesh()->GetBodyInstance();
-
-
 	if (BI && BI->IsInstanceSimulatingPhysics())
 	{
 		FRigidBodyState CurrentState;
 		GetMesh()->GetRigidBodyState(CurrentState);
-
-
 		
+		const bool bShouldSleep = false;
 
-
-		//BI->SetLinearVelocity(CurrentState.LinVel + FixLinVel, false);
 		/////// POSITION CORRECTION ///////
 
 		// Find out how much of a correction we are making
 		const FVector DeltaPos = NewestBodyInstance.Position - CurrentState.Position;
-		const float DeltaSize = DeltaPos.Size();
-
+		const float DeltaSize=DeltaPos.Size();
+	
 
 		// Snap position by default (big correction, or we are moving too slowly)
 		FVector UpdatedPos = CurrentState.Position;
 		FVector FixLinVel = FVector::ZeroVector;
 
-
+		
 		// If its a small correction and velocity is above threshold, only make a partial correction,
 		// and calculate a velocity that would fix it over 'fixTime'.
-		if (ErrorCorrection.MinDistanceToFix < DeltaSize && DeltaSize < ErrorCorrection.MaxDistanceToFix)
+		if (ErrorCorrection.MinDistanceToFix<DeltaSize&&DeltaSize<ErrorCorrection.MaxDistanceToFix)
 		{
-			const float LerpAlpha = UKismetMathLibrary::MapRangeClamped(DeltaSize, ErrorCorrection.MinDistanceToFix,
-			                                                            ErrorCorrection.MaxDistanceToFix, 0,
-			                                                            ErrorCorrection.MaxAlpha);
+			const float LerpAlpha=UKismetMathLibrary::MapRangeClamped(DeltaSize,ErrorCorrection.MinDistanceToFix,ErrorCorrection.MaxDistanceToFix,0,ErrorCorrection.MaxAlpha);
 			UpdatedPos = FMath::Lerp(CurrentState.Position, NewestBodyInstance.Position, LerpAlpha);
 			FixLinVel = (NewestBodyInstance.Position - UpdatedPos) * ErrorCorrection.SpeedFactor;
-			FixLinVel = FixLinVel.GetClampedToMaxSize(CurrentState.LinVel.Size());
-		}
-		else if (DeltaSize > ErrorCorrection.MaxDistanceToFix)
+			FixLinVel=FixLinVel.GetClampedToMaxSize(CurrentState.LinVel.Size());
+			
+		}else if(DeltaSize > ErrorCorrection.MaxDistanceToFix)
 		{
-			UpdatedPos = NewestBodyInstance.Position;
+			UpdatedPos=NewestBodyInstance.Position;
 		}
 
+		
 
 		/////// ORIENTATION CORRECTION ///////
 		// Get quaternion that takes us from old to new
@@ -1194,44 +1188,45 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 		FQuat UpdatedQuat = CurrentState.Quaternion;
 		FVector FixAngVel = FVector::ZeroVector; // degrees per second
 
-
+	
 		// If the error is small, and we are moving, try to move smoothly to it
-		if (ErrorCorrection.MinAngleToFix < FMath::Abs(DeltaAng) && FMath::Abs(DeltaAng) < ErrorCorrection.
-			MaxAngleToFix)
+		if (ErrorCorrection.MinAngleToFix<FMath::Abs(DeltaAng)  &&FMath::Abs(DeltaAng) < ErrorCorrection.MaxAngleToFix)
 		{
-			const float LerpAlpha = UKismetMathLibrary::MapRangeClamped(
-				FMath::Abs(DeltaAng), ErrorCorrection.MinAngleToFix, ErrorCorrection.MaxAngleToFix, 0,
-				ErrorCorrection.MaxAngularAlpha);
-			UpdatedQuat = FMath::Lerp(CurrentState.Quaternion, NewestBodyInstance.Quaternion, LerpAlpha);
+			const float LerpAlpha=UKismetMathLibrary::MapRangeClamped(FMath::Abs(DeltaAng),ErrorCorrection.MinAngleToFix,ErrorCorrection.MaxAngleToFix,0,ErrorCorrection.MaxAngularAlpha);
+			UpdatedQuat = FMath::Lerp(CurrentState.Quaternion, NewestBodyInstance.Quaternion,LerpAlpha);
 			FixAngVel = DeltaAxis.GetSafeNormal() * FMath::RadiansToDegrees(DeltaAng) * (1.f - LerpAlpha);
-		}
-		else if (FMath::Abs(DeltaAng) > ErrorCorrection.MaxAngleToFix)
+		
+		}else if(FMath::Abs(DeltaAng) > ErrorCorrection.MaxAngleToFix)
 		{
-			UpdatedQuat = NewestBodyInstance.Quaternion;
+			UpdatedQuat=NewestBodyInstance.Quaternion;
 		}
 
+	
 
 		/////// BODY UPDATE ///////
 		BI->SetBodyTransform(FTransform(UpdatedQuat, UpdatedPos), ETeleportType::TeleportPhysics);
 		BI->SetLinearVelocity(CurrentState.LinVel + FixLinVel, false);
-
-		BI->SetAngularVelocityInRadians(FVector(0, 0, 0), false);
+	//	BI->SetAngularVelocityInRadians(FMath::DegreesToRadians(UpdatedQuat.Vector()), false);
 
 		// state is restored when no velocity corrections are required
 		bool bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() <
 			KINDA_SMALL_NUMBER);
-
+	
 
 		/////// SLEEP UPDATE ///////
-		
-		if ( (RepCosmeticData.IsSleep!=VehicleState.bSleeping &&( bRestoredState||VehicleState.bSleeping)))
+		const bool bIsAwake = BI->IsInstanceAwake();
+		if (bIsAwake && (bShouldSleep && bRestoredState))
 		{
-			SetSleeping(RepCosmeticData.IsSleep);
+			BI->PutInstanceToSleep();
 		}
-	
+		else if (!bIsAwake)
+		{
+			BI->WakeInstance();
+		}
 	}
-}
 
+
+}
 bool UModularMovementComponent::IsLocal()
 {
 	// Check if the cached result is available

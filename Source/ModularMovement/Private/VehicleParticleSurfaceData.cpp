@@ -6,6 +6,7 @@
 #include "ModularWheel.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "TimerManager.h"
 #include "Async/Async.h"
 #include "Components/AudioComponent.h"
 #include "Kismet/GameplayStatics.h"
