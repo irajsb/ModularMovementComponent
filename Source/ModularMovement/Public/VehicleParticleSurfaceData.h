@@ -92,5 +92,10 @@ private:
 
 	virtual void BeginDestroy() override;
 
-	TArray<TPair<USceneComponent*,float>>GarbageEmitters;
+
+	void AddCompForDelete(USceneComponent* SceneComponent);
+	UPROPERTY(Transient)
+	TArray<USceneComponent*>GarbageEmitters;
+	void CleanupEmitters();
+	FTimerHandle CleanupTimerHandle;
 };

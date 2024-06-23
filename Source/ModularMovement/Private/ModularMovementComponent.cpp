@@ -314,7 +314,7 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 		
 			if(SubstepEngine==SubstepTick)
 			{
-				UpdateAirDrag();
+				UpdateAirDrag(GetMesh());
 				UpdateEngine(fDeltaTime, VehicleState.WheelTorque);
 			}
 		}
@@ -396,10 +396,10 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 			return;
 		}
 
-	
-		SteeringInput = CalcSteeringInput(DeltaTime);
-		ThrottleInput = CalcThrottleInput(DeltaTime);
-		BrakeInput = CalcBrakeInput();
+		auto Processor= Cast<UVehicleInputProcessor>( InputProcessor->ClassDefaultObject);
+		SteeringInput = Processor->CalcSteerInput(this,DeltaTime,RawSteeringInput);
+		ThrottleInput = Processor->CalcThrottleInput(this,DeltaTime,RawThrottleInput,RawBrakeInput);
+		BrakeInput = Processor->CalcBrakeInput(this,DeltaTime,RawBrakeInput,RawThrottleInput);
 
 		if (ShouldReplicateInput())
 		{
@@ -594,8 +594,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 	const float MinRads = VehicleState.IsEngineOn ? RPMToOmega(VehicleState.VehicleData->GetIdleRPM()) : 0.f;
 	const float DriveRPM= GetSetup()->GetGearBox()->GetDriveRatio() == 0?ThrottleInput * MaxRads:VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio();
 	const float TargetRPM =UKismetMathLibrary::MapRangeClamped(DriveRPM,0,MaxRads,MinRads,MaxRads);
-		
-
+	
 	VehicleState.EngineRads = FMath::FInterpConstantTo(VehicleState.EngineRads, TargetRPM, DeltaTime,
 	                                                   0.1 * VehicleState.VehicleData->GetMaxRPM());
 
@@ -621,10 +620,14 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 		//Use curve 
-		const float EngineTorque = VehicleState.IsEngineOn
+		 float EngineTorque = VehicleState.IsEngineOn
 			                           ? ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm)
 			                           : 0;
-
+		//Engine braking 
+		if(DriveRPM>MaxRads)
+		{
+			EngineTorque=-1*GetSetup()->GetTorqueForRPM(OmegaToRPM(DriveRPM-MaxRads));
+		}
 		//Gearbox 
 		const float TransmissionTorque = GetSetup()->GetGearBox()->GetDriveRatio();
 
@@ -656,12 +659,13 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 	}
 }
 
-void UModularMovementComponent::UpdateAirDrag() const
+void UModularMovementComponent::UpdateAirDrag(UPrimitiveComponent * CompToApplyForceTo) const
 {
+	
 	const float DragConstant=UseCustomDrag?CustomDragCoefficient:AirDragConstant;
 	const FVector BodyVelocity = GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity() / 100.f; //CM/s To Meter/s
 	const FVector DragForce = BodyVelocity * BodyVelocity.Size() * DragConstant * -1;
-	GetMesh()->GetBodyInstance()->AddForceAtPosition(
+	CompToApplyForceTo->GetBodyInstance()->AddForceAtPosition(
 		SIForceToUnrealForce(DragForce), GetMesh()->GetCenterOfMass(), true);
 }
 
@@ -1038,128 +1042,6 @@ void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuanti
 
 
 
-float UModularMovementComponent::CalcSteeringInput(float DeltaTime)
-{
-	// Determine the rate to use for interpolation
-	const float InterpolationSpeed = (RawSteeringInput != 0.f || FMath::Sign(RawSteeringInput * SteeringInput) == 1
-		                                  ? GetSetup()->GetSteerInputRise()
-		                                  : GetSetup()->GetSteerInputFall());
-
-	// Interpolate between the current steering input and the target
-	SteeringInput = FMath::FInterpTo(SteeringInput, RawSteeringInput, DeltaTime, InterpolationSpeed);
-
-	// Clamp the steering input to ensure it's within valid range
-	SteeringInput = FMath::Clamp(SteeringInput, -1.0f, 1.0f);
-
-	return SteeringInput;
-}
-
-float UModularMovementComponent::CalcBrakeInput()
-{
-	float NewBrakeInput = VehicleState.IsEngineOn ? 0.0f : GetSetup()->GetIdleBrakeInput();
-	if (GetSetup()->ShouldReverseAsBrake())
-	{
-		// if player wants to move forwards...
-		if (RawThrottleInput > 0.f)
-		{
-			// if vehicle is moving backwards, then press brake
-			if (VehicleState.ForwardSpeed < -GetSetup()->GetWrongDirectionThreshold())
-			{
-				NewBrakeInput = 1.0f;
-			}
-		}
-
-		// if player wants to move backwards...
-		else if (RawThrottleInput < 0.f)
-		{
-			// if vehicle is moving forwards, then press brake
-			if (VehicleState.ForwardSpeed > GetSetup()->GetWrongDirectionThreshold())
-			{
-				NewBrakeInput = 1.0f;
-			}
-		}
-		// if player isn't pressing forward or backwards...
-		else
-		{
-			if (FMath::Abs(VehicleState.ForwardSpeed) < GetSetup()->GetStopThreshold())
-
-			{
-				NewBrakeInput = 1.f;
-			}
-			else
-			{
-				NewBrakeInput = GetSetup()->GetIdleBrakeInput();
-			}
-		}
-
-		NewBrakeInput = FMath::Clamp<float>(NewBrakeInput, 0.0, 1.0);
-	}
-	else
-	{
-		if (RawBrakeInput == 0 && RawThrottleInput < 0)
-		{
-			NewBrakeInput = RawThrottleInput;
-		}
-		else
-		{
-			NewBrakeInput = FMath::Abs(RawBrakeInput);
-		}
-	}
-
-	// if player isn't pressing forward or backwards...
-	if (FMath::Abs(RawBrakeInput) < SMALL_NUMBER && FMath::Abs(RawThrottleInput) < SMALL_NUMBER)
-	{
-		if (VehicleState.ForwardSpeed < GetSetup()->GetStopThreshold() && VehicleState.ForwardSpeed > -GetSetup()->
-			GetStopThreshold()) //auto brake 
-		{
-			NewBrakeInput = 1.f;
-		}
-	}
-
-
-	return NewBrakeInput;
-}
-
-float UModularMovementComponent::CalcThrottleInput(float DeltaTime) const
-{
-	float NewThrottleInput = RawThrottleInput;
-	const bool IsInReverse = GetSetup()->GetGearBox()->IsInReverse();
-	if (GetSetup()->ShouldReverseAsBrake())
-	{
-		if (RawBrakeInput > 0.f && IsInReverse)
-		{
-			NewThrottleInput = RawBrakeInput;
-		}
-		else
-		//If the user is changing direction we should really be braking first and not applying any gas, so wait until they've changed gears
-			if (RawThrottleInput > 0.f && IsInReverse || RawThrottleInput < 0.f && !IsInReverse)
-			{
-				NewThrottleInput = 0.f;
-			}
-	}
-
-	//Throttle and steer are not discrete in a  tank so we calculate both here
-	if (GetSetup()->GetSteerType() == Tank)
-	{
-		NewThrottleInput = FMath::Clamp(FMath::Abs(RawThrottleInput) + FMath::Abs(SteeringInput), 0.f, 1.f);
-	}
-
-	if (!GetSetup()->ShouldReverseAsBrake() && IsInReverse)
-	{
-		if (NewThrottleInput > 0)
-		{
-			NewThrottleInput *= -1;
-		}
-		else
-		{
-			if (NewThrottleInput < 0)
-			{
-				NewThrottleInput = 0;
-			}
-		}
-	}
-	return NewThrottleInput;
-}
 
 
 void UModularMovementComponent::UpdateReplicatedCosmeticData()
@@ -1550,6 +1432,7 @@ void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 {
 	VehicleState.bSleeping=bEnableSleep;
 	OnSleepChange.Broadcast(bEnableSleep);
+	VehicleState.CurrentRpm=GetSetup()->GetIdleRPM();
 	SetSleepOnBody(GetMesh(),bEnableSleep);
 	for(auto Comp:Components)
 	{

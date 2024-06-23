@@ -3,7 +3,7 @@
 #include "Utility/VehicleSpringArm.h"
 #include "GameFramework/Pawn.h"
 #include "CollisionQueryParams.h"
-#include "WorldCollision.h"
+
 #include "Engine/World.h"
 #include "Engine/HitResult.h"
 #include "DrawDebugHelpers.h"
@@ -267,9 +267,19 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	
-
+	FRotator Result;
 	if (const APawn* OwningPawn = Cast<APawn>(GetOwner()))
 	{
+
+		float DotProduct=LastAutoRot.Vector().Dot( OwningPawn->GetControlRotation().Vector());
+		if(DotProduct<0)
+		{
+			DotProduct=1+DotProduct;
+		}
+		if(DotProduct<PauseSensitivity)
+		{
+			SetCooldown(PauseSeconds);
+		}
 		if (const UModularMovementComponent* MC = Cast<UModularMovementComponent>(OwningPawn->GetMovementComponent()))
 		{
 			if (MC->GetNumberOfDriveWheelsTouchingGround() == 0)
@@ -294,9 +304,14 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 		 FRotator CurrentRot = bUsePawnControlRotation ? OwningPawn->GetViewRotation() : GetComponentRotation();
 		if(MinPitch!=0.f)
 		{
+			
 			if(CurrentRot.Pitch<180.f)
 			{
 				CurrentRot.Pitch=FMath::Min(MinPitch,CurrentRot.Pitch);
+			}else
+			{
+				CurrentRot.Pitch=FMath::Min(360+MinPitch,CurrentRot.Pitch);
+				
 			}
 			if(bUsePawnControlRotation)
 			{
@@ -305,6 +320,7 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 					OwningPawn->GetController()->SetControlRotation(CurrentRot);
 				}
 			}
+			
 		
 		}
 		if (UMeshComponent* Mesh = Cast<UMeshComponent>(GetOwner()->GetRootComponent()))
@@ -327,7 +343,7 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 						const float Interpolation = UKismetMathLibrary::MapRangeClamped(
 								Velocity.Size(), AutoCorrectMinSpeedRange, AutoCorrectMaxSpeedRange, 0, 1) *
 							AutoCorrectInterpolationStrength;
-						FRotator Result = UKismetMathLibrary::RInterpTo(CurrentRot, Velocity.Rotation(), DeltaTime,
+						 Result = UKismetMathLibrary::RInterpTo(CurrentRot, Velocity.Rotation(), DeltaTime,
 																		Interpolation);
 						if (IgnorePitch)
 						{
@@ -347,7 +363,12 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 						{
 							SetWorldRotation(Result);
 						}
+						LastAutoRot=Result;
+					}else
+					{
+						LastAutoRot= OwningPawn->GetControlRotation();
 					}
+					
 				}
 				//Find lag amount by acceleration
 				if (bEnableCameraLag)
@@ -366,9 +387,19 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 
 			PreviousSpeed = (Velocity * FVector(1, 1, 0)).Size();
 		}
+		
+		
+		if(CurrentCooldown>0)
+		{
+			LastAutoRot= OwningPawn->GetControlRotation();
+		}
 	}
 
 
+
+
+	
+	
 	UpdateDesiredArmLocation(bDoCollisionTest, bEnableCameraLag, bEnableCameraRotationLag, DeltaTime);
 }
 

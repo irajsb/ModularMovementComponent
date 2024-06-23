@@ -63,39 +63,9 @@ void UVehicleParticleSurfaceData::UpdateParticleForWheel(float DeltaTime,UModula
 		}
 	}
 
-	//Update garbage emitters
+	
 
-	TArray<USceneComponent*> ComponentsToDestroy;
-
-	for (int Index = GarbageEmitters.Num() - 1; Index >= 0; Index--)
-	{
-		if(GarbageEmitters.IsValidIndex(Index))
-		{
-			auto& Garbage = GarbageEmitters[Index];
-    
-			if (Garbage.Value > CleanupTime)
-			{
-				if (Garbage.Key != nullptr)
-				{
-					ComponentsToDestroy.Add(Garbage.Key);
-					GarbageEmitters.RemoveAtSwap(Index);
-				}
-			}
-			else
-			{
-				Garbage.Value += DeltaTime;
-			}
-		}
-	}
-
-	// Destroy components after iteration
-	for (USceneComponent* Component : ComponentsToDestroy)
-	{
-		if (Component)
-		{
-			Component->DestroyComponent();
-		}
-	}
+	
 }
 
 void UVehicleParticleSurfaceData::OnSleep() const
@@ -120,6 +90,7 @@ void UVehicleParticleSurfaceData::OnSleep() const
 			AudioComponent->SetFloatParameter("Stress",0.f);
 		}
 	});
+
 	
 	
 }
@@ -143,7 +114,7 @@ void UVehicleParticleSurfaceData::HandleParticle(const UModularWheel* Wheel,cons
 	
 	if(const auto Comp=Cast<UNiagaraComponent>(CurrentEmitter))
 	{
-		GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+		AddCompForDelete(Comp);
 		Comp->SetFloatParameter("Strength",0.f);
 		Comp->SetFloatParameter("Stress",0.f);
 	}
@@ -154,7 +125,7 @@ void UVehicleParticleSurfaceData::HandleParticle(const UModularWheel* Wheel,cons
 		{
 			//Comp->SetActive(false);
 			
-				GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+			AddCompForDelete(Comp);
 			
 			Comp->SetFloatParameter("Strength",0.f);
 			Comp->SetFloatParameter("Stress",0.f);
@@ -193,7 +164,7 @@ void UVehicleParticleSurfaceData::HandleNiagaraParticle(const UModularWheel* Whe
 	
 	if (const auto Comp = Cast<UParticleSystemComponent>(CurrentEmitter))
 	{
-		GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+		AddCompForDelete(Comp);
 		Comp->SetFloatParameter("Strength",0.f);
 		Comp->SetFloatParameter("Stress",0.f);
 	}
@@ -203,7 +174,7 @@ void UVehicleParticleSurfaceData::HandleNiagaraParticle(const UModularWheel* Whe
 		if (Comp->GetAsset() != ParticleCouple.NiagaraSystem)
 		{
 			
-			GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+			AddCompForDelete(Comp);
 			Comp->SetFloatParameter("Strength",0.f);
 			Comp->SetFloatParameter("Stress",0.f);
 			CurrentEmitter = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),ParticleCouple.NiagaraSystem ,Wheel->WheelState.HitResult.ImpactPoint);
@@ -248,7 +219,7 @@ void UVehicleParticleSurfaceData::HandleSound(const UModularWheel* Wheel, const 
 		if(Comp->Sound.Get()!=ParticleCouple.Sound)
 		{
 			//Comp->SetActive(false);
-			GarbageEmitters.Add(MakeTuple(Comp, 0.f));
+			AddCompForDelete(Comp);
 			
 			Comp->FadeOut(1,0.f);
 			AudioComponent=	UGameplayStatics::SpawnSoundAtLocation(GetWorld(),ParticleCouple.Sound,Wheel->WheelState.HitResult.ImpactPoint);
@@ -287,18 +258,9 @@ void UVehicleParticleSurfaceData::HandleSound(const UModularWheel* Wheel, const 
 
 void UVehicleParticleSurfaceData::BeginDestroy()
 {
-	for (int Index = GarbageEmitters.Num() - 1; Index >= 0; Index--)
-	{
-		auto& Garbage = GarbageEmitters[Index];
-	
-			if (Garbage.Key)
-			{
-				Garbage.Key->DestroyComponent();
-				GarbageEmitters.RemoveAtSwap(Index);
-				
-			}
-	}
 
+	CleanupEmitters();
+	CleanupTimerHandle.Invalidate();
 	if(CurrentEmitter)
 	{
 		CurrentEmitter->DestroyComponent();
@@ -309,6 +271,31 @@ void UVehicleParticleSurfaceData::BeginDestroy()
 		AudioComponent->DestroyComponent();
 	}
 	UObject::BeginDestroy();
+}
+
+void UVehicleParticleSurfaceData::AddCompForDelete(USceneComponent* SceneComponent)
+{
+	GarbageEmitters.Add(SceneComponent);
+	GetWorld()->GetTimerManager().SetTimer(CleanupTimerHandle,this,&UVehicleParticleSurfaceData::CleanupEmitters,CleanupTime);
+}
+
+void UVehicleParticleSurfaceData::CleanupEmitters()
+{
+
+	for (int Index = GarbageEmitters.Num() - 1; Index >= 0; Index--)
+	{
+		if(GarbageEmitters[Index])
+		{
+			if(!GarbageEmitters[Index]->IsBeingDestroyed())
+			{
+				GarbageEmitters[Index]->DestroyComponent();
+				
+			}
+		}
+		GarbageEmitters.RemoveAtSwap(Index);
+		
+	}
+	
 }
 
 

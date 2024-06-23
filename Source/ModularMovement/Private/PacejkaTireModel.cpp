@@ -128,7 +128,13 @@ void UPacejkaTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 
 			ModularMovementComponent->UseCustomDrag=true;
 			ModularMovementComponent->CustomDragCoefficient=Material->BodyDragCoefficient;
-			ModularMovementComponent->UpdateAirDrag();
+			if(	Wheel->ConstraintParent)
+			{
+				ModularMovementComponent->UpdateAirDrag(Wheel->ConstraintParent);
+			}else
+			{
+				ModularMovementComponent->UpdateAirDrag(ModularMovementComponent->GetMesh());
+			}
 		}
 		else
 		{

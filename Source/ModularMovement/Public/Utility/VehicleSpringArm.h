@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/ObjectMacros.h"
+
 #include "Engine/EngineTypes.h"
 #include "Camera/CameraShakeBase.h"
 #include "Components/SceneComponent.h"
@@ -196,6 +196,13 @@ public :
 	// Camera will face target speed
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VehicleSpringArm)
 	bool AutoCorrect=true;
+	// If user had any input pause auto correct for few seconds
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VehicleSpringArm)
+	bool AutoDetectInput=true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VehicleSpringArm)
+	float PauseSeconds=3.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VehicleSpringArm)
+	float PauseSensitivity=0.998;
 	//Speed when auto correct starts ( auto correct rotates camera to vehicle movement direction)
 	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	float AutoCorrectMinSpeedRange = 300;
@@ -236,4 +243,7 @@ private:
 	float CurrentArmLen;
 	//To keep track of airborne time
 	float AirborneTime = 0.f;
+
+
+	FRotator LastAutoRot;
 };

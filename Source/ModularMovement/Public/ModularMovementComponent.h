@@ -4,6 +4,7 @@
 
 #include "BaseVehicleData.h"
 #include "ModularVehicleData.h"
+#include "VehicleInputProcessor.h"
 #include "Components/MeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/PawnMovementComponent.h"
@@ -357,12 +358,10 @@ public:
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool IsTrailer;
    
-
-    // Calculate input functions
-    float CalcSteeringInput(float DeltaTime);
-    float CalcBrakeInput();
-    float CalcThrottleInput(float DeltaTime) const;
-
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly,AdvancedDisplay)
+    TSubclassOf<UVehicleInputProcessor> InputProcessor=UVehicleInputProcessor::StaticClass();
+    
+    
     // Engine functions
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
     int GetNumberOfWheels() const;
@@ -411,7 +410,7 @@ public:
     // Capture state and update functions
     void CaptureState(float DeltaTime);
     void UpdateEngine(float DeltaTime, float& WheelTorque);
-    void UpdateAirDrag() const;
+    void UpdateAirDrag(UPrimitiveComponent * CompToApplyForceTo) const;
     void UpdateTankSteering(float UseSteeringValue);
     void UpdateWheels(float DeltaTime, float WheelTorque, bool SubstepTick);
 

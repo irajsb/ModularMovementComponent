@@ -150,7 +150,14 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 
 			ModularMovementComponent->UseCustomDrag=true;
 			ModularMovementComponent->CustomDragCoefficient=Material->BodyDragCoefficient;
-			ModularMovementComponent->UpdateAirDrag();
+
+			if(	Wheel->ParentBodyOverride)
+			{
+				ModularMovementComponent->UpdateAirDrag(Wheel->ParentBodyOverride);
+			}else
+			{
+				ModularMovementComponent->UpdateAirDrag(ModularMovementComponent->GetMesh());
+			}
 		}
 		else
 		{
