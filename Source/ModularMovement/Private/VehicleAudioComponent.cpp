@@ -24,50 +24,101 @@ void UVehicleAudioComponent::BeginPlay()
 	
 }
 
-UVehicleAudioComponent::UVehicleAudioComponent(): Load(0), CurrentTurbo(0)
+UVehicleAudioComponent::UVehicleAudioComponent(): Load(0), CurrentTurbo(0), LastHandBrakeInput(false),
+                                                  LastBrakeInput(false),
+                                                  LastReverseInput(false),
+                                                  BrakeAudioComponent(nullptr),
+                                                  ReverseAudioComponent(nullptr)
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	bAutoActivate= false;
+	bAutoActivate = false;
 }
 
 void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                            FActorComponentTickFunction* ThisTickFunction)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if(const auto Pawn=Cast<APawn>(GetOwner()))
-	{
+    APawn* Pawn = Cast<APawn>(GetOwner());
+    if (!Pawn) {
+        return;
+    }
 
-		if(const auto MC= Cast<UModularMovementComponent>( Pawn->GetMovementComponent()))
-		{
-			
-				const auto RPMRatio=MC->VehicleState.CurrentRpm/MC->VehicleState.VehicleData->GetMaxRPM();
-				const float RPMChange=RPMRatio-RPM;
-				const bool GearChanging=MC->GetSetup()->GetGearBox()->IsChangingGear();
-				RPM=UKismetMathLibrary::FInterpTo_Constant(RPM,RPMRatio,DeltaTime,RPMInterpolationSpeed);
-				SetFloatParameter("RPM",RPM*RPMMultiplier);
+    UModularMovementComponent* MC = Cast<UModularMovementComponent>(Pawn->GetMovementComponent());
+    if (!MC) {
+        return;
+    }
 
-				const float NewLoad=GearChanging?0.f:((FMath::Abs(MC->ThrottleInput)/2)+(RPMChange > 0.05) )? 0.5f : 0.0f;
-				Load=UKismetMathLibrary::FInterpTo_Constant(Load,NewLoad,DeltaTime,LoadInterpolationSpeed);
-				SetFloatParameter("Load",Load*LoadMultiplier);
+    const float RPMRatio = MC->VehicleState.CurrentRpm / MC->VehicleState.VehicleData->GetMaxRPM();
+    const float RPMChange = RPMRatio - RPM;
+    const bool GearChanging = MC->GetSetup()->GetGearBox()->IsChangingGear();
+    RPM = UKismetMathLibrary::FInterpTo_Constant(RPM, RPMRatio, DeltaTime, RPMInterpolationSpeed);
+    SetFloatParameter("RPM", RPM * RPMMultiplier);
 
-			
-				CurrentTurbo=UKismetMathLibrary::FInterpTo_Constant(CurrentTurbo,RPMRatio,DeltaTime,TurboInterpolationSpeed);
-				SetFloatParameter("Turbo",CurrentTurbo*TurboMultiplier);
+    const float NewLoad = GearChanging ? 0.f : ((FMath::Abs(MC->ThrottleInput) / 2) + (RPMChange > 0.05)) ? 0.5f : 0.0f;
+    Load = UKismetMathLibrary::FInterpTo_Constant(Load, NewLoad, DeltaTime, LoadInterpolationSpeed);
+    SetFloatParameter("Load", Load * LoadMultiplier);
 
-			if(LastHandBrakeInput!=MC->HandBrakeInput)
-			{
-				LastHandBrakeInput=MC->HandBrakeInput;
-				if(LastHandBrakeInput)
-				{
-					UGameplayStatics::PlaySoundAtLocation(GetWorld(),HandBrakeSound,GetComponentLocation());
-				}else
-				{
-					UGameplayStatics::PlaySoundAtLocation(GetWorld(),HandReleaseSound,GetComponentLocation());
-				}
-			}
-		}
-	}
+    CurrentTurbo = UKismetMathLibrary::FInterpTo_Constant(CurrentTurbo, RPMRatio, DeltaTime, TurboInterpolationSpeed);
+    SetFloatParameter("Turbo", CurrentTurbo * TurboMultiplier);
+
+    if (LastHandBrakeInput != MC->HandBrakeInput) {
+        LastHandBrakeInput = MC->HandBrakeInput;
+        if (LastHandBrakeInput) {
+            UGameplayStatics::PlaySoundAtLocation(GetWorld(), HandBrakeSound, GetComponentLocation());
+        } else {
+            UGameplayStatics::PlaySoundAtLocation(GetWorld(), HandReleaseSound, GetComponentLocation());
+        }
+    }
+
+    const bool BrakeInput = MC->IsBraking;
+
+    if (BrakeInput != LastBrakeInput) {
+        LastBrakeInput = BrakeInput;
+        if (BrakeInput) {
+            UGameplayStatics::PlaySoundAtLocation(GetWorld(), BrakeStartSound, GetComponentLocation());
+            if (BrakeLoopSound) {
+                if (BrakeAudioComponent) {
+                    BrakeAudioComponent->FadeIn(0.2, 1);
+                } else {
+                    UActorComponent* Comp = GetOwner()->AddComponentByClass(UAudioComponent::StaticClass(), false, FTransform(), false);
+                    BrakeAudioComponent = Cast<UAudioComponent>(Comp);
+                    if (BrakeAudioComponent) {
+                        BrakeAudioComponent->SetSound(BrakeLoopSound);
+                        BrakeAudioComponent->FadeIn(0.2, 1);
+                    }
+                }
+            }
+        } else {
+            if (BrakeAudioComponent) {
+                BrakeAudioComponent->FadeOut(0.2, 0);
+            }
+            UGameplayStatics::PlaySoundAtLocation(GetWorld(), BrakeReleaseSound, GetComponentLocation());
+        }
+    }
+
+    if (MC->GetSetup()) {
+        const bool Reverse = MC->GetSetup()->GetGearBox()->IsInReverse();
+        if (Reverse != LastReverseInput && ReverseSound) {
+            LastReverseInput = Reverse;
+            if (Reverse) {
+                if (ReverseAudioComponent) {
+                    ReverseAudioComponent->Play();
+                } else {
+                    UActorComponent* Comp = GetOwner()->AddComponentByClass(UAudioComponent::StaticClass(), false, FTransform(), false);
+                    ReverseAudioComponent = Cast<UAudioComponent>(Comp);
+                    if (ReverseAudioComponent) {
+                        ReverseAudioComponent->SetSound(ReverseSound);
+                        ReverseAudioComponent->Play();
+                    }
+                }
+            } else {
+                if (ReverseAudioComponent) {
+                    ReverseAudioComponent->Stop();
+                }
+            }
+        }
+    }
 }
 
 void UVehicleAudioComponent::OnEngineStateChange(bool IsEngineOn, bool IsStarting)

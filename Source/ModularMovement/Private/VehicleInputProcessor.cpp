@@ -9,6 +9,8 @@
 float UVehicleInputProcessor::CalcBrakeInput_Implementation(UModularMovementComponent* MovementComponent,
                                                             float DeltaTime,float RawBrakeInput,float RawThrottleInput)
 {
+
+	MovementComponent->IsBraking=false;
 	auto Setup= MovementComponent->GetSetup();
 	float NewBrakeInput =MovementComponent->VehicleState.IsEngineOn? 0.0f:Setup->GetIdleBrakeInput();
 	if (Setup->ShouldReverseAsBrake())
@@ -22,6 +24,7 @@ float UVehicleInputProcessor::CalcBrakeInput_Implementation(UModularMovementComp
 			if (MovementComponent->VehicleState.ForwardSpeed < -Setup->GetWrongDirectionThreshold())
 			{
 				NewBrakeInput = 1.0f;
+				MovementComponent->IsBraking=true;
 			}
 		}
 
@@ -32,6 +35,7 @@ float UVehicleInputProcessor::CalcBrakeInput_Implementation(UModularMovementComp
 			if (MovementComponent->VehicleState.ForwardSpeed > Setup->GetWrongDirectionThreshold())
 			{
 				NewBrakeInput = 1.0f;
+				MovementComponent->IsBraking=true;
 			}
 		}
 		// if player isn't pressing forward or backwards...

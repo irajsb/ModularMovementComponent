@@ -8,7 +8,7 @@ public class ModularMovement : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		//PCHUsage = ModuleRules.PCHUsageMode.NoPCHs;
-		//bUseUnity = false;
+	//	bUseUnity = false;
 		
         
 		PublicIncludePaths.AddRange(

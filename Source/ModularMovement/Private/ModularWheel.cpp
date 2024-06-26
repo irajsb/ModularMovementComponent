@@ -734,8 +734,10 @@ void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponen
 			NoFrictionDefaultPhysMaterial = NewObject<UPhysicalMaterial>();
 			NoFrictionDefaultPhysMaterial->Friction = 0.f;
 			NoFrictionDefaultPhysMaterial->StaticFriction = 0.f;
-			NoFrictionDefaultPhysMaterial->Restitution = 0.5;
+			NoFrictionDefaultPhysMaterial->Restitution = 1;
 			NoFrictionDefaultPhysMaterial->FrictionCombineMode = EFrictionCombineMode::Min;
+			NoFrictionDefaultPhysMaterial->RestitutionCombineMode=EFrictionCombineMode::Max;
+		
 			if (WheelCollision)
 			{
 				WheelCollision->SetPhysMaterialOverride(NoFrictionDefaultPhysMaterial);

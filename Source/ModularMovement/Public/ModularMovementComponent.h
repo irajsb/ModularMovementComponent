@@ -295,8 +295,10 @@ public:
     UPROPERTY(Transient)
     float SteeringInput;
 
-    UPROPERTY(Transient)
+    UPROPERTY(Transient,BlueprintReadOnly,Category=Input)
     float BrakeInput;
+    UPROPERTY(Transient,BlueprintReadOnly,Category=Input)
+    bool IsBraking;
 
     UPROPERTY(Transient, BlueprintReadOnly, Category = Input)
     float RawThrottleInput;

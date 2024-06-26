@@ -28,6 +28,17 @@ public:
 	TObjectPtr<USoundBase> HandBrakeSound;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
 	TObjectPtr<USoundBase> HandReleaseSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+	TObjectPtr<USoundBase> BrakeStartSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+	TObjectPtr<USoundBase> BrakeLoopSound;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+	TObjectPtr<USoundBase> BrakeReleaseSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+	TObjectPtr<USoundBase> ReverseSound;
+	
+	
 	
 	UPROPERTY(EditAnywhere,Category="EngineSound")
 	float RPMInterpolationSpeed=0.5;
@@ -50,9 +61,20 @@ public:
 
 	UPROPERTY()
 	TObjectPtr<USoundBase> TempEngineSound;
+
+	
+	
+	UPROPERTY(BlueprintReadOnly,Category="EngineSound")
+	float Load;
+	UPROPERTY(BlueprintReadOnly,Category="EngineSound")
+	float CurrentTurbo;
 private:
 	float RPM=0.f;
-	float Load;
-	float CurrentTurbo;
 	bool LastHandBrakeInput;
+	bool LastBrakeInput;
+	bool LastReverseInput;
+	UPROPERTY(Transient)
+	UAudioComponent * BrakeAudioComponent;
+	UPROPERTY(Transient)
+	UAudioComponent * ReverseAudioComponent;
 };
