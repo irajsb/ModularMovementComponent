@@ -28,6 +28,7 @@ DECLARE_CYCLE_STAT(TEXT("Modular Tick Component"), STAT_ModularTickComponent, ST
 DECLARE_CYCLE_STAT(TEXT("Modular Updage Engine"), STAT_ModularEngine, STATGROUP_MovementPhysics);
 
 
+
 //TODO : Throttle input rise
 #define LOCTEXT_NAMESPACE "ModularMovement"
 
@@ -623,8 +624,17 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 		//Engine braking 
 		if(DriveRPM>MaxRads)
 		{
-			EngineTorque=-1*GetSetup()->GetTorqueForRPM(OmegaToRPM(DriveRPM-MaxRads));
+			if( GetSetup()->GetGearBox()->IsInReverse())
+			{
+				EngineTorque=DriveRPM-MaxRads;
+			}else
+			{
+				EngineTorque=-1*DriveRPM-MaxRads;
+			}
+			
 		}
+
+		
 		//Gearbox 
 		const float TransmissionTorque = GetSetup()->GetGearBox()->GetDriveRatio();
 
