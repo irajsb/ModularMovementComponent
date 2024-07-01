@@ -296,11 +296,15 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 	}
 
 	
-		CaptureState(DeltaTime);
+	
 
 	
 	if(VehicleState.bSleeping)
 	{
+		for(auto Comp:Components)
+		{
+			Comp->UpdateSteering(DeltaTime, this, SteeringInput);
+		}
 		return;
 	}
 	if (ShouldProcessPhysics())
@@ -381,7 +385,13 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 
 
+		CaptureState(DeltaTime);
 
+	auto Processor= Cast<UVehicleInputProcessor>( InputProcessor->ClassDefaultObject);
+	SteeringInput = Processor->CalcSteerInput(this,DeltaTime,RawSteeringInput);
+	ThrottleInput = Processor->CalcThrottleInput(this,DeltaTime,RawThrottleInput,RawBrakeInput);
+	BrakeInput = Processor->CalcBrakeInput(this,DeltaTime,RawBrakeInput,RawThrottleInput);
+	
 	if(IsActive()&&!VehicleState.bSleeping)
 	{
 		//Check data 
@@ -394,10 +404,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 			return;
 		}
 
-		auto Processor= Cast<UVehicleInputProcessor>( InputProcessor->ClassDefaultObject);
-		SteeringInput = Processor->CalcSteerInput(this,DeltaTime,RawSteeringInput);
-		ThrottleInput = Processor->CalcThrottleInput(this,DeltaTime,RawThrottleInput,RawBrakeInput);
-		BrakeInput = Processor->CalcBrakeInput(this,DeltaTime,RawBrakeInput,RawThrottleInput);
+	
 
 		if (ShouldReplicateInput())
 		{
@@ -420,14 +427,15 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 			UpdateReplicatedCosmeticData();
 		}
 
-		for (UModularWheel* Component : Components)
-		{
-			Component->UpdateAnimation(DeltaTime, this);
-		}
+	
 	
 
 
 		
+	}
+	for (UModularWheel* Component : Components)
+	{
+		Component->UpdateAnimation(DeltaTime, this);
 	}
 
 	if (NetworkMode == Default)
@@ -551,7 +559,7 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 	if((AllowSleep&&!TankSteering)||(AllowTankSleep&&TankSteering))
 	{
 		// Wake if control input pressed
-		if (VehicleState.bSleeping && RawThrottleInput!=0.f)
+		if (VehicleState.bSleeping && (RawThrottleInput!=0.f||RawSteeringInput!=0.f))
 		{
 			
 			SetSleeping(false);
