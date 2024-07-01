@@ -73,6 +73,7 @@ private:
 	bool LastHandBrakeInput;
 	bool LastBrakeInput;
 	bool LastReverseInput;
+	float LastBrakePlayTime=0.f;
 	UPROPERTY(Transient)
 	UAudioComponent * BrakeAudioComponent;
 	UPROPERTY(Transient)

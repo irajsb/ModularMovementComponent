@@ -49,6 +49,8 @@ public:
 
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	virtual float GetEngineInertia()const {return 0.f;};
+
+	virtual float CalcEngineBrake(float ExcessRpm){return 0.f;};
 	//Transmission
 
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
@@ -123,4 +125,6 @@ public:
 	virtual float GetAIMaxSteerMultiplier()const{return 0.f;};
 	virtual float GetSleepThreshold()const{return 0.f;}
 	virtual float GetSleepSlope()const{return 0.f;}
+
+	
 };

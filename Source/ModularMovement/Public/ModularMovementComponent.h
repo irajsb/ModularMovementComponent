@@ -154,7 +154,7 @@ struct FRepCosmeticData
     UPROPERTY()
     bool IsSleep;
 
-    FRepCosmeticData() : CurrentFuel(0), EngineOn(0)
+    FRepCosmeticData() : CurrentFuel(0), EngineOn(0), IsSleep(false)
     {
         EngineRPM = 0;
         CurrentGear = 0;
@@ -355,11 +355,6 @@ public:
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     TEnumAsByte<EVehicleNetworkMode> NetworkMode;
 
-    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
-    bool SubstepEngine = true;
-
-    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
-    bool SubStepSuspension = true;
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool IsTrailer;
@@ -416,9 +411,9 @@ public:
     // Capture state and update functions
     void CaptureState(float DeltaTime);
     void UpdateEngine(float DeltaTime, float& WheelTorque);
-    void UpdateAirDrag(UPrimitiveComponent * CompToApplyForceTo) const;
+    void UpdateAirDrag(UPrimitiveComponent * CompToApplyForceTo);
     void UpdateTankSteering(float UseSteeringValue);
-    void UpdateWheels(float DeltaTime, float WheelTorque, bool SubstepTick);
+    void UpdateWheels(float DeltaTime, float WheelTorque);
 
     // AI movement functions
     EAIVehicleState DetermineAIState(float ForwardFactor, float DeltaTime);
@@ -489,6 +484,9 @@ public:
     TOptional<bool> CachedShouldProcessPhysics;
     TOptional<bool> CachedShouldProcessCosmetics;
 
+    UPROPERTY()
+    FVector BodyForces;
+    
     float GetMassPerWheel() const;
 
     UFUNCTION(BlueprintCallable, Category = "Sleep")

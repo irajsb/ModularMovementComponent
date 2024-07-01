@@ -246,6 +246,12 @@ void UModularGearBox::SetCurrentGear(int InGear)
 	}
 }
 
+void UModularGearBox::SetToIdle()
+{
+	CurrentGear=TargetGear=IdleGear;
+	GearChangeTime=0.f;
+}
+
 
 bool UModularGearBox::IsInReverse()
 {

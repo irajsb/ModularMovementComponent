@@ -294,10 +294,10 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 	{
 		return;
 	}
-	if(SubstepEngine==SubstepTick)
-	{	//same cond as engine 
+
+	
 		CaptureState(DeltaTime);
-	}
+
 	
 	if(VehicleState.bSleeping)
 	{
@@ -309,13 +309,13 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 		if (!IsTrailer)
 		{
 		
-			if(SubstepEngine==SubstepTick)
-			{
+
+			
 				UpdateAirDrag(GetMesh());
 				UpdateEngine(fDeltaTime, VehicleState.WheelTorque);
-			}
+			
 		}
-		UpdateWheels(fDeltaTime, VehicleState.WheelTorque, SubstepTick);
+		UpdateWheels(fDeltaTime, VehicleState.WheelTorque);
 	}
 	else
 	{
@@ -327,6 +327,7 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 				{
 					Component->UpdateSteering(DeltaTime, this, SteeringInput);
 					Component->UpdateSuspension(DeltaTime, this);
+					
 					Component->WheelState.AngularPosition += Component->WheelState.AngularVelocity * DeltaTime;
 
 
@@ -448,11 +449,9 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		}
 	}
 	
-	//if everything is stepped then skip this tick 
-	if(!(SubstepEngine&&SubStepSuspension))
-	{	
-		VehicleTick(DeltaTime, false);
-	}
+
+		
+	
 	
 }
 
@@ -568,6 +567,7 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 				{
 				
 					SetSleeping(true);
+					
 				}
 			}else
 			{
@@ -624,13 +624,8 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 		//Engine braking 
 		if(DriveRPM>MaxRads)
 		{
-			if( GetSetup()->GetGearBox()->IsInReverse())
-			{
-				EngineTorque=DriveRPM-MaxRads;
-			}else
-			{
-				EngineTorque=-1*DriveRPM-MaxRads;
-			}
+			
+			EngineTorque=GetSetup()->CalcEngineBrake(OmegaToRPM( DriveRPM - MaxRads));
 			
 		}
 
@@ -666,14 +661,14 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 	}
 }
 
-void UModularMovementComponent::UpdateAirDrag(UPrimitiveComponent * CompToApplyForceTo) const
+void UModularMovementComponent::UpdateAirDrag(UPrimitiveComponent * CompToApplyForceTo) 
 {
 	
 	const float DragConstant=UseCustomDrag?CustomDragCoefficient:AirDragConstant;
 	const FVector BodyVelocity = GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity() / 100.f; //CM/s To Meter/s
 	const FVector DragForce = BodyVelocity * BodyVelocity.Size() * DragConstant * -1;
-	CompToApplyForceTo->GetBodyInstance()->AddForceAtPosition(
-		SIForceToUnrealForce(DragForce), GetMesh()->GetCenterOfMass(), true);
+	BodyForces+=SIForceToUnrealForce(DragForce);
+	
 }
 
 void UModularMovementComponent::UpdateTankSteering(const float UseSteeringValue)
@@ -724,7 +719,7 @@ void UModularMovementComponent::UpdateTankSteering(const float UseSteeringValue)
 	
 }
 
-void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque, bool SubstepTick)
+void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 {
 	//Capturing inputs
 	//Steer
@@ -733,55 +728,6 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque,
 	const float UseSteeringValue = SteeringInput;
 	
 	UpdateTankSteering(UseSteeringValue);
-
-
-	for (UModularWheel* Component : Components)
-	{
-		if (Component->WheelState.WheelSetup)
-		{
-			Component->WheelState.BrakeTorque = BrakeInput * Component->WheelState.WheelSetup->BrakeTorque;
-			Component->WheelState.IsHandBrakeTorque = false;
-			if (HandBrakeInput)
-			{
-				if (Component->WheelState.AffectedByHandBrake)
-				{
-					Component->WheelState.BrakeTorque = Component->WheelState.WheelSetup->HandBrakeTorque;
-					Component->WheelState.IsHandBrakeTorque = true;
-					Component->WheelState.DriveTorque = 0;
-				}
-			}
-
-			if(SubstepTick==SubStepSuspension)
-			{
-				
-				//calc and Apply Suspension forces 
-				Component->UpdateSuspension(DeltaTime, this);
-				//Apply Steering
-				Component->UpdateSteering(DeltaTime, this, UseSteeringValue);
-				
-			}
-			
-			if(SubstepTick)
-			{
-				if (!Component->WheelState.ApplyDriveForce || Component->DifferentialIndex == 255)
-				{
-					Component->UpdateForces(DeltaTime, this);
-				}
-			}
-		}
-		else
-		{
-			UModularVehicleFunctionLibrary::NotifyError(
-				"Wheel Setup class is missing in wheel" + Component->GetName() + " . Please create and assign one !");
-		}
-	}
-	
-	if(!SubstepTick)
-	{
-		//only tire model needs to be always substepped
-		return;
-	}
-
 
 	float TempDiffRatio = -1.f;
 	for (auto Diff : Cast<UModularVehicleData>(VehicleState.VehicleData)->DifferentialData)
@@ -796,12 +742,58 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque,
 			if (TempDiffRatio != Diff.DifferentialRatio)
 			{
 				UE_LOG(LogModularVehicle, Error,
-				       TEXT("Found two active diffs with different ratios.This can cause unexpected behaviour"))
+					   TEXT("Found two active diffs with different ratios.This can cause unexpected behaviour"))
 			}
 			ApplyDifferential(Diff, WheelTorque * Diff.TorqueTransferRatio, DeltaTime);
 		}
 	}
 	CurrentDifferentialRatio = TempDiffRatio;
+
+	ParallelFor(Components.Num(), [&](int32 Index)
+	{
+		UModularWheel* Component = Components[Index];
+		if (Component->WheelState.WheelSetup)
+		{
+			Component->WheelState.BrakeTorque = BrakeInput * Component->WheelState.WheelSetup->BrakeTorque;
+			Component->WheelState.IsHandBrakeTorque = false;
+			if (HandBrakeInput)
+			{
+				if (Component->WheelState.AffectedByHandBrake)
+				{
+					Component->WheelState.BrakeTorque = Component->WheelState.WheelSetup->HandBrakeTorque;
+					Component->WheelState.IsHandBrakeTorque = true;
+					Component->WheelState.DriveTorque = 0;
+				}
+			}
+
+			
+			// Calc and Apply Suspension forces 
+			Component->UpdateSuspension(DeltaTime, this);
+			// Apply Steering
+			Component->UpdateSteering(DeltaTime, this, UseSteeringValue);
+			Component->UpdateForces(DeltaTime, this);
+		}
+		else
+		{
+			// Note: Using a lambda to capture 'this' for the NotifyError function
+			AsyncTask(ENamedThreads::GameThread, [this, ComponentName = Component->GetName()]()
+			{
+				UModularVehicleFunctionLibrary::NotifyError(
+					"Wheel Setup class is missing in wheel" + ComponentName + ". Please create and assign one!");
+			});
+		}
+	});
+
+
+	// Apply accumulated forces
+	GetMesh()->AddForce(BodyForces);
+	BodyForces=FVector::ZeroVector;
+	for (const auto Wheel:Components)
+	{
+		Wheel->ApplyAccumulatedForces();
+	}
+
+
 }
 
 
@@ -1405,27 +1397,36 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 	float AverageSpeed = 0.f;
 	for (UModularWheel* Wheel : DiffData.Wheels)
 	{
-		//Apply those torques 
-		Wheel->UpdateForces(DeltaTime, this);
+		
 		AverageSpeed += Wheel->WheelState.AngularVelocity;
 	}
 	AverageSpeed = AverageSpeed / WheelCount;
 	//Post Update
 
 
+	// Pre-calculate constants if they don't change frequently
+	const float MaxRPM = GetSetup()->GetMaxRPM();
+	const float DriveRatio = GetSetup()->GetGearBox()->GetDriveRatio();
+	const float RPMToRadPerSec = (2.0f * PI) / 60.0f;
+
 	for (UModularWheel* Wheel : DiffData.Wheels)
 	{
 		if (DiffData.DifferentialType == Locked || DiffData.DifferentialType == LimitedSlip)
 		{
+			// Adjust angular velocity based on differential type
 			Wheel->WheelState.AngularVelocity = FMath::Lerp(Wheel->WheelState.AngularVelocity, AverageSpeed, Slip);
 		}
-		const float MaxWheelAngularVelocity = (GetSetup()->GetMaxRPM() * GetSetup()->GetGearBox()->GetDriveRatio() * 2 *
-			PI) / 60 * Wheel->WheelState.WheelSetup->WheelRadius / 100;
 
+		// Calculate max angular velocity for this wheel
+		const float MaxWheelAngularVelocity = MaxRPM * DriveRatio * RPMToRadPerSec * 
+			Wheel->WheelState.WheelSetup->WheelRadius / 100.0f;
 
-		Wheel->WheelState.AngularVelocity = FMath::Clamp(Wheel->WheelState.AngularVelocity, -MaxWheelAngularVelocity,
-		                                                 MaxWheelAngularVelocity);
+		// Clamp the angular velocity to prevent unrealistic values
+		Wheel->WheelState.AngularVelocity = FMath::Clamp(Wheel->WheelState.AngularVelocity, 
+														 -MaxWheelAngularVelocity,
+														 MaxWheelAngularVelocity);
 	}
+
 	
 }
 
@@ -1434,9 +1435,19 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 {
 	VehicleState.bSleeping=bEnableSleep;
-	OnSleepChange.Broadcast(bEnableSleep);
+	
 	VehicleState.CurrentRpm=GetSetup()->GetIdleRPM();
-
+	if(bEnableSleep)
+	{
+		if(GetSetup())
+		{
+			if(GetSetup()->GetGearBox())
+			{
+				GetSetup()->GetGearBox()->SetToIdle();
+			}
+		}
+	}
+	
 	for (const auto Comp:Components)
 	{
 		Comp->WheelState.AngularVelocity=0.f;
@@ -1455,7 +1466,7 @@ void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 			Comp->SurfaceData->OnSleep();
 		}
 	}
-	
+	OnSleepChange.Broadcast(bEnableSleep);
 }
 
 

@@ -78,6 +78,10 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	//How fast engine RPM can change . Used to stabilize RPM ranges from 0-1. Heavier vehicles generally have higher inertia due to heavier internal components 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
 	float EngineInertia=0.234;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
+	float EngineBrakeFactor=0.1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
+	float EngineMaxBrakeTorque=1000.f;
 
 	//Gearbox Data
 	UPROPERTY(Instanced,EditAnywhere,Category=Essential)
@@ -191,12 +195,14 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Fuel)
 	float EngineFuelConsumptionMaxRPM;
 
+	
 //Getter Functions
 	virtual float GetIdleRPM() const override;
 	virtual float GetMaxRPM() const override;
 	virtual bool ShouldZeroRpmWhenShifting() const override;
 	virtual float GetTorqueForRPM(float RPM) const override;
 	virtual float GetEngineInertia() const override;
+	virtual float CalcEngineBrake(float ExcessRpm) override;
 	//Trans
 	virtual UModularGearBox* GetGearBox()const  override;
 	

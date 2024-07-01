@@ -111,6 +111,9 @@ public:
 	//Set target gear
 	UFUNCTION(BlueprintCallable,Category=Transmission)
 	virtual  void  SetCurrentGear(int InGear);
+	//Set target gear
+	UFUNCTION(BlueprintCallable,Category=Transmission)
+	virtual  void  SetToIdle();
 
 	//Is current gear not equal to target gear
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Transmission)

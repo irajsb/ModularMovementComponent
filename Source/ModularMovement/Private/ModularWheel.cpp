@@ -197,7 +197,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 
 	// Start Trace
 	UKismetSystemLibrary::SphereTraceMulti(GetWorld(), ComponentLocation, TraceResult.TraceEnd, WheelState.WheelSetup->WheelRadius,
-	                                       ModularMovementComponent->GetSetup()->GetSuspensionTraceTypeQuery(), true,
+	                                       ModularMovementComponent->GetSetup()->GetSuspensionTraceTypeQuery(), false,
 	                                       ModularMovementComponent->ActorsToIgnore,
 	                                       Debug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
 	                                       Hits, true);
@@ -257,7 +257,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 			FVector CorrectedForce = DirectionVector * SIForceToUnrealForce(WheelState.WheelLoad.Z);
 
 
-			AddForceAtPosition(Mesh, TraceResult.ImpactPoint, CorrectedForce, NAME_None);
+			TotalForces+=CorrectedForce;
 			
 		}
 
@@ -325,7 +325,8 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		{
 
 			if(1){
-			AddForceAtPosition(Mesh, WheelState.HitResult.TraceStart, FrictionForceVector, NAME_None);
+			
+				TotalForces+=FrictionForceVector;
 
 			}else
 			{
@@ -784,4 +785,19 @@ UPhysicalMaterial* UModularWheel::GetActivePhysicalMaterial()
 {
 	const auto PhysMat=PhysicalMaterialOverride?PhysicalMaterialOverride:WheelState.HitResult.PhysMaterial.Get();
 	return PhysMat;
+}
+
+void UModularWheel::ApplyAccumulatedForces()
+{
+	UPrimitiveComponent* Mesh = MovementComponentRef->GetMesh();
+	if (ParentBodyOverride)
+	{
+		Mesh = ParentBodyOverride;
+	}else if(ConstraintParent)
+	{
+		Mesh=ConstraintParent;
+	}
+	AddForceAtPosition(Mesh, WheelState.HitResult.ImpactPoint, TotalForces, NAME_None);
+	TotalForces=FVector::ZeroVector;
+	
 }

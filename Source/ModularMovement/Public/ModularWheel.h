@@ -171,4 +171,9 @@ public:
 
     UPROPERTY(Transient, BlueprintReadWrite, Category=Wheel)
     UPhysicalMaterial* PhysicalMaterialOverride;
+
+    UPROPERTY()
+    FVector TotalForces;
+
+    void ApplyAccumulatedForces();
 };
