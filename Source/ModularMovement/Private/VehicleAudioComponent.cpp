@@ -110,7 +110,8 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			{
 				BrakeAudioComponent->FadeOut(0.2, 0);
 			}
-			if(LastBrakePlayTime>0)
+			LastBrakePlayTime-=DeltaTime;
+			if(LastBrakePlayTime<0)
 			{
 				LastBrakePlayTime=0.2;
 				UGameplayStatics::PlaySoundAtLocation(GetWorld(), BrakeReleaseSound, GetComponentLocation());
