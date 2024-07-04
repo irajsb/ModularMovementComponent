@@ -18,7 +18,7 @@ class MODULARMOVEMENT_API USemiTruckGearBox : public UModularGearBox
 	UPROPERTY(Category="Setup",EditAnywhere)
 	float Cooldown=3.f;
 	
-	float CurrentCooldown;
+	float CurrentCooldown=0.f;
 
 	virtual void Update(float DeltaTime, UModularMovementComponent* MovementComponent) override;
 };

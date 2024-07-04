@@ -198,7 +198,7 @@ FCollisionQueryParams UModularVehicleFunctionLibrary::ConfigureCollisionParams(F
 	return Params;
 }
 
-void UModularVehicleFunctionLibrary::UpdateWheelState(UModularWheel* Wheel, FWheelState NewWheelState)
+void UModularVehicleFunctionLibrary::UpdateWheelState(UModularWheel* Wheel, FModularWheelState NewWheelState)
 {
 	Wheel->UpdateWheelState(NewWheelState);
 }
@@ -222,7 +222,7 @@ void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,
 	}
 
 	
-	FWheelState& WheelState = *Wheel->GetWheelState();
+	FModularWheelState& WheelState = *Wheel->GetWheelState();
 	if (Wheel->GetWorld()->IsGameWorld() && WheelState.WheelSetup)
 	{
 		const FVector SuspensionTraceLocation = WheelState.HitResult.bBlockingHit

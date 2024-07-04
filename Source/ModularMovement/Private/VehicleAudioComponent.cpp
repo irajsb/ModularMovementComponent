@@ -50,7 +50,7 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	{
 		return;
 	}
-	LastBrakePlayTime-=DeltaTime;
+	LastBrakePlayTime=LastBrakePlayTime-DeltaTime;
 	const float RPMRatio = MC->VehicleState.CurrentRpm / MC->VehicleState.VehicleData->GetMaxRPM();
 	const float RPMChange = RPMRatio - RPM;
 	const bool GearChanging = MC->GetSetup()->GetGearBox()->IsChangingGear();
@@ -110,8 +110,7 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			{
 				BrakeAudioComponent->FadeOut(0.2, 0);
 			}
-			LastBrakePlayTime-=DeltaTime;
-			if(LastBrakePlayTime<0)
+			if(LastBrakePlayTime<0.f)
 			{
 				LastBrakePlayTime=0.2;
 				UGameplayStatics::PlaySoundAtLocation(GetWorld(), BrakeReleaseSound, GetComponentLocation());

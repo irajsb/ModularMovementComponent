@@ -114,7 +114,7 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 
 
 USTRUCT(BlueprintType)
-struct FWheelState{
+struct FModularWheelState{
 	GENERATED_BODY()
 	//Ranges from 0-1
 	UPROPERTY(Transient)

@@ -28,7 +28,7 @@ protected:
 public:
     // Wheel setup properties
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ShowOnlyInnerProperties), Category=Setup)
-    FWheelState WheelState;
+    FModularWheelState WheelState;
 
     UPROPERTY()
     FName OptionalBoneName;
@@ -63,8 +63,8 @@ public:
     virtual FTransform GetWheelTransform();
 
     // Wheel state methods
-    virtual void UpdateWheelState(FWheelState In);
-    virtual FWheelState* GetWheelState();
+    virtual void UpdateWheelState(FModularWheelState In);
+    virtual FModularWheelState* GetWheelState();
 
     // Blueprint callable methods
     UFUNCTION(BlueprintCallable, Category="Game|Components|ModularVehicleWheel")

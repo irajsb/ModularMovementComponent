@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "BaseVehicleData.h"
 #include "ModularVehicleData.h"
 #include "VehicleInputProcessor.h"
 #include "Components/MeshComponent.h"
@@ -179,11 +178,11 @@ struct FVehicleState
 
     // Class pointer to the vehicle data asset
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Setup)
-    TSoftClassPtr<UBaseVehicleData> VehicleDataClass;
+    TSoftClassPtr<UModularVehicleData> VehicleDataClass;
 
     // Pointer to the vehicle data
     UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
-    UBaseVehicleData* VehicleData = nullptr;
+    UModularVehicleData* VehicleData = nullptr;
 
     // Current RPM (Revolutions Per Minute) of the vehicle's engine
     UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
@@ -317,7 +316,7 @@ public:
 
     // Get vehicle setup
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
-    UBaseVehicleData* GetSetup() const;
+    UModularVehicleData* GetSetup() const;
 
     // Set input functions
     UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
@@ -497,4 +496,8 @@ public:
     {
         SetSleeping(false);
     }
+
+
+    UPROPERTY(Transient)
+    float LastAntiRollover;
 };

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "BaseVehicleData.h"
+#include "ModularGearBox.h"
 #include "Engine/DataAsset.h"
 #include "Curves/CurveFloat.h"
 #include "ModularVehicleData.generated.h"
@@ -10,6 +10,17 @@
 /**
  * 
  */
+
+UENUM(BlueprintType)
+enum  EModularSteerType 
+{
+	SingleAngle,
+	Ackermann,
+	Tank,
+};
+
+
+
 
 class UModularWheel;
 
@@ -47,8 +58,8 @@ struct FDifferentialData
 	TArray<UModularWheel* > Wheels;
 	
 };
-UCLASS()
-class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
+UCLASS(Blueprintable)
+class MODULARMOVEMENT_API UModularVehicleData : public UObject
 {
 	GENERATED_BODY()
 	public:
@@ -75,9 +86,9 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	TArray<FDifferentialData> DifferentialData;
 
 	
-	//How fast engine RPM can change . Used to stabilize RPM ranges from 0-1. Heavier vehicles generally have higher inertia due to heavier internal components 
+	//How fast engine RPM can change . Used to stabilize RPM . the bigger the number the faster it can change.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
-	float EngineInertia=0.234;
+	float EngineInertia=0.1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
 	float EngineBrakeFactor=0.1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
@@ -195,53 +206,111 @@ class MODULARMOVEMENT_API UModularVehicleData : public UBaseVehicleData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Fuel)
 	float EngineFuelConsumptionMaxRPM;
 
-	
-//Getter Functions
-	virtual float GetIdleRPM() const override;
-	virtual float GetMaxRPM() const override;
-	virtual bool ShouldZeroRpmWhenShifting() const override;
-	virtual float GetTorqueForRPM(float RPM) const override;
-	virtual float GetEngineInertia() const override;
-	virtual float CalcEngineBrake(float ExcessRpm) override;
-	//Trans
-	virtual UModularGearBox* GetGearBox()const  override;
-	
-	//misc
-	virtual bool GetScaleTireFrictionWithSurfaceAngle() override;
-	virtual float GetAirDragConstant() const override;
-	virtual bool ShouldScaleDriveTorqueToNumberOfWheels() const override;
-	virtual bool ShouldReverseAsBrake() const override;
-	virtual float GetStopThreshold() const override;
-	virtual float GetWrongDirectionThreshold() override;
-	virtual TEnumAsByte<ETraceTypeQuery> GetSuspensionTraceTypeQuery() const override;
-	virtual float GetReverseThreshold() const override;
-	virtual float GetIdleBrakeInput() const override;
-	//Steer
-	virtual float GetSteerSpeedScaleForSpeed(float Speed)  override;
-	virtual EModularSteerType GetSteerType() const override;
-	virtual float GetSteerInputRise() const override;
-	virtual float GetSteerInputFall() const override;
 
-	virtual void GetAckermannValues(float& OutWheelBase, float& OutTrackWidth) override;
-	virtual float GetCounterSteerMultiplier() const override;
-	//AI
-	virtual float GetAITraceLength() const override;
-	virtual float GetAITraceSpeedMultiplier() const override;
-	virtual float GetNearGoalDistance() override;
-	virtual float GetDesireSpeedNearGoal() const override;
-	virtual float GetDesireSpeedNormal() const override;
-	virtual float GetDesireSpeedTurning() const override;
-	virtual float GetDesireSpeedTurningAround() const override;
-	virtual float GetFullThrottleSpeed() const override;
-	virtual float GetAIMaxSteerMultiplier() const override;
-	virtual float GetTurnThreshold() const override;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = AntiRollover)
+	bool bEnableAntiRollover;
+
+	/** Anti rollover value threshold */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = AntiRollover, meta = (EditCondition = "bEnableAntiRollover"))
+	float AntiRolloverValueThreshold;
+
+	/** Relation between sine of Z axis delta angle and anti-rollover force applied */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AntiRollover, meta = (editcondition = "bEnableAntiRollover"))
+	FRuntimeFloatCurve AntiRolloverForceCurve;
+
+	
+
+	
+//engine
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetIdleRPM()const ;
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetMaxRPM()const ;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 bool ShouldZeroRpmWhenShifting()const;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetTorqueForRPM(float RPM)const ;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetEngineInertia()const ;
+
+	 float CalcEngineBrake(float ExcessRpm);;
+	//Transmission
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 class UModularGearBox* GetGearBox()const ;
+
+
+
+	
+
+	//Misc
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetAirDragConstant()const ;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 bool ShouldScaleDriveTorqueToNumberOfWheels() const ;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	  bool ShouldReverseAsBrake()const;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetStopThreshold()const ;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetWrongDirectionThreshold() ;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	  TEnumAsByte<ETraceTypeQuery> GetSuspensionTraceTypeQuery()const;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetReverseThreshold()const;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetIdleBrakeInput()const;
+
+	
+	//steer
+
+	 inline  float GetSteerSpeedScaleForSpeed(float Speed);;
+	
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 EModularSteerType GetSteerType()const;
+
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetSteerInputRise()const;
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetSteerInputFall()const;
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	  void GetAckermannValues(float & OutWheelBase,float & OutTrackWidth);
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 float GetCounterSteerMultiplier()const;
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
+	 bool GetScaleTireFrictionWithSurfaceAngle();
 
 	//Fuel
 
-	virtual float GetTankCapacity() const override;
-	virtual float GetFuelConsumption(float RPMRatio) const override;
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Fuel)
+	 float GetTankCapacity()const;
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Fuel)
+	 float GetFuelConsumption(float RPMRatio)const;
 
-	virtual float GetSleepSlope() const override;
 
-	virtual float GetSleepThreshold() const override;
+	//AI
+	 float GetAITraceLength()const;;
+	 float GetAITraceSpeedMultiplier()const;;
+	 float GetNearGoalDistance();;
+	 float GetDesireSpeedNearGoal()const;;
+	 float GetDesireSpeedNormal()const;;
+	 float GetTurnThreshold()const;;
+	 float GetDesireSpeedTurning()const;;
+	 float GetDesireSpeedTurningAround()const;;
+	 float GetFullThrottleSpeed()const;;
+	 float GetAIMaxSteerMultiplier()const;;
+	 float GetSleepThreshold()const;
+	FVector GetAntiRolloverTorque(float DeltaTime, FVector UpVector, float& LastAntiRolloverValue);
+	float GetSleepSlope()const;
+	
 };

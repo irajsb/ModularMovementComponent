@@ -251,3 +251,25 @@ float UModularVehicleData::GetSleepThreshold() const
 {
 	return  SleepThreshold;
 }
+
+FVector UModularVehicleData::GetAntiRolloverTorque(float DeltaTime, FVector UpVector, float& LastAntiRolloverValue)
+{
+	
+	FVector Result = FVector::ZeroVector;
+	if(!bEnableAntiRollover)
+	{
+		return Result;
+	}
+	const FVector WorldZ = FVector::UpVector;
+	const FVector AntiRolloverVector = FVector::CrossProduct(UpVector, WorldZ);
+	const float Sine = AntiRolloverVector.Size();
+
+	if (Sine > LastAntiRolloverValue || Sine >= AntiRolloverValueThreshold)
+	{
+		const float CoefficientMultiplier = AntiRolloverForceCurve.GetRichCurve()->Eval(Sine);
+		Result=AntiRolloverVector * CoefficientMultiplier;
+	}
+
+	LastAntiRolloverValue = Sine;
+	return  Result;
+}
