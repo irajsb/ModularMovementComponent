@@ -498,13 +498,13 @@ FTransform UModularWheel::GetWheelTransform()
 }
 
 
-void UModularWheel::UpdateWheelState(FWheelState In)
+void UModularWheel::UpdateWheelState(FModularWheelState In)
 {
 	WheelState = In;
 }
 
 
-FWheelState* UModularWheel::GetWheelState()
+FModularWheelState* UModularWheel::GetWheelState()
 {
 	return &WheelState;
 }

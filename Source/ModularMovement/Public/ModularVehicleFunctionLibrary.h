@@ -78,7 +78,7 @@ public:
 	                                                      UObject* WorldContextObject);
 	//ADVANCED: Update wheel state on the wheel (Better to use a previous wheel state and update it and set it on the wheel ) 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static void UpdateWheelState(UModularWheel* Wheel, FWheelState NewWheelState);
+	static void UpdateWheelState(UModularWheel* Wheel, FModularWheelState NewWheelState);
 
 
 

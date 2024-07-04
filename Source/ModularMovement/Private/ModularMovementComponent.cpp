@@ -114,7 +114,7 @@ UMeshComponent* UModularMovementComponent::GetMesh() const
 }
 
 
-UBaseVehicleData* UModularMovementComponent::GetSetup() const
+UModularVehicleData* UModularMovementComponent::GetSetup() const
 {
 	return VehicleState.VehicleData;
 }
@@ -232,7 +232,7 @@ void UModularMovementComponent::InitializeComponent()
 
 	if (VehicleState.VehicleDataClass.LoadSynchronous())
 	{
-		VehicleState.VehicleData = NewObject<UBaseVehicleData>(this, VehicleState.VehicleDataClass.Get());
+		VehicleState.VehicleData = NewObject<UModularVehicleData>(this, VehicleState.VehicleDataClass.Get());
 	}
 
 	if (!GetSetup())
@@ -316,9 +316,12 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 
 			
 				UpdateAirDrag(GetMesh());
+				
 				UpdateEngine(fDeltaTime, VehicleState.WheelTorque);
+				
 			
 		}
+		GetMesh()->AddTorqueInRadians(GetSetup()->GetAntiRolloverTorque(DeltaTime,GetMesh()->GetUpVector(),LastAntiRollover));
 		UpdateWheels(fDeltaTime, VehicleState.WheelTorque);
 	}
 	else
@@ -597,30 +600,27 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 	const float MaxRads = RPMToOmega(VehicleState.VehicleData->GetMaxRPM());
+	const bool EngineFree=GetSetup()->GetGearBox()->GetDriveRatio()||VehicleState.DriveWheelsOnGround==0;
 	const float MinRads = VehicleState.IsEngineOn ? RPMToOmega(VehicleState.VehicleData->GetIdleRPM()) : 0.f;
-	const float DriveRPM= GetSetup()->GetGearBox()->GetDriveRatio() == 0?ThrottleInput * MaxRads:VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio();
-	const float TargetRPM =UKismetMathLibrary::MapRangeClamped(DriveRPM,0,MaxRads,MinRads,MaxRads);
-	
+	const float DriveRPM= EngineFree == 0?ThrottleInput * MaxRads:VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio();
+	const bool GearChange=GetSetup()->ShouldZeroRpmWhenShifting() && GetSetup()->GetGearBox()->IsChangingGear();
+	 float TargetRPM =UKismetMathLibrary::MapRangeClamped(DriveRPM,0,MaxRads,MinRads,MaxRads);
+	if(GearChange)
+	{
+		TargetRPM=0.f;
+		WheelTorque=0.f;
+	}
 	VehicleState.EngineRads = FMath::FInterpConstantTo(VehicleState.EngineRads, TargetRPM, DeltaTime,
-	                                                   0.1 * VehicleState.VehicleData->GetMaxRPM());
+	                                                   VehicleState.VehicleData->GetEngineInertia() * VehicleState.VehicleData->GetMaxRPM());
 
 
 	VehicleState.CurrentRpm = OmegaToRPM(VehicleState.EngineRads);
 
 
-	//TODO Refactor
-	if (GetSetup()->ShouldZeroRpmWhenShifting() && GetSetup()->GetGearBox()->IsChangingGear())
+	
+	if (!GearChange)
 	{
-		VehicleState.CurrentRpm = 0;
-		WheelTorque=0.f;
-	}
-	else
-	{
-		if (VehicleState.DriveWheelsOnGround == 0)
-		{
-			VehicleState.CurrentRpm = FMath::Clamp<float>((GetSetup()->GetMaxRPM() * ThrottleInput),
-			                                              GetSetup()->GetIdleRPM(), GetSetup()->GetMaxRPM());
-		}
+		
 
 		//Engine Torque 
 
@@ -675,7 +675,14 @@ void UModularMovementComponent::UpdateAirDrag(UPrimitiveComponent * CompToApplyF
 	const float DragConstant=UseCustomDrag?CustomDragCoefficient:AirDragConstant;
 	const FVector BodyVelocity = GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity() / 100.f; //CM/s To Meter/s
 	const FVector DragForce = BodyVelocity * BodyVelocity.Size() * DragConstant * -1;
-	BodyForces+=SIForceToUnrealForce(DragForce);
+	if(CompToApplyForceTo==GetMesh())
+	{
+		BodyForces+=SIForceToUnrealForce(DragForce);
+	}else
+	{
+		// if custom body
+		CompToApplyForceTo->AddForce(SIForceToUnrealForce(DragForce));
+	}
 	
 }
 
