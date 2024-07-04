@@ -2,9 +2,11 @@
 
 #pragma once
 
+#include "CoreMinimal.h"
 #include "ModularGearBox.h"
-#include "Engine/DataAsset.h"
 #include "Curves/CurveFloat.h"
+#include "Engine/DataAsset.h"
+#include "Engine/EngineTypes.h"
 #include "ModularVehicleData.generated.h"
 
 /**
@@ -274,7 +276,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	
 	//steer
 
-	 inline  float GetSteerSpeedScaleForSpeed(float Speed);;
+	   float GetSteerSpeedScaleForSpeed(float Speed);;
 	
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)
 	 EModularSteerType GetSteerType()const;

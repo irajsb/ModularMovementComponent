@@ -14,6 +14,7 @@
 #include "ModularGearBox.h"
 #include "ModularVehicleData.h"
 #include "ModularVehicleFunctionLibrary.h"
+#include "Async/Async.h"
 #include "GameFramework/Pawn.h"
 #include "PBDRigidsSolver.h"
 #include "TimerManager.h"

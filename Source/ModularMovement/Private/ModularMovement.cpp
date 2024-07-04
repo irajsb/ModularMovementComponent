@@ -8,6 +8,7 @@
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Styling/SlateStyle.h"
 #include "Styling/SlateStyleRegistry.h"
+#include "Async/Async.h"
 #include "Interfaces/IPluginManager.h"
 #include "Modules/ModuleManager.h"
 #include "PhysicsEngine/PhysicsSettings.h"
