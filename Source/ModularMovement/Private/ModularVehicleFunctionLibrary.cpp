@@ -295,14 +295,25 @@ void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalM
 
 	for (const auto Wheel:Wheels)
 	{
-		const FName BoneName=FName(BoneNamePrefix+Wheel->GetName());
-		Wheel->SetWorldLocation(	Mesh->GetSocketLocation(BoneName));
+		if(Wheel){
+			const FName BoneName=FName(BoneNamePrefix+Wheel->GetName());
+			Wheel->SetWorldLocation(	Mesh->GetSocketLocation(BoneName));
 
-		if(const auto WheelCast=Cast<UModularWheel>(Wheel))
+			if(const auto WheelCast=Cast<UModularWheel>(Wheel))
+			{
+				WheelCast->OptionalBoneName=BoneName;
+			}
+		}else
 		{
-			WheelCast->OptionalBoneName=BoneName;
+#if WITH_EDITOR
+			auto messageLog = FMessageLog("ModularMovement");
+			messageLog.Open(EMessageSeverity::Error, true);
+			messageLog.Message(EMessageSeverity::Error, FText::FromString("Empty Wheel passed to SetupWheelLocationFromBone"));
+#endif
+			
 		}
 	}
+		
 }
 
 void UModularVehicleFunctionLibrary::NotifyError(FString Error)
