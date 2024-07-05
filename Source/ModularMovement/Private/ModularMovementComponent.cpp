@@ -115,10 +115,6 @@ UMeshComponent* UModularMovementComponent::GetMesh() const
 }
 
 
-UModularVehicleData* UModularMovementComponent::GetSetup() const
-{
-	return VehicleState.VehicleData;
-}
 
 void UModularMovementComponent::SetThrottleInput(float Input)
 {
@@ -159,8 +155,8 @@ float UModularMovementComponent::GetRPMRatio()
 		return 0;
 	}
 	return UKismetMathLibrary::MapRangeClamped(VehicleState.CurrentRpm,
-	                                           GetSetup()->GetIdleRPM(),
-	                                           GetSetup()->GetMaxRPM(), 0, 1);
+	                                           GetSetup()->IdleRpm,
+	                                           GetSetup()->MaxRpm, 0, 1);
 }
 
 void UModularMovementComponent::HoldStarter(float StartTime)
@@ -203,12 +199,12 @@ void UModularMovementComponent::StopEngine()
 
 void UModularMovementComponent::AddFuel(float Amount)
 {
-	VehicleState.CurrentFuel = FMath::Min(VehicleState.CurrentFuel + Amount, GetSetup()->GetTankCapacity());
+	VehicleState.CurrentFuel = FMath::Min(VehicleState.CurrentFuel + Amount, GetSetup()->TankCapacity);
 }
 
 void UModularMovementComponent::SetFuel(float Amount)
 {
-	VehicleState.CurrentFuel = FMath::Min(Amount, GetSetup()->GetTankCapacity());
+	VehicleState.CurrentFuel = FMath::Min(Amount, GetSetup()->TankCapacity);
 }
 
 float UModularMovementComponent::GetFuelRatio()
@@ -217,7 +213,7 @@ float UModularMovementComponent::GetFuelRatio()
 	{
 		return 0.f;
 	}
-	return VehicleState.CurrentFuel / GetSetup()->GetTankCapacity();
+	return VehicleState.CurrentFuel / GetSetup()->TankCapacity;
 }
 
 
@@ -273,7 +269,7 @@ void UModularMovementComponent::InitializeComponent()
 	}
 
 	//Calculate Constants
-	AirDragConstant = GetSetup()->GetAirDragConstant();
+	AirDragConstant = GetSetup()->AirDragCoefficient;
 	//0.5*GetSetup()->AirDragCoefficient*GetSetup()->VehicleFrontArea;
 	RollingResistanceConstant = 30 * AirDragConstant;
 
@@ -519,7 +515,7 @@ void UModularMovementComponent::BeginPlay()
 		HoldStarter(0.f);
 	}
 
-	VehicleState.CurrentFuel = GetSetup()->GetTankCapacity();
+	VehicleState.CurrentFuel = GetSetup()->TankCapacity;
 	
 }
 
@@ -559,7 +555,7 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 	VehicleState.SideSpeed = FVector::DotProduct(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity(),
 	                                             GetMesh()->GetRightVector());
 
-	const auto TankSteering=GetSetup()->GetSteerType()==Tank;
+	const auto TankSteering=GetSetup()->SteerType==Tank;
 	if((AllowSleep&&!TankSteering)||(AllowTankSleep&&TankSteering))
 	{
 		// Wake if control input pressed
@@ -568,13 +564,13 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 			
 			SetSleeping(false);
 			VehicleState.SleepTimer=0.f;
-		}else if (VehicleState.WheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->GetSleepSlope()))
+		}else if (VehicleState.WheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->SleepSlopeLimit))
 		{
 			if(VehicleState.SleepTimer>SleepDelay)
 			{
 				float SpeedSqr = GetMesh()->GetPhysicsLinearVelocity().SizeSquared();
 			
-				const float SleepThreshold=GetSetup()->GetSleepThreshold();
+				const float SleepThreshold=GetSetup()->SleepThreshold;
 				if (SpeedSqr < (SleepThreshold * SleepThreshold))
 				{
 				
@@ -602,9 +598,9 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 	const float MaxRads = RPMToOmega(VehicleState.VehicleData->GetMaxRPM());
 	const bool EngineFree=GetSetup()->GetGearBox()->GetDriveRatio()||VehicleState.DriveWheelsOnGround==0;
-	const float MinRads = VehicleState.IsEngineOn ? RPMToOmega(VehicleState.VehicleData->GetIdleRPM()) : 0.f;
+	const float MinRads = VehicleState.IsEngineOn ? RPMToOmega(GetSetup()->IdleRpm) : 0.f;
 	const float DriveRPM= EngineFree == 0?ThrottleInput * MaxRads:VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio();
-	const bool GearChange=GetSetup()->ShouldZeroRpmWhenShifting() && GetSetup()->GetGearBox()->IsChangingGear();
+	const bool GearChange=GetSetup()->ZeroRpmWhenShifting && GetSetup()->GetGearBox()->IsChangingGear();
 	 float TargetRPM =UKismetMathLibrary::MapRangeClamped(DriveRPM,0,MaxRads,MinRads,MaxRads);
 	if(GearChange)
 	{
@@ -872,7 +868,7 @@ EAIVehicleState UModularMovementComponent::DetermineAIState(float ForwardFactor,
 	if (VehicleState.AIState == Neutral)
 	{
 		//if We need to turn or turn around
-		if (ForwardFactor < GetSetup()->GetReverseThreshold())
+		if (ForwardFactor < GetSetup()->ReverseThreshold)
 		{
 			OutState = TurningAround;
 		}
@@ -1097,8 +1093,8 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 	if (GetOwnerRole() == ROLE_SimulatedProxy || NetworkMode == ClientAuthoritative)
 	{
 		VehicleState.CurrentRpm = UKismetMathLibrary::MapRangeClamped(RepCosmeticData.EngineRPM, 0, 255,
-		                                                              GetSetup()->GetIdleRPM(),
-		                                                              GetSetup()->GetMaxRPM());
+		                                                              GetSetup()->IdleRpm,
+		                                                              GetSetup()->MaxRpm);
 
 		if (const auto CurrentGear = GetSetup()->GetGearBox()->CurrentGear != RepCosmeticData.CurrentGear)
 		{
@@ -1421,7 +1417,7 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 
 
 	// Pre-calculate constants if they don't change frequently
-	const float MaxRPM = GetSetup()->GetMaxRPM();
+	const float MaxRPM = GetSetup()->MaxRpm;
 	const float DriveRatio = GetSetup()->GetGearBox()->GetDriveRatio();
 	const float RPMToRadPerSec = (2.0f * PI) / 60.0f;
 
@@ -1452,7 +1448,7 @@ void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 {
 	VehicleState.bSleeping=bEnableSleep;
 	
-	VehicleState.CurrentRpm=GetSetup()->GetIdleRPM();
+	VehicleState.CurrentRpm=GetSetup()->IdleRpm;
 	if(bEnableSleep)
 	{
 		if(GetSetup())

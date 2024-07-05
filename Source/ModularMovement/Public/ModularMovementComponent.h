@@ -316,7 +316,7 @@ public:
 
     // Get vehicle setup
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
-    UModularVehicleData* GetSetup() const;
+    FORCEINLINE UModularVehicleData* GetSetup() const {return VehicleState.VehicleData;}
 
     // Set input functions
     UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")

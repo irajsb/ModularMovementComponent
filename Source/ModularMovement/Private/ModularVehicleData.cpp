@@ -28,6 +28,11 @@ UModularVehicleData::UModularVehicleData()
 
 	GearBoxData=CreateDefaultSubobject<UModularGearBox>("DefaultGearBox");
 
+	bEnableAntiRollover = false;
+	AntiRolloverValueThreshold = 1.f;
+	FRichCurve* AntiRolloverForceCurveData = AntiRolloverForceCurve.GetRichCurve();
+	AntiRolloverForceCurveData->AddKey(0.f, 10000000.0f);
+	AntiRolloverForceCurveData->AddKey(1.f, 200000000.0f);
 	if(EngineTorqueCurve.GetRichCurve()->IsEmpty())
 	{
 		auto Curve=EngineTorqueCurve.GetRichCurve();
