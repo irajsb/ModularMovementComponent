@@ -630,8 +630,11 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 		if(DriveRPM>MaxRads)
 		{
 			
-			EngineTorque=GetSetup()->CalcEngineBrake(OmegaToRPM( DriveRPM - MaxRads));
+		 VehicleState.EngineBrake=GetSetup()->CalcEngineBrake(OmegaToRPM( DriveRPM - MaxRads));
 			
+		}else
+		{
+			VehicleState.EngineBrake=0.f;
 		}
 
 		
@@ -655,6 +658,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 		WheelTorque = EngineTorque * TransmissionTorque;
+		VehicleState.EngineBrake=VehicleState.EngineBrake*TransmissionTorque;
 
 		if (ModularVehicleDebugger)
 		{
@@ -766,7 +770,8 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 		UModularWheel* Component = Components[Index];
 		if (Component->WheelState.WheelSetup)
 		{
-			Component->WheelState.BrakeTorque = BrakeInput * Component->WheelState.WheelSetup->BrakeTorque;
+			Component->WheelState.BrakeTorque =VehicleState.EngineBrake+ BrakeInput * Component->WheelState.WheelSetup->BrakeTorque;
+			
 			Component->WheelState.IsHandBrakeTorque = false;
 			if (HandBrakeInput)
 			{

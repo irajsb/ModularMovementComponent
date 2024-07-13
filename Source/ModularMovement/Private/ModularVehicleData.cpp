@@ -87,16 +87,10 @@ float UModularVehicleData::GetEngineInertia() const
 
 float UModularVehicleData::CalcEngineBrake(float ExcessRpm)
 {
-	
-    
-			
 	float BrakingTorque = ExcessRpm * EngineBrakeFactor;
 			
-	float EngineTorque =GetGearBox()->IsInReverse() ? BrakingTorque : -BrakingTorque;
-    
-			
-	
-	 return  FMath::Clamp(EngineTorque, -EngineMaxBrakeTorque, EngineMaxBrakeTorque);
+
+	 return  FMath::Clamp(BrakingTorque, -EngineMaxBrakeTorque, EngineMaxBrakeTorque);
 }
 
 UModularGearBox* UModularVehicleData::GetGearBox()const 

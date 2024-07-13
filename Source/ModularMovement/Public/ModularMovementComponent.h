@@ -200,6 +200,9 @@ struct FVehicleState
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     float WheelTorque;
 
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    float EngineBrake=0.f;
+
     // Desired speed for the vehicle
     float DesiredSpeed = 0.f;
 
