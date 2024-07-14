@@ -4,8 +4,7 @@
 #include "VehicleWeaponComponent.h"
 
 
-
-
+#include "ModularMovementComponent.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/AudioComponent.h"
@@ -47,6 +46,16 @@ void UVehicleWeaponComponent::SetAimLocationOnScreen(FVector2D In)
 	{
 		ServerSetAimLocationOnScreen(In);
 	}
+}
+
+void UVehicleWeaponComponent::SetCurrentAmmo(int32 input)
+{
+	CurrentAmmo=input;
+}
+
+void UVehicleWeaponComponent::SetCurrentAmmoInClip(int32 input)
+{
+CurrentAmmoInClip=	FMath::Min(input,WeaponConfig.ClipSize);
 }
 
 void UVehicleWeaponComponent::ServerSetAimLocationOnScreen_Implementation(FVector2D In)
@@ -160,6 +169,7 @@ void UVehicleWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType
 				UpdateAnim(DeltaTime);
 				CurrentWeaponRotationWorldSpace = GetOwner()->GetActorRotation().RotateVector(
 					CurrentWeaponRotation.Quaternion().Vector()).Rotation();
+				
 
 				
 			}
@@ -647,8 +657,8 @@ void UVehicleWeaponComponent::UpdateAnim(float DeltaTime)
 	else
 	{
 	
-			CurrentWeaponRotation = UKismetMathLibrary::RInterpTo_Constant(CurrentWeaponRotation, TargetRotation, DeltaTime,
-																	   WeaponConfig.RotInterpolationSpeed);
+		CurrentWeaponRotation = UKismetMathLibrary::RInterpTo_Constant(CurrentWeaponRotation, TargetRotation, DeltaTime,
+																   WeaponConfig.RotInterpolationSpeed);
 
 		
 	
@@ -663,6 +673,22 @@ void UVehicleWeaponComponent::UpdateAnim(float DeltaTime)
 			bStableAim = false;
 		}
 	}
+
+	if (!UKismetMathLibrary::EqualEqual_RotatorRotator(TargetRotation, CurrentWeaponRotation, 0.5f))
+	{
+		OnAimUpdate.Broadcast();
+		if(APawn* Pawn=GetOwningPawn())
+		{
+			if(UModularMovementComponent* MovementComponent=static_cast<UModularMovementComponent*>( Pawn->GetMovementComponent()))
+			{
+				if(MovementComponent->VehicleState.bSleeping)
+				{
+					MovementComponent->SetSleeping(false);
+				}
+			}
+		}
+	}
+
 }
 
 void UVehicleWeaponComponent::OnRep_BurstCounter()

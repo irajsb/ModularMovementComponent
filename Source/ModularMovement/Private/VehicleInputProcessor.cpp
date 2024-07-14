@@ -11,6 +11,7 @@ float UVehicleInputProcessor::CalcBrakeInput_Implementation(UModularMovementComp
 {
 
 	MovementComponent->IsBraking=false;
+	
 	auto Setup= MovementComponent->GetSetup();
 	float NewBrakeInput =MovementComponent->VehicleState.IsEngineOn? 0.0f:Setup->GetIdleBrakeInput();
 	if (Setup->ShouldReverseAsBrake())

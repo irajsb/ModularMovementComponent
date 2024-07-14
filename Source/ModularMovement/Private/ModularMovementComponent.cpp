@@ -555,8 +555,8 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 	VehicleState.SideSpeed = FVector::DotProduct(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity(),
 	                                             GetMesh()->GetRightVector());
 
-	const auto TankSteering=GetSetup()->SteerType==Tank;
-	if((AllowSleep&&!TankSteering)||(AllowTankSleep&&TankSteering))
+
+	if(AllowSleep)
 	{
 		// Wake if control input pressed
 		if (VehicleState.bSleeping && (RawThrottleInput!=0.f||RawSteeringInput!=0.f))
@@ -1287,6 +1287,7 @@ void UModularMovementComponent::SetSleepOnBody(UPrimitiveComponent* PrimitiveCom
 	{
 		for(auto Body:SK->Bodies)
 		{
+			
 			if(Sleep)
 			{
 				Body->PutInstanceToSleep();
@@ -1447,6 +1448,7 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 {
 	VehicleState.bSleeping=bEnableSleep;
+
 	
 	VehicleState.CurrentRpm=GetSetup()->IdleRpm;
 	if(bEnableSleep)
@@ -1464,19 +1466,31 @@ void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 	{
 		Comp->WheelState.AngularVelocity=0.f;
 	}
-	SetSleepOnBody(GetMesh(),bEnableSleep);
+	
+	
+		SetSleepOnBody(GetMesh(),bEnableSleep);
+	
 	for(auto Comp:Components)
 	{
 		if(Comp->ConstraintParent)
 		{
-			SetSleepOnBody(Comp->ConstraintParent,bEnableSleep);
-			SetSleepOnBody(Comp->WheelCollision,bEnableSleep);
+			
+				SetSleepOnBody(Comp->ConstraintParent,bEnableSleep);
+				SetSleepOnBody(Comp->WheelCollision,bEnableSleep);
+			
 			
 		}
 		if(Comp->SurfaceData)
 		{
 			Comp->SurfaceData->OnSleep();
 		}
+	}
+	TArray<UActorComponent*> Comps;
+	GetOwner()->GetComponents(Comps,true);
+	for(auto Comp:Comps)
+	{
+		if(const auto Prim=Cast<UPrimitiveComponent>(Comp))
+		SetSleepOnBody(Prim,bEnableSleep);
 	}
 	OnSleepChange.Broadcast(bEnableSleep);
 }

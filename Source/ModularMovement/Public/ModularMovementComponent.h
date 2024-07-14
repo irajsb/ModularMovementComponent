@@ -344,8 +344,7 @@ public:
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool AllowSleep = true;
 
-    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
-    bool AllowTankSleep = false;
+ 
 
     
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)

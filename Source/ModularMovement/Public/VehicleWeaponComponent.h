@@ -30,6 +30,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFireAnimationStateChanged, bool, 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnReloadAnimationStateChanged, bool, bPlay);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAimUpdate);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReload);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFire);
@@ -233,7 +235,14 @@ public:
 	/** current ammo - inside clip */
 	UPROPERTY(Transient, Replicated)
 	int32 CurrentAmmoInClip;
+///** current total ammo */
+	UFUNCTION(Blueprintable,BlueprintAuthorityOnly)
+	void SetCurrentAmmo(int32 input);
+///** current ammo - inside clip */
+	UFUNCTION(Blueprintable,BlueprintAuthorityOnly)
+	void SetCurrentAmmoInClip(int32 input);
 
+	
 	bool bIsAIAllowedToFire;
 
 	UPROPERTY(BlueprintReadOnly, Category=Weapon)
@@ -469,4 +478,7 @@ public:
 	float CurrentAnimationRecoil;
 	float TargetAnimationRecoil;
 	FRotator LastTargetRotation;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnAimUpdate OnAimUpdate;
 };
