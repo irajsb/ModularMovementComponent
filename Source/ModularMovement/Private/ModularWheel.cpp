@@ -254,6 +254,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 
 			DirectionVector = UKismetMathLibrary::VLerp(DirectionVector, FVector::UpVector,
 			                                            WheelState.WheelSetup->SteepSurfaceAssistance);
+		
 			FVector CorrectedForce = DirectionVector * SIForceToUnrealForce(WheelState.WheelLoad.Z);
 
 
@@ -313,9 +314,12 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		const FVector GroundXVector = FVector::CrossProduct(GetRightVector(), GroundZVector);
 		const FVector GroundYVector = FVector::CrossProduct(GroundZVector, GroundXVector);
 		const FMatrix Mat = FMatrix(GroundXVector, GroundYVector, GroundZVector, ModularMovementComponent->GetMesh()->GetComponentLocation());
-		const FVector FrictionForceVector = Mat.TransformVector(FinalForceVector);
-		
+		FVector FrictionForceVector = Mat.TransformVector(FinalForceVector);
 
+		const float CrawlAssistance= GetWheelSetup()->CrawlAssistance;
+		if(CrawlAssistance!=0.f){
+		FrictionForceVector=FrictionForceVector+FrictionForceVector*FMath::Max(0,ModularMovementComponent->GetMesh()->GetUpVector().Dot(FrictionForceVector.GetUnsafeNormal())*CrawlAssistance);
+			}
 		//Calculate direction of force
 
 		
