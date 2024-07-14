@@ -683,6 +683,7 @@ void UVehicleWeaponComponent::UpdateAnim(float DeltaTime)
 			{
 				if(MovementComponent->VehicleState.bSleeping)
 				{
+					MovementComponent->VehicleState.SleepTimer=0.f;
 					MovementComponent->SetSleeping(false);
 				}
 			}

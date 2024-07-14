@@ -389,7 +389,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 	auto Processor= Cast<UVehicleInputProcessor>( InputProcessor->ClassDefaultObject);
 	SteeringInput = Processor->CalcSteerInput(this,DeltaTime,RawSteeringInput);
-	ThrottleInput = Processor->CalcThrottleInput(this,DeltaTime,RawThrottleInput,RawBrakeInput);
+	ThrottleInput = Processor->CalcThrottleInput(this,DeltaTime,RawThrottleInput,RawBrakeInput,RawSteeringInput);
 	BrakeInput = Processor->CalcBrakeInput(this,DeltaTime,RawBrakeInput,RawThrottleInput);
 	
 	if(IsActive()&&!VehicleState.bSleeping)
@@ -732,6 +732,7 @@ void UModularMovementComponent::UpdateTankSteering(const float UseSteeringValue)
 		}
 	}
 
+	UE_LOG(LogTemp,Log,TEXT("Track left track right %f %f"),VehicleState.TrackLeft.TorqueTransfer,VehicleState.TrackRight.TorqueTransfer)
 	
 }
 
@@ -1460,9 +1461,12 @@ void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 	{
 		if(GetSetup())
 		{
-			if(GetSetup()->GetGearBox())
+			if(GetSetup()->GetSteerType()!=Tank)
 			{
-				GetSetup()->GetGearBox()->SetToIdle();
+				if(GetSetup()->GetGearBox())
+				{
+					GetSetup()->GetGearBox()->SetToIdle();
+				}
 			}
 		}
 	}

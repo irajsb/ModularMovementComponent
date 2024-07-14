@@ -23,5 +23,5 @@ public:
 	float CalcSteerInput(UModularMovementComponent* MovementComponent,float DeltaTime,float RawInput);
 
 	UFUNCTION(BlueprintCallable,BlueprintNativeEvent,Category="Input")
-	float CalcThrottleInput(UModularMovementComponent* MovementComponent,float DeltaTime,float RawInput,float RawBrakeInput);
+	float CalcThrottleInput(UModularMovementComponent* MovementComponent,float DeltaTime,float RawInput,float RawBrakeInput,float RawSteeringInput);
 };

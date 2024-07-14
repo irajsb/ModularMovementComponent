@@ -99,7 +99,7 @@ float UVehicleInputProcessor::CalcSteerInput_Implementation(UModularMovementComp
 }
 
 float UVehicleInputProcessor::CalcThrottleInput_Implementation(UModularMovementComponent* MovementComponent,
-	float DeltaTime,float RawInput,float RawBrakeInput)
+	float DeltaTime,float RawInput,float RawBrakeInput,float RawSteeringInput)
 {
 
 	auto Setup= MovementComponent->GetSetup();
@@ -124,7 +124,7 @@ float UVehicleInputProcessor::CalcThrottleInput_Implementation(UModularMovementC
 	//Throttle and steer are not discrete in a  tank so we calculate both here
 	if (Setup->GetSteerType() == Tank)
 	{
-		NewThrottleInput = FMath::Clamp(FMath::Abs(RawInput) + FMath::Abs(RawInput), 0.f, 1.f);
+		NewThrottleInput = FMath::Clamp(FMath::Abs(RawInput) + FMath::Abs(RawSteeringInput), 0.f, 1.f);
 	}
 
 	if(!Setup->ShouldReverseAsBrake()&&IsInReverse)
