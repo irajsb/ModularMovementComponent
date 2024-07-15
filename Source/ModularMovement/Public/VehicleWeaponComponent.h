@@ -229,11 +229,11 @@ public:
 	float TimerIntervalAdjustment;
 
 	/** current total ammo */
-	UPROPERTY(Transient, Replicated)
+	UPROPERTY(Transient, Replicated,BlueprintReadOnly,Category=Ammo)
 	int32 CurrentAmmo;
 
 	/** current ammo - inside clip */
-	UPROPERTY(Transient, Replicated)
+	UPROPERTY(Transient, Replicated,BlueprintReadOnly,Category=Ammo)
 	int32 CurrentAmmoInClip;
 ///** current total ammo */
 	UFUNCTION(Blueprintable,BlueprintAuthorityOnly)
@@ -258,6 +258,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category=Weapon)
 	FRotator CurrentWeaponRotationWorldSpace;
 
+	UPROPERTY(BlueprintReadOnly, Category=Weapon)
 	FVector TargetLocation;
 
 	/** FX for muzzle flash */
@@ -457,6 +458,8 @@ private:
 	FTimerHandle TimerHandle_HandleFiring;
 	FTimerHandle TimerHandle_StopReload;
 	FTimerHandle TimerHandle_ReloadWeapon;
+public:
+	UPROPERTY(BlueprintReadOnly, Category=Weapon)
 	float CurrentTimeBetweenShots;
 
 	UPROPERTY(Transient)
