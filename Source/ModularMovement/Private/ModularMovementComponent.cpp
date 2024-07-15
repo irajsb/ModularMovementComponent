@@ -298,7 +298,7 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 	
 	if(VehicleState.bSleeping)
 	{
-		for(auto Comp:Components)
+		for(const auto Comp:Components)
 		{
 			Comp->UpdateSteering(DeltaTime, this, SteeringInput);
 		}
@@ -387,7 +387,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 		CaptureState(DeltaTime);
 
-	auto Processor= Cast<UVehicleInputProcessor>( InputProcessor->ClassDefaultObject);
+	const auto Processor= Cast<UVehicleInputProcessor>( InputProcessor->ClassDefaultObject);
 	SteeringInput = Processor->CalcSteerInput(this,DeltaTime,RawSteeringInput);
 	ThrottleInput = Processor->CalcThrottleInput(this,DeltaTime,RawThrottleInput,RawBrakeInput,RawSteeringInput);
 	BrakeInput = Processor->CalcBrakeInput(this,DeltaTime,RawBrakeInput,RawThrottleInput);
@@ -568,7 +568,7 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 		{
 			if(VehicleState.SleepTimer>SleepDelay)
 			{
-				float SpeedSqr = GetMesh()->GetPhysicsLinearVelocity().SizeSquared();
+				const float SpeedSqr = GetMesh()->GetPhysicsLinearVelocity().SizeSquared();
 			
 				const float SleepThreshold=GetSetup()->SleepThreshold;
 				if (SpeedSqr < (SleepThreshold * SleepThreshold))
@@ -623,7 +623,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 		//Use curve 
-		 float EngineTorque = VehicleState.IsEngineOn
+		const float EngineTorque = VehicleState.IsEngineOn
 			                           ? ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm)
 			                           : 0;
 		//Engine braking 
@@ -732,7 +732,7 @@ void UModularMovementComponent::UpdateTankSteering(const float UseSteeringValue)
 		}
 	}
 
-	UE_LOG(LogTemp,Log,TEXT("Track left track right %f %f"),VehicleState.TrackLeft.TorqueTransfer,VehicleState.TrackRight.TorqueTransfer)
+	
 	
 }
 
@@ -817,7 +817,7 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 
 EAIVehicleState UModularMovementComponent::DetermineAIState(float ForwardFactor, float DeltaTime)
 {
-	UWorld* World = GetWorld();
+	const UWorld* World = GetWorld();
 	const FVector VehicleLocation = GetOwner()->GetActorLocation() + FVector(
 		0, 0, GetOwner()->GetRootComponent()->GetLocalBounds().BoxExtent.Z);
 	FHitResult HitResultF;
@@ -837,7 +837,7 @@ EAIVehicleState UModularMovementComponent::DetermineAIState(float ForwardFactor,
 		DrawDebugString(GetWorld(), GetMesh()->GetComponentLocation(), FString::SanitizeFloat(TraceLenForward), nullptr,
 		                FColor::Red, 0);
 		//start traces
-		bool AIDebug = true;
+		const bool AIDebug = true;
 		UKismetSystemLibrary::LineTraceSingle(World, VehicleLocation,
 		                                      VehicleLocation + VehicleDirection * TraceLenForward,
 		                                      GetSetup()->GetSuspensionTraceTypeQuery(), false, ActorsToIgnore,
@@ -1140,7 +1140,7 @@ void UModularMovementComponent::SetCosmeticDataOnServer_Implementation(FRepCosme
 	OnRep_RepCosmeticData();
 }
 
-void UModularMovementComponent::ShowSetupError(FString Error)
+void UModularMovementComponent::ShowSetupError(const FString& Error)
 {
 	UE_LOG(LogModularVehicle, Error, TEXT("%s"), *Error)
 #if WITH_EDITOR
@@ -1162,8 +1162,6 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 	{
 		FRigidBodyState CurrentState;
 		GetMesh()->GetRigidBodyState(CurrentState);
-		
-		const bool bShouldSleep = false;
 
 		/////// POSITION CORRECTION ///////
 
@@ -1228,7 +1226,7 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 	//	BI->SetAngularVelocityInRadians(FMath::DegreesToRadians(UpdatedQuat.Vector()), false);
 
 		// state is restored when no velocity corrections are required
-		bool bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() <
+		const bool bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() <
 			KINDA_SMALL_NUMBER);
 	
 
@@ -1291,7 +1289,7 @@ void UModularMovementComponent::SetSleepOnBody(UPrimitiveComponent* PrimitiveCom
 {
 	if(const auto SK=Cast<USkeletalMeshComponent>(PrimitiveComponent))
 	{
-		for(auto Body:SK->Bodies)
+		for(const auto Body:SK->Bodies)
 		{
 			
 			if(Sleep)
@@ -1326,14 +1324,14 @@ void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 }
 
 
-void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, float EngineTorque, float DeltaTime)
+void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, float EngineTorque, float DeltaTime) const
 {
 	// Open differential: Equal torque distribution, but account for wheel slip
 	float TotalAngularVelocity = 0.0f;
 	float MinVelocity = BIG_NUMBER;
 	float MaxVelocity = -BIG_NUMBER;
 	const int WheelCount = DiffData.Wheels.Num();
-	for (UModularWheel* Wheel : DiffData.Wheels)
+	for (const UModularWheel* Wheel : DiffData.Wheels)
 	{
 		const float AngularVelocity = Wheel->WheelState.AngularVelocity;
 		TotalAngularVelocity += FMath::Abs(AngularVelocity);
@@ -1414,7 +1412,7 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 
 
 	float AverageSpeed = 0.f;
-	for (UModularWheel* Wheel : DiffData.Wheels)
+	for (const UModularWheel* Wheel : DiffData.Wheels)
 	{
 		
 		AverageSpeed += Wheel->WheelState.AngularVelocity;
@@ -1426,7 +1424,7 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 	// Pre-calculate constants if they don't change frequently
 	const float MaxRPM = GetSetup()->MaxRpm;
 	const float DriveRatio = GetSetup()->GetGearBox()->GetDriveRatio();
-	const float RPMToRadPerSec = (2.0f * PI) / 60.0f;
+	constexpr float RPMToRadPerSec = (2.0f * PI) / 60.0f;
 
 	for (UModularWheel* Wheel : DiffData.Wheels)
 	{
@@ -1479,7 +1477,7 @@ void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 	
 		SetSleepOnBody(GetMesh(),bEnableSleep);
 	
-	for(auto Comp:Components)
+	for(const auto Comp:Components)
 	{
 		if(Comp->ConstraintParent)
 		{
@@ -1496,7 +1494,7 @@ void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 	}
 	TArray<UActorComponent*> Comps;
 	GetOwner()->GetComponents(Comps,true);
-	for(auto Comp:Comps)
+	for(const auto Comp:Comps)
 	{
 		if(const auto Prim=Cast<UPrimitiveComponent>(Comp))
 		SetSleepOnBody(Prim,bEnableSleep);
