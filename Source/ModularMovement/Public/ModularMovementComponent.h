@@ -252,7 +252,7 @@ struct FModularVehicleState
     // Axle RPM
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     float AxleRPM = 0.f;
-    FVehicleState(): WheelTorque(0.f), AIState(), TrackLeft(), TrackRight()
+    FModularVehicleState(): WheelTorque(0.f), AIState(), TrackLeft(), TrackRight()
     {
     };
 };
