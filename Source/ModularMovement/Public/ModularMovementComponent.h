@@ -172,7 +172,7 @@ struct FModularTrackInfo
 
 // Structure representing the state of a vehicle
 USTRUCT(BlueprintType)
-struct FVehicleState
+struct FModularVehicleState
 {
     GENERATED_BODY()
 
@@ -336,7 +336,7 @@ public:
 
     // Data holder
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly, meta = (ShowOnlyInnerProperties))
-    FVehicleState VehicleState;
+    FModularVehicleState VehicleState;
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool ApplyRecommendedMeshProperties = true;

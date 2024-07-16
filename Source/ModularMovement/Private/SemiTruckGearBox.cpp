@@ -13,7 +13,7 @@ void USemiTruckGearBox::Update(float DeltaTime, UModularMovementComponent* Movem
 	MC = MovementComponent;
 	if (!IsManual)
 	{
-		FVehicleState VehicleState = MovementComponent->VehicleState;
+		const auto  VehicleState = MovementComponent->VehicleState;
 		if (VehicleState.DriveWheelsOnGround != 0)
 		{
 			if (MovementComponent->GetSetup()->ShouldReverseAsBrake())
