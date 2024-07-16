@@ -252,6 +252,9 @@ struct FModularVehicleState
     // Axle RPM
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     float AxleRPM = 0.f;
+    FVehicleState(): WheelTorque(0.f), AIState(), TrackLeft(), TrackRight()
+    {
+    };
 };
 
 UCLASS(meta = (BlueprintSpawnableComponent))
@@ -465,12 +468,12 @@ public:
     UPROPERTY(EditAnywhere, Category = Network)
     FOldRigidBodyErrorCorrection ErrorCorrection;
 
-    void ApplyDifferential(FDifferentialData DiffData, float EngineTorque, float DeltaTime);
+    void ApplyDifferential(FDifferentialData DiffData, float EngineTorque, float DeltaTime) const;
 
     UFUNCTION(BlueprintCallable, Category = "Sleep")
     void SetSleeping(bool bEnableSleep);
 
-    static void ShowSetupError(FString Error);
+    static void ShowSetupError(const FString& Error);
 
     FRigidBodyState NewestBodyInstance;
 

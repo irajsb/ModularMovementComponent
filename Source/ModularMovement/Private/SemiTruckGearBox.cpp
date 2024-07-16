@@ -57,8 +57,8 @@ void USemiTruckGearBox::Update(float DeltaTime, UModularMovementComponent* Movem
 				}
 			}
 			//Calculate RPM from vehicle speed instead of wheel because wheel can get locked or spin
-			const float CurrentRpm = (VehicleState.ForwardSpeed / 100 * Gears[CurrentGear].GearRatio * MovementComponent
-				->CurrentDifferentialRatio / DriveWheelRadius) * 30 / PI;
+			const float CurrentRpm = VehicleState.ForwardSpeed / 100 * Gears[CurrentGear].GearRatio * MovementComponent
+				->CurrentDifferentialRatio / DriveWheelRadius * 30 / PI;
 
 			GearBoxRPMRatio = UKismetMathLibrary::MapRangeClamped(
 				CurrentRpm, MovementComponent->GetSetup()->GetIdleRPM(),
@@ -66,7 +66,7 @@ void USemiTruckGearBox::Update(float DeltaTime, UModularMovementComponent* Movem
 			const float TargetRpm = UKismetMathLibrary::MapRangeUnclamped(
 				IdealRPMRatio, 0, 1, MovementComponent->GetSetup()->GetIdleRPM(),
 				MovementComponent->GetSetup()->GetMaxRPM());
-			const float IdealGearRatio = (TargetRpm * PI * DriveWheelRadius) / (VehicleState.ForwardSpeed / 100 *
+			const float IdealGearRatio = TargetRpm * PI * DriveWheelRadius / (VehicleState.ForwardSpeed / 100 *
 				MovementComponent->CurrentDifferentialRatio * 30);
 
 			// not currently changing gear, also don't want to change up because the wheels are spinning up due to having no load

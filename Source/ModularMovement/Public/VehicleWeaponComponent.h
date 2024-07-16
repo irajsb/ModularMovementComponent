@@ -60,53 +60,53 @@ struct FWeaponDataRow
 
 
 	/** Ammo count */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	int ClipSize;
 
 	/** Ammo count */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	int AmmoCount;
 
 	/** Time to reload after ammo finishes */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	float ReloadTime;
 
 	/** Damage type to be registered */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	TSubclassOf<UDamageType> DamageType;
 
 	/** Initial time between shots for weapons that need to speed up before shooting, such as gatling guns */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	float InitialTimeBetweenShots;
 
 
 
 
 	/** Infinite ammo (infinite reloads) */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	bool bInfiniteAmmo;
 
 	/** Infinite current mag */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	bool bInfiniteClip;
 
 	/** Speed for animating aim rotation of weapon */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	float RotInterpolationSpeed;
 
 
 
 
 	/** Heat generated per shot */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	float HeatPerShot;
 
 	/** Heat reduction rate per second */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	float HeatReduce;
 
 	/** AITimer Multiplier */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	float AITimerMultiplier;
 
 	/** Weapon Recoil (Negative To Disable) */
@@ -114,14 +114,14 @@ struct FWeaponDataRow
 	float WeaponRecoil;
 
 	// Recoil for animating barrels
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	float MaxAnimationRecoil=-30.f;
 
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	float RecoilInterpolationSpeed;
 
 	/** Flag indicating if owned by AI */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	bool IsOwnedByAI;
 
 	/** Flag indicating instant rotation */
@@ -129,27 +129,27 @@ struct FWeaponDataRow
 	bool InstantRotation;
 
 	/** Minimum pitch for aim */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	float MinPitch;
 
 	/** Maximum pitch for aim */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	float MaxPitch;
 
 	/** Widget to be shown at where aim is */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	TSubclassOf<UUserWidget> AimWidgetClass;
 
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	bool AimDirectlyForward=false;
 	/** Size of aim widget */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	FVector2D AimWidgetSize;
 
 	
 
 	/** Collision channel */
-	UPROPERTY(EditAnywhere, Category = "Setup")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Setup")
 	TEnumAsByte<ECollisionChannel> Channel;
 
 	FWeaponDataRow() : HeatPerShot(0), HeatReduce(0), RecoilInterpolationSpeed(200), Channel(ECC_Visibility)
@@ -229,11 +229,11 @@ public:
 	float TimerIntervalAdjustment;
 
 	/** current total ammo */
-	UPROPERTY(Transient, Replicated)
+	UPROPERTY(Transient, Replicated,BlueprintReadOnly,Category=Ammo)
 	int32 CurrentAmmo;
 
 	/** current ammo - inside clip */
-	UPROPERTY(Transient, Replicated)
+	UPROPERTY(Transient, Replicated,BlueprintReadOnly,Category=Ammo)
 	int32 CurrentAmmoInClip;
 ///** current total ammo */
 	UFUNCTION(Blueprintable,BlueprintAuthorityOnly)
@@ -258,6 +258,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category=Weapon)
 	FRotator CurrentWeaponRotationWorldSpace;
 
+	UPROPERTY(BlueprintReadOnly, Category=Weapon)
 	FVector TargetLocation;
 
 	/** FX for muzzle flash */
@@ -457,6 +458,8 @@ private:
 	FTimerHandle TimerHandle_HandleFiring;
 	FTimerHandle TimerHandle_StopReload;
 	FTimerHandle TimerHandle_ReloadWeapon;
+public:
+	UPROPERTY(BlueprintReadOnly, Category=Weapon)
 	float CurrentTimeBetweenShots;
 
 	UPROPERTY(Transient)

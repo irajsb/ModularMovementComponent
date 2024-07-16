@@ -7,12 +7,12 @@
 #include "ModularMovementComponent.h"
 
 float UVehicleInputProcessor::CalcBrakeInput_Implementation(UModularMovementComponent* MovementComponent,
-                                                            float DeltaTime,float RawBrakeInput,float RawThrottleInput)
+                                                            float DeltaTime, const float RawBrakeInput, const float RawThrottleInput)
 {
 
 	MovementComponent->IsBraking=false;
-	
-	auto Setup= MovementComponent->GetSetup();
+
+	const auto Setup= MovementComponent->GetSetup();
 	float NewBrakeInput =MovementComponent->VehicleState.IsEngineOn? 0.0f:Setup->GetIdleBrakeInput();
 	if (Setup->ShouldReverseAsBrake())
 	{
@@ -81,13 +81,13 @@ float UVehicleInputProcessor::CalcBrakeInput_Implementation(UModularMovementComp
 	return NewBrakeInput;
 }
 
-float UVehicleInputProcessor::CalcSteerInput_Implementation(UModularMovementComponent* MovementComponent,float DeltaTime,float RawInput)
+float UVehicleInputProcessor::CalcSteerInput_Implementation(UModularMovementComponent* MovementComponent, const float DeltaTime, const float RawInput)
 {
 	
 	// Determine the rate to use for interpolation
-	const float InterpolationSpeed = (RawInput != 0.f || FMath::Sign(RawInput * MovementComponent->SteeringInput) == 1
-										  ? MovementComponent->GetSetup()->GetSteerInputRise()
-										  : MovementComponent->GetSetup()->GetSteerInputFall());
+	const float InterpolationSpeed = RawInput != 0.f || FMath::Sign(RawInput * MovementComponent->SteeringInput) == 1
+		                                 ? MovementComponent->GetSetup()->GetSteerInputRise()
+		                                 : MovementComponent->GetSetup()->GetSteerInputFall();
 
 	// Interpolate between the current steering input and the target
 	float Result = FMath::FInterpTo(MovementComponent->SteeringInput, RawInput, DeltaTime, InterpolationSpeed);
@@ -99,10 +99,9 @@ float UVehicleInputProcessor::CalcSteerInput_Implementation(UModularMovementComp
 }
 
 float UVehicleInputProcessor::CalcThrottleInput_Implementation(UModularMovementComponent* MovementComponent,
-	float DeltaTime,float RawInput,float RawBrakeInput,float RawSteeringInput)
+	float DeltaTime, const float RawInput, const float RawBrakeInput, const float RawSteeringInput)
 {
-
-	auto Setup= MovementComponent->GetSetup();
+	const auto Setup= MovementComponent->GetSetup();
 	float NewThrottleInput =RawInput;
 	const bool IsInReverse=Setup->GetGearBox()->IsInReverse();
 	if (Setup->ShouldReverseAsBrake())
