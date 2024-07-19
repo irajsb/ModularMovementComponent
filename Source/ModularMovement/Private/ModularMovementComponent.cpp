@@ -1243,6 +1243,17 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 
 
 }
+
+void UModularMovementComponent::SetCanSleep(bool Input)
+{
+	if(VehicleState.bSleeping&&!Input)
+	{
+		SetSleeping(false);
+		
+	}
+	AllowSleep=Input;
+}
+
 bool UModularMovementComponent::IsLocal()
 {
 	// Check if the cached result is available

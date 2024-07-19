@@ -482,6 +482,8 @@ public:
     UPROPERTY(BlueprintAssignable)
     FOnCustomEvent OnCustomEvent;
 
+    UFUNCTION(BlueprintCallable,Category=Sleep)
+    void SetCanSleep(bool Input);
     bool IsLocal();
 
     TOptional<bool> CachedIsLocal;
