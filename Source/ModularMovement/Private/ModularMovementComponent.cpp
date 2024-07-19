@@ -559,7 +559,7 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 	if(AllowSleep)
 	{
 		// Wake if control input pressed
-		if (VehicleState.bSleeping && (RawThrottleInput!=0.f||RawSteeringInput!=0.f))
+		if (VehicleState.bSleeping && ((RawThrottleInput!=0.f||RawSteeringInput!=0.f)||GetMesh()->IsAnyRigidBodyAwake()))
 		{
 			
 			SetSleeping(false);
