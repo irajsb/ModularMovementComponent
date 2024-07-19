@@ -172,7 +172,7 @@ struct FModularTrackInfo
 
 // Structure representing the state of a vehicle
 USTRUCT(BlueprintType)
-struct FVehicleState
+struct FModularVehicleState
 {
     GENERATED_BODY()
 
@@ -252,7 +252,7 @@ struct FVehicleState
     // Axle RPM
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     float AxleRPM = 0.f;
-    FVehicleState(): WheelTorque(0.f), AIState(), TrackLeft(), TrackRight()
+    FModularVehicleState(): WheelTorque(0.f), AIState(), TrackLeft(), TrackRight()
     {
     };
 };
@@ -339,7 +339,7 @@ public:
 
     // Data holder
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly, meta = (ShowOnlyInnerProperties))
-    FVehicleState VehicleState;
+    FModularVehicleState VehicleState;
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool ApplyRecommendedMeshProperties = true;

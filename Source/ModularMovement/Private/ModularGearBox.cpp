@@ -105,7 +105,7 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 	MC = MovementComponent;
 	if (!IsManual)
 	{
-		FVehicleState VehicleState = MovementComponent->VehicleState;
+		FModularVehicleState VehicleState = MovementComponent->VehicleState;
 		if (VehicleState.DriveWheelsOnGround != 0)
 		{
 			if (MovementComponent->GetSetup()->ShouldReverseAsBrake())
