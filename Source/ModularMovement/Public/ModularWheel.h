@@ -72,7 +72,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Game|Components|ModularVehicleWheel", meta=(KeyWords="Set Change Update"))
     void UpdateWheelSetup(UModularVehicleWheelData* VehicleWheelData);
-
+    // only useful when called in construction script ;
+    UFUNCTION(BlueprintCallable, Category="Game|Components|ModularVehicleWheel", meta=(KeyWords="Set Change Update"))
+    void SetupWheelClass(TSoftClassPtr<UModularVehicleWheelData> WheelSetupClass);
     UFUNCTION(BlueprintCallable, Category="Game|Components|ModularVehicleWheel", meta=(KeyWords="Set Change Update"))
     void SetSteerOnWheel(float Angle);
 

@@ -528,6 +528,14 @@ void UModularWheel::UpdateWheelSetup(UModularVehicleWheelData* VehicleWheelData)
 	WheelState.WheelSetup = VehicleWheelData;
 }
 
+void UModularWheel::SetupWheelClass(TSoftClassPtr<UModularVehicleWheelData> WheelSetupClass)
+{
+	if(!WheelSetupClass.IsNull())
+	{
+		WheelState.WheelSetupClass=WheelSetupClass;
+	}
+}
+
 void UModularWheel::SetSteerOnWheel(float Angle)
 {
 	WheelState.SteerAngle = Angle;

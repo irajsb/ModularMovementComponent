@@ -133,9 +133,11 @@ struct FModularWheelState{
 	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	FVector WheelLoad=FVector::ZeroVector;
 
-	//Base class to create an instance from for setup of this wheel
-	UPROPERTY(EditAnywhere,Category=Setup)
+	//Base class to create an instance from for setup of this wheel only changeable in construction script 
+	UPROPERTY(BlueprintReadWrite,EditAnywhere,Category=Setup)
 	TSoftClassPtr<UModularVehicleWheelData> WheelSetupClass;
+
+	
 	//Instanced setup which can be edited at runtime without conflicit
 	UPROPERTY(BlueprintReadOnly,Transient,Category=Setup)
 	UModularVehicleWheelData* WheelSetup=nullptr;

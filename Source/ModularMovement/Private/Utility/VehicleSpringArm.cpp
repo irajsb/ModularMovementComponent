@@ -370,23 +370,26 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 					}
 					
 				}
-				//Find lag amount by acceleration
-				if (bEnableCameraLag)
-				{
-					const float Acceleration = ((Velocity * FVector(1, 1, 0)).Size() - PreviousSpeed) / DeltaTime;
-					const float InterpolationTarget = UKismetMathLibrary::MapRangeClamped(
-						Acceleration, MinAcceleration, MaxAcceleration, TargetArmLength - MaxArmLenChange,
-						TargetArmLength + MaxArmLenChange);
-					CurrentArmLen = UKismetMathLibrary::FInterpTo(CurrentArmLen, InterpolationTarget, DeltaTime,
-					                                              ArmLenInterpolationSpeed);
-				}else
-				{
-					CurrentArmLen=TargetArmLength;
-				}
+				
+		}
+		
+			//Find lag amount by acceleration
+			if (bEnableCameraLag)
+			{
+				const float Acceleration = ((Velocity * FVector(1, 1, 0)).Size() - PreviousSpeed) / DeltaTime;
+				const float InterpolationTarget = UKismetMathLibrary::MapRangeClamped(
+					Acceleration, MinAcceleration, MaxAcceleration, TargetArmLength - MaxArmLenChange,
+					TargetArmLength + MaxArmLenChange);
+				CurrentArmLen = UKismetMathLibrary::FInterpTo(CurrentArmLen, InterpolationTarget, DeltaTime,
+															  ArmLenInterpolationSpeed);
+				
+			}else
+			{
+				CurrentArmLen=TargetArmLength;
 			}
-
 			PreviousSpeed = (Velocity * FVector(1, 1, 0)).Size();
 		}
+
 		
 		
 		if(CurrentCooldown>0)

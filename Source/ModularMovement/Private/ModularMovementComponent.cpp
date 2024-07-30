@@ -300,7 +300,7 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 	{
 		for(const auto Comp:Components)
 		{
-			Comp->UpdateSteering(DeltaTime, this, SteeringInput);
+			Comp->UpdateSteering(fDeltaTime, this, SteeringInput);
 		}
 		return;
 	}
@@ -318,7 +318,7 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 				
 			
 		}
-		GetMesh()->AddTorqueInRadians(GetSetup()->GetAntiRolloverTorque(DeltaTime,GetMesh()->GetUpVector(),LastAntiRollover));
+		GetMesh()->AddTorqueInRadians(GetSetup()->GetAntiRolloverTorque(fDeltaTime,GetMesh()->GetUpVector(),LastAntiRollover));
 		UpdateWheels(fDeltaTime, VehicleState.WheelTorque);
 	}
 	else
@@ -329,10 +329,10 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 			{
 				if (Component->WheelState.WheelSetup)
 				{
-					Component->UpdateSteering(DeltaTime, this, SteeringInput);
-					Component->UpdateSuspension(DeltaTime, this);
+					Component->UpdateSteering(fDeltaTime, this, SteeringInput);
+					Component->UpdateSuspension(fDeltaTime, this);
 					
-					Component->WheelState.AngularPosition += Component->WheelState.AngularVelocity * DeltaTime;
+					Component->WheelState.AngularPosition += Component->WheelState.AngularVelocity * fDeltaTime;
 
 
 					float IntegerPart;
@@ -558,8 +558,9 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 
 	if(AllowSleep)
 	{
+		const float EffectiveThrottle=FMath::Min(RawThrottleInput,ClutchInput);
 		// Wake if control input pressed
-		if (VehicleState.bSleeping && ((RawThrottleInput!=0.f||RawSteeringInput!=0.f)||GetMesh()->IsAnyRigidBodyAwake()))
+		if (VehicleState.bSleeping && ((EffectiveThrottle!=0.f||RawSteeringInput!=0.f)||GetMesh()->IsAnyRigidBodyAwake()))
 		{
 			
 			SetSleeping(false);
@@ -597,9 +598,10 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 	const float MaxRads = RPMToOmega(VehicleState.VehicleData->GetMaxRPM());
-	const bool EngineFree=GetSetup()->GetGearBox()->GetDriveRatio()||VehicleState.DriveWheelsOnGround==0;
+	const bool EngineFree=GetSetup()->GetGearBox()->GetDriveRatio()==0.f||VehicleState.DriveWheelsOnGround==0;
+	const float Clutch=EngineFree?0.f:ClutchInput;
 	const float MinRads = VehicleState.IsEngineOn ? RPMToOmega(GetSetup()->IdleRpm) : 0.f;
-	const float DriveRPM= EngineFree == 0?ThrottleInput * MaxRads:VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio();
+	const float DriveRPM=FMath::Lerp( ThrottleInput * MaxRads,VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio(),Clutch);
 	const bool GearChange=GetSetup()->ZeroRpmWhenShifting && GetSetup()->GetGearBox()->IsChangingGear();
 	 float TargetRPM =UKismetMathLibrary::MapRangeClamped(DriveRPM,0,MaxRads,MinRads,MaxRads);
 	if(GearChange)
@@ -1341,6 +1343,8 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 	float TotalAngularVelocity = 0.0f;
 	float MinVelocity = BIG_NUMBER;
 	float MaxVelocity = -BIG_NUMBER;
+
+	EngineTorque=EngineTorque*ClutchInput;
 	const int WheelCount = DiffData.Wheels.Num();
 	for (const UModularWheel* Wheel : DiffData.Wheels)
 	{
@@ -1465,7 +1469,7 @@ void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 	VehicleState.bSleeping=bEnableSleep;
 
 	
-	VehicleState.CurrentRpm=GetSetup()->IdleRpm;
+	VehicleState.CurrentRpm=VehicleState.IsEngineOn? GetSetup()->IdleRpm:0.f;
 	if(bEnableSleep)
 	{
 		if(GetSetup())

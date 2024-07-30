@@ -305,6 +305,9 @@ public:
     UPROPERTY(Transient,BlueprintReadOnly,Category=Input)
     bool IsBraking;
 
+    UPROPERTY(BlueprintReadWrite,Category=Clutch)
+    float ClutchInput=1.f;
+
     UPROPERTY(Transient, BlueprintReadOnly, Category = Input)
     float RawThrottleInput;
 
