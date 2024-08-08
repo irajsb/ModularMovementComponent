@@ -30,8 +30,7 @@ UENUM()
 enum EModularDifferentialType
 {
 	Simple,
-	Open,
-	LimitedSlip,
+	Open,	LimitedSlip,
 	Locked
 };
 
@@ -146,7 +145,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	UPROPERTY(EditAnywhere, Category=Advanced)
 	float StopThreshold;
 	// How much to press the brake when the player has release throttle
-	UPROPERTY(EditAnywhere, Category=Advanced)
+	UPROPERTY(EditAnywhere, Category=Advanced,BlueprintReadWrite)
 	float IdleBrakeInput;
 
 	//Multiply steer limit angle by this value in order to make AI vehicles move easier
@@ -301,16 +300,16 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 
 
 	//AI
-	 float GetAITraceLength()const;;
-	 float GetAITraceSpeedMultiplier()const;;
+	 float GetAITraceLength()const;
+	 float GetAITraceSpeedMultiplier()const;
 	 float GetNearGoalDistance();;
-	 float GetDesireSpeedNearGoal()const;;
-	 float GetDesireSpeedNormal()const;;
-	 float GetTurnThreshold()const;;
-	 float GetDesireSpeedTurning()const;;
-	 float GetDesireSpeedTurningAround()const;;
-	 float GetFullThrottleSpeed()const;;
-	 float GetAIMaxSteerMultiplier()const;;
+	 float GetDesireSpeedNearGoal()const;
+	 float GetDesireSpeedNormal()const;
+	 float GetTurnThreshold()const;
+	 float GetDesireSpeedTurning()const;
+	 float GetDesireSpeedTurningAround()const;
+	 float GetFullThrottleSpeed()const;
+	 float GetAIMaxSteerMultiplier()const;
 	 float GetSleepThreshold()const;
 	FVector GetAntiRolloverTorque(float DeltaTime, FVector UpVector, float& LastAntiRolloverValue);
 	float GetSleepSlope()const;

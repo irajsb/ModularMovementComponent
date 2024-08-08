@@ -33,6 +33,8 @@ public:
     UPROPERTY()
     FName OptionalBoneName;
 
+    UFUNCTION(BlueprintCallable,Category=Effects)
+    void DisableSurfaceEffects();
     UPROPERTY(BlueprintReadWrite, Transient, Category=Setup)
     UPrimitiveComponent* ParentBodyOverride;
 
@@ -152,7 +154,7 @@ public:
     UPROPERTY(BlueprintReadOnly, Category=Constraint)
     UPhysicsConstraintComponent* SuspensionConstraint = nullptr;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly)
     UPrimitiveComponent* WheelCollision = nullptr;
 
     UPROPERTY(BlueprintReadOnly, Category=Constraint)
@@ -178,4 +180,8 @@ public:
     FVector TotalForces;
 
     void ApplyAccumulatedForces();
+
+
+    UFUNCTION(BlueprintCallable,Category=ConstraintWheels)
+    void ToggleAxleSuspensionXYLock(bool NewLock);
 };

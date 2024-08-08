@@ -560,7 +560,7 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 	{
 		const float EffectiveThrottle=FMath::Min(RawThrottleInput,ClutchInput);
 		// Wake if control input pressed
-		if (VehicleState.bSleeping && ((EffectiveThrottle!=0.f||RawSteeringInput!=0.f)||GetMesh()->IsAnyRigidBodyAwake()))
+		if (VehicleState.bSleeping && (EffectiveThrottle!=0.f||RawSteeringInput!=0.f||GetMesh()->IsAnyRigidBodyAwake()))
 		{
 			
 			SetSleeping(false);

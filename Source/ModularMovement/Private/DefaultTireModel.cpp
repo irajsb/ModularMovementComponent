@@ -41,6 +41,14 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	 FVector WorldMeshVelocity = Mesh->GetBodyInstance()->
 	                                                            GetUnrealWorldVelocityAtPoint(
 		                                                            Wheel->WheelState.HitResult.TraceStart);
+	if(Wheel->WheelState.HitResult.Component.IsValid())
+	{
+		auto Comp=Wheel->WheelState.HitResult.Component.Get();
+		if(Comp->IsSimulatingPhysics())
+		{
+		WorldMeshVelocity-=	Comp->GetBodyInstance()->GetUnrealWorldVelocityAtPoint(Wheel->WheelState.HitResult.TraceStart);
+		}
+	}
 	
 	WorldMeshVelocity.Z = 0;
 	const FVector LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity / 100.f);

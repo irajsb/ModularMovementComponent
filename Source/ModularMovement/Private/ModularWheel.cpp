@@ -72,6 +72,15 @@ void UModularWheel::TickComponent(float DeltaTime, ELevelTick TickType, FActorCo
 	}
 }
 
+void UModularWheel::DisableSurfaceEffects()
+{
+	if(SurfaceData)
+	{
+		SurfaceData->ConditionalBeginDestroy();
+		SurfaceData=nullptr;
+	}
+}
+
 void UModularWheel::SetupWheels(UModularMovementComponent* ModularMovementComponent)
 {
 	//Initialize WheelSetup from WheelSetupClass
@@ -316,11 +325,8 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 		const FMatrix Mat = FMatrix(GroundXVector, GroundYVector, GroundZVector, ModularMovementComponent->GetMesh()->GetComponentLocation());
 		FVector FrictionForceVector = Mat.TransformVector(FinalForceVector);
 
-		const float CrawlAssistance= GetWheelSetup()->CrawlAssistance;
-		if(CrawlAssistance!=0.f){
-		FrictionForceVector=FrictionForceVector+FrictionForceVector*FMath::Max(0,ModularMovementComponent->GetMesh()->GetUpVector().Dot(FrictionForceVector.GetUnsafeNormal())*CrawlAssistance);
-			}
-		//Calculate direction of force
+	
+
 
 		
 
@@ -717,7 +723,7 @@ void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponen
 			SuspensionConstraint->SetConstrainedComponents(WheelOrDifferential, NAME_None, ParentBody, NAME_None);
 			ConstraintParent=WheelOrDifferential;
 			// Set up the constraint properties here
-			SuspensionConstraint->SetLinearXLimit(IsAxle?LCM_Limited:LCM_Locked,WheelSetup-> XYAxisMoveLimit);
+			SuspensionConstraint->SetLinearXLimit(IsAxle?LCM_Locked:LCM_Locked,WheelSetup-> XYAxisMoveLimit);
 			SuspensionConstraint->SetLinearYLimit(IsAxle?LCM_Limited:LCM_Locked,WheelSetup-> XYAxisMoveLimit);
 			SuspensionConstraint->SetLinearZLimit(LCM_Limited, WheelSetup->SuspensionLength);
 			
@@ -811,5 +817,14 @@ void UModularWheel::ApplyAccumulatedForces()
 	}
 	AddForceAtPosition(Mesh, WheelState.HitResult.ImpactPoint, TotalForces, NAME_None);
 	TotalForces=FVector::ZeroVector;
+	
+}
+
+void UModularWheel::ToggleAxleSuspensionXYLock(bool NewLock)
+{
+
+	SuspensionConstraint->SetLinearXLimit(NewLock?LCM_Locked:LCM_Limited,GetWheelSetup()-> XYAxisMoveLimit);
+	SuspensionConstraint->SetLinearYLimit(NewLock?LCM_Locked:LCM_Limited,GetWheelSetup()-> XYAxisMoveLimit);
+	
 	
 }

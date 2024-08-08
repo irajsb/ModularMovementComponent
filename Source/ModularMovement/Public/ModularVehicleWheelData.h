@@ -93,9 +93,7 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	float SteepSurfaceAssistance=0.0;
 
-	//Will Help Off road vehicles  crawl near vertical surfaces 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
-	float CrawlAssistance=0.f;
+
 	
 	//Angle in degrees
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Steer)
