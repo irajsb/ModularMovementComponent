@@ -36,7 +36,7 @@ public:
 	UPROPERTY(EditAnywhere,Category=AttachPoint)
 	bool ManualConstraintDestroy=false;
 	// Set to zero to disable
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category=AttachPoint)
 	float AngularBreakableLimit=30000000000.0;
 	FTimerHandle Handle;
 
@@ -49,6 +49,8 @@ public:
 
 	void ResetWheels() const;
 
+	UPROPERTY(BlueprintReadOnly,Category=AttachPoint)
+	bool CanAttach;
 	
 	UFUNCTION()
 	void OnConstraintBreak(int32 Index);
@@ -56,7 +58,7 @@ public:
 	 * This toggles the attach calls result OnTrailerAttach
 	 * @param FromSave If from save then animations should be ignored and be attached instantly . This has no internal affect just will be passed to events so you can react to it
 	 */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable,Category=AttachPoint)
 	void OnTrailerButtonPress(bool FromSave);
 
 	

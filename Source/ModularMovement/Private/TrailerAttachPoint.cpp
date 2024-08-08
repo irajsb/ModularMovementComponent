@@ -39,7 +39,7 @@ void UTrailerAttachPoint::Check()
 	else
 	{	OtherAttachPoint = nullptr;
 		SetHiddenInGame(true);
-		bool CanAttach = false;
+		 CanAttach = false;
 		TArray<AActor*> Actors;
 		UGameplayStatics::GetAllActorsOfClass(GetWorld(), APawn::StaticClass(), Actors);
 		for (auto Actor : Actors)
@@ -155,7 +155,7 @@ void UTrailerAttachPoint::OnTrailerButtonPress(bool FromSave)
 	}
 	else
 	{
-		if (OtherAttachPoint)
+		if (OtherAttachPoint&&CanAttach)
 		{
 			SetHiddenInGame(true);
 			OtherAttachPoint->SetHiddenInGame(true);
