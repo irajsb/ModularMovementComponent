@@ -154,7 +154,7 @@ public:
     UPROPERTY(BlueprintReadOnly, Category=Constraint)
     UPhysicsConstraintComponent* SuspensionConstraint = nullptr;
 
-    UPROPERTY(BlueprintReadOnly)
+    UPROPERTY(BlueprintReadOnly,Category=Wheel)
     UPrimitiveComponent* WheelCollision = nullptr;
 
     UPROPERTY(BlueprintReadOnly, Category=Constraint)

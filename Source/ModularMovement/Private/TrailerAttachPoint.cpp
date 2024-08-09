@@ -6,6 +6,7 @@
 #include "ModularMovement.h"
 #include "ModularMovementComponent.h"
 #include "ModularVehicleFunctionLibrary.h"
+#include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
 
 void UTrailerAttachPoint::BeginPlay()
@@ -34,6 +35,11 @@ void UTrailerAttachPoint::Check()
 				OnTrailerPromptShow.Broadcast(
 					FMath::Abs(UModularVehicleFunctionLibrary::GetForwardSpeedKMH(MC)) < MaxSpeedToDeAttach, true);
 			}
+		}
+		SetHiddenInGame(true);
+		if(OtherAttachPoint)
+		{
+			OtherAttachPoint->SetHiddenInGame(true);
 		}
 	}
 	else
