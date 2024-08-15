@@ -661,7 +661,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 		WheelTorque = EngineTorque * TransmissionTorque;
 		VehicleState.EngineBrake=VehicleState.EngineBrake*TransmissionTorque;
-
+	
 		if (ModularVehicleDebugger)
 		{
 			//Set Torques and throttle
@@ -1454,9 +1454,12 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 			Wheel->WheelState.WheelSetup->WheelRadius / 100.0f;
 
 		// Clamp the angular velocity to prevent unrealistic values
-		Wheel->WheelState.AngularVelocity = FMath::Clamp(Wheel->WheelState.AngularVelocity, 
-														 -MaxWheelAngularVelocity,
-														 MaxWheelAngularVelocity);
+		if(MaxWheelAngularVelocity!=0.f)
+		{
+			Wheel->WheelState.AngularVelocity = FMath::Clamp(Wheel->WheelState.AngularVelocity, 
+															 -MaxWheelAngularVelocity,
+															 MaxWheelAngularVelocity);
+		}
 	}
 
 	
