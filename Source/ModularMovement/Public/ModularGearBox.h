@@ -56,9 +56,7 @@ public:
 	//Is gearbox Manual
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission)
 	bool IsManual;
-	//Can skip gears to desired gear 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission)
-	bool CanSkipGears;
+
 	//Desired ideal rpm for this vehicle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission,meta=(EditCondition=CanSkipGears))
 	float IdealRPMRatio=0.3;
@@ -124,4 +122,15 @@ public:
 
 	UPROPERTY(Transient)
 	UModularMovementComponent* MC;
+
+
+	int32 MaxGear=9999;
+	//
+	UFUNCTION(BlueprintCallable,Category=Transmission)
+	void SetMaxGear(int32 InGear);
+	UFUNCTION(BlueprintCallable,Category=Transmission)
+	void ResetMaxGear()
+	{
+		MaxGear=9999;
+	}
 };

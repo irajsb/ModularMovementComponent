@@ -9,7 +9,7 @@
 #include "Kismet/KismetMathLibrary.h"
 
 
-UModularGearBox::UModularGearBox(): IsManual(false), CanSkipGears(false), IdleGear(0), CurrentGear(0), TargetGear(0),
+UModularGearBox::UModularGearBox(): IsManual(false), IdleGear(0), CurrentGear(0), TargetGear(0),
                                     MC(nullptr)
 {
 	//reverse
@@ -38,6 +38,12 @@ void UModularGearBox::SetupGearBox()
 
 void UModularGearBox::SetTargetGear(int32 GearNum, bool bImmediate, class UModularMovementComponent* MovementComponent)
 {
+	
+		if(GearNum>MaxGear)
+		{
+			return;
+		}
+	
 	if (Gears.IsValidIndex(GearNum))
 	{
 		if (GearChangeTime == 0.f || bImmediate)
@@ -161,6 +167,11 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 			const float IdealGearRatio = (TargetRpm * PI * DriveWheelRadius) / (VehicleState.ForwardSpeed / 100 *
 				MovementComponent->CurrentDifferentialRatio * 30);
 
+			if(CurrentGear>MaxGear)
+			{
+				SetTargetGear(MaxGear, true, MovementComponent);
+				return;
+			}
 			// not currently changing gear, also don't want to change up because the wheels are spinning up due to having no load
 			if (CurrentGear > IdleGear)
 			{
@@ -170,31 +181,20 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 					{
 						if(Gears.IsValidIndex(CurrentGear + 1))
 						{
-							if (CanSkipGears)
-							{
-								int ClosestGearIndex;
-								CalculateIdealGear(IdealGearRatio, ClosestGearIndex,CurrentGear + 1);
-								SetTargetGear(ClosestGearIndex, false, MovementComponent);
-							}
-							else
-							{
+						
+							
+							
 								SetTargetGear(CurrentGear + 1, false, MovementComponent);
-							}
+							
 						}
 					}
-					else if (GearBoxRPMRatio <= Gears[CurrentGear].DownRatio && CurrentGear > IdleGear + 1)
+					else if ( GearBoxRPMRatio <= Gears[CurrentGear].DownRatio && CurrentGear > IdleGear + 1)
 					// don't change down to neutral
 					{
-						if (CanSkipGears)
-						{
-							int ClosestGearIndex;
-							CalculateIdealGear(IdealGearRatio, ClosestGearIndex,CurrentGear - 1);
-							SetTargetGear(ClosestGearIndex, true, MovementComponent);
-						}
-						else
-						{
+						
 							SetTargetGear(CurrentGear - 1, true, MovementComponent);
-						}
+						
+						
 					}
 				}
 			}
@@ -256,6 +256,11 @@ void UModularGearBox::SetToIdle()
 bool UModularGearBox::IsInReverse()
 {
 	return CurrentGear < IdleGear;
+}
+
+void UModularGearBox::SetMaxGear(int32 InGear)
+{
+	MaxGear=InGear;
 }
 
 bool UModularGearBox::IsChangingGear()
