@@ -7,10 +7,13 @@
 #include "Animation/AnimTrace.h"
 
 
+
+
+
 FAnimNode_AnimateIdler::FAnimNode_AnimateIdler(): TrackComponent(nullptr), AnimRot(0)
 {
 }
-
+FAnimNode_AnimateIdler::~FAnimNode_AnimateIdler() =default;
 
 void FAnimNode_AnimateIdler::GatherDebugData(FNodeDebugData& DebugData)
 {

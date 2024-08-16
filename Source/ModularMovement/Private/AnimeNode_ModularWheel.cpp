@@ -4,6 +4,9 @@
 #include "AnimeNode_ModularWheel.h"
 
 
+FAnimNode_ModularWheel::~FAnimNode_ModularWheel()=default;
+
+
 FAnimNode_ModularWheel::FAnimNode_ModularWheel()
 {
 	AnimInstanceProxy = nullptr;

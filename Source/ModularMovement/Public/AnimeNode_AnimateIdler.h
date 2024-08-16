@@ -6,9 +6,7 @@
 #include "UObject/ObjectMacros.h"
 #include "BoneContainer.h"
 #include "BonePose.h"
-
 #include "BoneControllers/AnimNode_SkeletalControlBase.h"
-
 #include "AnimeNode_AnimateIdler.generated.h"
 
 class UTankTrackComponent;
@@ -31,7 +29,7 @@ struct MODULARMOVEMENT_API FAnimNode_AnimateIdler : public FAnimNode_SkeletalCon
 	UPROPERTY(EditAnywhere, Category=Data,meta = (PinShownByDefault))
 	int OptionalTeethCount=-1;
 
-	
+	virtual  ~FAnimNode_AnimateIdler() override;
 	FAnimNode_AnimateIdler();
 	float LastLenDiff;
 	float AnimRot;

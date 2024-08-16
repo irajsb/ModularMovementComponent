@@ -21,7 +21,7 @@
 			"WhitelistPlatforms": [
 				"Win64",
 				"Linux",
-				"Android","IOS"
+				"Android","IOS","Mac"
 			]
 		},
 		{
@@ -31,7 +31,7 @@
 			"WhitelistPlatforms": [
 				"Win64",
 				"Linux",
-				"Android","IOS"
+				"Android","IOS","Mac
 			]
 		}
 	],

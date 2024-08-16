@@ -23,7 +23,7 @@ struct MODULARMOVEMENT_API FAnimNode_ModularWheel : public FAnimNode_SkeletalCon
 	FString WheelPrefix;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Vehicle, meta = (PinShownByDefault))
 	FString SuspPrefix;
-	
+	virtual  ~FAnimNode_ModularWheel() override;
 	FAnimNode_ModularWheel();
 
 	// FAnimNode_Base interface
