@@ -55,7 +55,13 @@ class MODULARMOVEMENT_API UVehicleSpringArm : public USceneComponent
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = CameraSettings)
 	uint32 bUsePawnControlRotation : 1;
-
+	UPROPERTY(Transient)
+	uint32 bLockToOrientation : 1;
+	UFUNCTION(BlueprintCallable,Category=Lock)
+	void SetCameraLock(bool InCameraLock);
+	float Denominator;
+	UFUNCTION(BlueprintCallable,Category=Lock)
+	void ToggleCameraLock();
 	/** Should we inherit pitch from parent component. Does nothing if using Absolute Rotation. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = CameraSettings)
 	uint32 bInheritPitch : 1;
@@ -146,7 +152,7 @@ class MODULARMOVEMENT_API UVehicleSpringArm : public USceneComponent
 	FVector PreviousDesiredLoc;
 	FVector PreviousArmOrigin;
 	/** Temporary variable for lagging camera rotation, for previous rotation */
-	FRotator PreviousDesiredRot;
+	FRotator PreviousDesiredRot=FRotator::ZeroRotator;
 
 	// UActorComponent interface
 	virtual void OnRegister() override;
@@ -168,6 +174,7 @@ class MODULARMOVEMENT_API UVehicleSpringArm : public USceneComponent
 
 	/** Returns the desired rotation for the spring arm, before the rotation constraints such as bInheritPitch etc are enforced. */
 	virtual FRotator GetDesiredRotation() const;
+	FRotator SafeRotatorInterpolation(const FRotator& From, const FRotator& To, float Alpha, float Speed);
 
 protected:
 	/** Cached component-space socket location */
@@ -234,6 +241,26 @@ public :
 	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
 	TSubclassOf<UCameraShakeBase> CameraShake;
 
+
+
+	// Adjust this to control shake intensity . this is an automated shake calculated by angular velocity of the vehicle 
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
+	float AngularVelocityShakeMultiplier = 0.3f; 
+
+	// Smooth the angular velocity
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
+	float SmoothingFactor = 0.1f;
+
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
+	bool ChromaticAberration=true;
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
+	float ChromaticAberrationMinSpeed=300.f;
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
+	float ChromaticAberrationMaxSpeed=1500.f;
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
+	float MaxAberration=2.f;
+	
+
 private:
 	//Cooldown to let user handle spring arm manually
 	float CurrentCooldown;
@@ -245,5 +272,8 @@ private:
 	float AirborneTime = 0.f;
 
 
-	FRotator LastAutoRot;
+	FRotator LastAutoRot=FRotator::ZeroRotator;
+	FRotator LastOwnerRot=FRotator::ZeroRotator;
+	FVector AngularVelocity=FVector::ZeroVector;
+	FVector SmoothedAngularVelocity=FVector::ZeroVector;
 };

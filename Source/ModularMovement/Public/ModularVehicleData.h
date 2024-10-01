@@ -94,6 +94,9 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	float EngineBrakeFactor=0.1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
 	float EngineMaxBrakeTorque=1000.f;
+	// minimum engine power when engine health is low
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
+	float EngineBrokenMinTorqueFactor=0.2;
 
 	//Gearbox Data
 	UPROPERTY(Instanced,EditAnywhere,Category=Essential)
@@ -208,7 +211,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	float EngineFuelConsumptionMaxRPM;
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = AntiRollover)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AntiRollover)
 	bool bEnableAntiRollover;
 
 	/** Anti rollover value threshold */

@@ -58,6 +58,7 @@ void UTrailerAttachPoint::Check()
 					if (Dist < DrawDistance && !OtherAttachPoint)
 					{
 						OtherAttachPoint = AttachPoint;
+						OtherAttachPoint->OtherAttachPoint=this;
 						if (Dist < AttachDistance)
 						{
 							CanAttach = true;
@@ -143,12 +144,21 @@ void UTrailerAttachPoint::OnConstraintBreak(int32 Index)
 
 void UTrailerAttachPoint::OnTrailerButtonPress(bool FromSave)
 {
+	if(IsTrailer)
+	{
+		if(OtherAttachPoint)
+		{
+			OtherAttachPoint->OnTrailerButtonPress(FromSave);
+			return;
+		}
+	}
 	if (ConstraintComponent)
 	{
 		OnTrailerAttach.Broadcast(false, false, ConstraintComponent);
 		if(OtherAttachPoint)
 		{
 			OtherAttachPoint->OnTrailerAttach.Broadcast(false, false, ConstraintComponent);
+			
 		}
 
 		if (!ManualConstraintDestroy)
@@ -156,6 +166,7 @@ void UTrailerAttachPoint::OnTrailerButtonPress(bool FromSave)
 			ConstraintComponent->BreakConstraint();
 		}
 		ConstraintComponent = nullptr;
+		OtherAttachPoint->ConstraintComponent=nullptr;
 
 		ResetWheels();
 	}
@@ -172,6 +183,7 @@ void UTrailerAttachPoint::OnTrailerButtonPress(bool FromSave)
 				                                GetRelativeTransform(), false)))
 			{
 				ConstraintComponent = Comp;
+				OtherAttachPoint->ConstraintComponent=ConstraintComponent;
 				ConstraintComponent->OnConstraintBroken.AddDynamic(this, &UTrailerAttachPoint::OnConstraintBreak);
 			}
 			if(AngularBreakableLimit>0)
@@ -192,3 +204,4 @@ void UTrailerAttachPoint::OnTrailerButtonPress(bool FromSave)
 		}
 	}
 }
+

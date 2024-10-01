@@ -37,6 +37,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
 	TObjectPtr<USoundBase> ReverseSound;
+
+	// param Health will be passed to this sound. It should be silent at 1 and max at 0. RPM will be also passed 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+	TObjectPtr<USoundBase> EngineHealthSound;
 	
 	
 	
@@ -62,10 +66,15 @@ public:
 	UPROPERTY()
 	TObjectPtr<USoundBase> TempEngineSound;
 
+	//you can pass particles to this system to handle params on them Strentgh and Health will be passed
+	UPROPERTY(BlueprintReadWrite,Category=Particle)
+	TArray<UParticleSystemComponent*> Particles;
 	
 	
 	UPROPERTY(BlueprintReadOnly,Category="EngineSound")
 	float Load;
+	UPROPERTY(BlueprintReadOnly,EditAnywhere,Category="EngineSound")
+	float ColdStart=3.f;
 	UPROPERTY(BlueprintReadOnly,Category="EngineSound")
 	float CurrentTurbo;
 private:
@@ -78,4 +87,7 @@ private:
 	UAudioComponent * BrakeAudioComponent;
 	UPROPERTY(Transient)
 	UAudioComponent * ReverseAudioComponent;
+
+	UPROPERTY(Transient)
+	UAudioComponent * HealthAudioComponent;
 };

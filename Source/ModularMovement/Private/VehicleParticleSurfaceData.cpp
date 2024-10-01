@@ -17,6 +17,7 @@
 void UVehicleParticleSurfaceData::UpdateParticleForWheel(float DeltaTime,UModularWheel* Wheel)
 {
 
+
 	
 	bool Found=false;
 	bool SoundFound=false;
@@ -63,8 +64,23 @@ void UVehicleParticleSurfaceData::UpdateParticleForWheel(float DeltaTime,UModula
 		}
 	}
 
-	
-
+	const float CurrentLen=Wheel->WheelState.HitResult.Time;
+	if(SuspensionSqueakSound)
+	{
+		SuspensionSqueakTime=SuspensionSqueakTime-DeltaTime;
+		if(SuspensionSqueakTime<=0.f)
+		{
+		
+			if(FMath::Abs(CurrentLen-LastSuspSize)>SuspLenChange)
+			{
+				// play susp squeak
+				SuspensionSqueakTime=FMath::RandRange(SqueakCooldownMin,SqueakCooldownMax);
+				UGameplayStatics::SpawnSoundAtLocation(this,SuspensionSqueakSound,Wheel->GetComponentLocation(),FRotator::ZeroRotator,1.f,1.f,0.f,SoundAttenuation);
+		
+			}
+		}
+		LastSuspSize=CurrentLen;
+	}
 	
 }
 
@@ -222,7 +238,9 @@ void UVehicleParticleSurfaceData::HandleSound(const UModularWheel* Wheel, const 
 			AddCompForDelete(Comp);
 			
 			Comp->FadeOut(1,0.f);
-			AudioComponent=	UGameplayStatics::SpawnSoundAtLocation(GetWorld(),ParticleCouple.Sound,Wheel->WheelState.HitResult.ImpactPoint);
+			AudioComponent=	UGameplayStatics::SpawnSoundAtLocation(GetWorld(),ParticleCouple.Sound,Wheel->WheelState.HitResult.ImpactPoint,FRotator::ZeroRotator,1.f,1.f,0.f,SoundAttenuation);
+		
+		
 			return;
 		}
 		Comp->SetWorldLocation(Wheel->WheelState.HitResult.ImpactPoint);
@@ -250,7 +268,8 @@ void UVehicleParticleSurfaceData::HandleSound(const UModularWheel* Wheel, const 
 		
 	}else
 	{
-		AudioComponent=	UGameplayStatics::SpawnSoundAtLocation(GetWorld(),ParticleCouple.Sound,Wheel->WheelState.HitResult.ImpactPoint);
+		AudioComponent=	UGameplayStatics::SpawnSoundAtLocation(GetWorld(),ParticleCouple.Sound,Wheel->WheelState.HitResult.ImpactPoint,FRotator::ZeroRotator,1.f,1.f,0.f,SoundAttenuation);
+		
 	}
 	
 

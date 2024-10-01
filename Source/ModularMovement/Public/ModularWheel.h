@@ -184,4 +184,5 @@ public:
 
     UFUNCTION(BlueprintCallable,Category=ConstraintWheels)
     void ToggleAxleSuspensionXYLock(bool NewLock);
+    float GetSpringCompressionRatio() const;
 };

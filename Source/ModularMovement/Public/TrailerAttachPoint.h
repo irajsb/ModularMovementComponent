@@ -69,10 +69,11 @@ public:
 	FOnTrailerPromptShow OnTrailerPromptShow;
 
 
-	UPROPERTY(Transient)
+	UPROPERTY(Transient,BlueprintReadOnly,Category="Trailer")
 	UPhysicsConstraintComponent * ConstraintComponent;
 
 
 	UPROPERTY(BlueprintAssignable,Category=AttachPoint)
 	FOnTrailerAttach OnTrailerAttach;
+	
 };

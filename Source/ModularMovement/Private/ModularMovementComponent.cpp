@@ -114,6 +114,15 @@ UMeshComponent* UModularMovementComponent::GetMesh() const
 	return Cast<UMeshComponent>(UpdatedComponent);
 }
 
+void UModularMovementComponent::SetEngineHealth(float Input)
+{
+	VehicleHealth=Input;
+	if(VehicleHealth==0.f&&VehicleState.IsEngineOn)
+	{
+		StopEngine();
+	}
+
+}
 
 
 void UModularMovementComponent::SetThrottleInput(float Input)
@@ -164,7 +173,7 @@ void UModularMovementComponent::HoldStarter(float StartTime)
 	auto StaterFinish = [this,StartTime]()
 	{
 		// if no fuel keep the loop going else start engine 
-		HoldStarter(VehicleState.CurrentFuel == 0.f ? StartTime : 0.f);
+		HoldStarter(VehicleState.CurrentFuel == 0.f ||VehicleHealth==0.f? StartTime : 0.f);
 	};
 	if (StartTime == 0.f)
 	{
@@ -186,6 +195,7 @@ void UModularMovementComponent::ReleaseStarter()
 		GetWorld()->GetTimerManager().ClearTimer(StarterTimerHandle);
 		OnEngineStateChange.Broadcast(VehicleState.IsEngineOn, false);
 	}
+	
 }
 
 void UModularMovementComponent::StopEngine()
@@ -523,7 +533,6 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 {
 
 
-
 	VehicleState.DriveWheelsOnGround =VehicleState.WheelsOnGround = 0;
 
 	VehicleState.AxleRPM=0.f;
@@ -659,7 +668,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 		}
 
 
-		WheelTorque = EngineTorque * TransmissionTorque;
+		WheelTorque = EngineTorque * TransmissionTorque*FMath::Max(VehicleHealth,GetSetup()->EngineBrokenMinTorqueFactor);
 		VehicleState.EngineBrake=VehicleState.EngineBrake*TransmissionTorque;
 	
 		if (ModularVehicleDebugger)

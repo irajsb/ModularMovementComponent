@@ -8,6 +8,7 @@
 #include "Engine/HitResult.h"
 #include "DrawDebugHelpers.h"
 #include "ModularMovementComponent.h"
+#include "Camera/CameraComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
 
@@ -49,11 +50,64 @@ UVehicleSpringArm::UVehicleSpringArm(const FObjectInitializer& ObjectInitializer
 	CameraLagMaxDistance = 0.f;
 
 	UnfixedCameraPosition = FVector::ZeroVector;
+	
 }
 
 FRotator UVehicleSpringArm::GetDesiredRotation() const
 {
 	return GetComponentRotation();
+}
+
+FRotator UVehicleSpringArm::SafeRotatorInterpolation(const FRotator& From, const FRotator& To, float Alpha, float Speed)
+{
+	if (From.ContainsNaN() || To.ContainsNaN())
+	{
+		UE_LOG(LogTemp, Error, TEXT("Invalid rotation detected in UVehicleSpringArm::SafeRotatorInterpolation"));
+		return FRotator::ZeroRotator;
+	}
+
+	FQuat FromQuat = FQuat(From);
+	FQuat ToQuat = FQuat(To);
+    
+	if (!FromQuat.IsNormalized() || !ToQuat.IsNormalized())
+	{
+		UE_LOG(LogTemp, Error, TEXT("Non-normalized quaternion detected in UVehicleSpringArm::SafeRotatorInterpolation"));
+		return FRotator::ZeroRotator;
+	}
+
+	return FRotator(FMath::QInterpTo(FromQuat, ToQuat, Alpha, Speed));
+}
+
+
+void UVehicleSpringArm::SetCameraLock(bool InCameraLock)
+{
+	if(InCameraLock!=bLockToOrientation)
+	{
+		
+
+		if(InCameraLock)
+		{
+			Denominator=GetOwner()->GetActorRotation().Yaw;
+		}else
+		{
+			if (const APawn* OwningPawn = Cast<APawn>(GetOwner()))
+			{
+				if(OwningPawn->Controller)
+				{
+					OwningPawn->Controller->SetControlRotation(GetTargetRotation());
+				}
+			}
+			
+			
+		}
+
+		bLockToOrientation=InCameraLock;
+	}
+}
+
+void UVehicleSpringArm::ToggleCameraLock()
+{
+	SetCameraLock(!bLockToOrientation);
 }
 
 FRotator UVehicleSpringArm::GetTargetRotation() const
@@ -75,7 +129,10 @@ FRotator UVehicleSpringArm::GetTargetRotation() const
 	// If inheriting rotation, check options for which components to inherit
 	if (!IsUsingAbsoluteRotation())
 	{
+		
 		const FRotator LocalRelativeRotation = GetRelativeRotation();
+	
+		
 		if (!bInheritPitch)
 		{
 			DesiredRot.Pitch = LocalRelativeRotation.Pitch;
@@ -91,7 +148,12 @@ FRotator UVehicleSpringArm::GetTargetRotation() const
 			DesiredRot.Roll = LocalRelativeRotation.Roll;
 		}
 	}
+	if(bLockToOrientation)
+	{
+		DesiredRot.Yaw=DesiredRot.Yaw+GetOwner()->GetActorRotation().Yaw-Denominator;
+	}
 
+	
 	return DesiredRot;
 }
 
@@ -100,6 +162,31 @@ void UVehicleSpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocation
 {
 	FRotator DesiredRot = GetTargetRotation();
 
+	// Calculate and apply camera shake
+	FRotator OwnerRot = GetOwner()->GetActorRotation();
+    
+	// Calculate angular velocity
+	FRotator DeltaRot =UKismetMathLibrary::NormalizedDeltaRotator(OwnerRot,LastOwnerRot);		
+	FVector DeltaEuler = DeltaRot.Euler();
+	AngularVelocity = DeltaEuler / DeltaTime;
+
+	
+	SmoothedAngularVelocity = FMath::VInterpTo(SmoothedAngularVelocity, AngularVelocity, DeltaTime, 1.0f / SmoothingFactor);
+
+	if (SmoothedAngularVelocity.ContainsNaN()) {
+		SmoothedAngularVelocity = FVector::ZeroVector;
+	}
+	// Apply shake based on smoothed angular velocity
+	
+	const FRotator Shake(SmoothedAngularVelocity.Y * AngularVelocityShakeMultiplier,0.f,-SmoothedAngularVelocity.X * AngularVelocityShakeMultiplier);
+
+	// Apply shake to desired rotation
+	
+
+	LastOwnerRot = OwnerRot;
+
+
+	
 	// Apply 'lag' to rotation if desired
 	if (bDoRotationLag && CurrentCooldown <= 0.f)
 	{
@@ -114,15 +201,15 @@ void UVehicleSpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocation
 				LerpTarget += ArmRotStep * LerpAmount;
 				RemainingTime -= LerpAmount;
 
-				DesiredRot = FRotator(FMath::QInterpTo(FQuat(PreviousDesiredRot), FQuat(LerpTarget), LerpAmount,
-				                                       CameraRotationLagSpeed));
+				DesiredRot = SafeRotatorInterpolation(PreviousDesiredRot, LerpTarget, LerpAmount, CameraRotationLagSpeed);
+				DesiredRot += Shake;
 				PreviousDesiredRot = DesiredRot;
 			}
 		}
 		else
 		{
-			DesiredRot = FRotator(FMath::QInterpTo(FQuat(PreviousDesiredRot), FQuat(DesiredRot), DeltaTime,
-			                                       CameraRotationLagSpeed));
+			DesiredRot = SafeRotatorInterpolation(PreviousDesiredRot, DesiredRot, DeltaTime, CameraRotationLagSpeed);
+			DesiredRot += Shake;
 		}
 	}
 	PreviousDesiredRot = DesiredRot;
@@ -166,19 +253,7 @@ void UVehicleSpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocation
 			}
 		}
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (bDrawDebugLagMarkers)
-		{
-			DrawDebugSphere(GetWorld(), ArmOrigin, 5.f, 8, FColor::Green);
-			DrawDebugSphere(GetWorld(), DesiredLoc, 5.f, 8, FColor::Yellow);
 
-			const FVector ToOrigin = ArmOrigin - DesiredLoc;
-			DrawDebugDirectionalArrow(GetWorld(), DesiredLoc, DesiredLoc + ToOrigin * 0.5f, 7.5f,
-			                          bClampedDist ? FColor::Red : FColor::Green);
-			DrawDebugDirectionalArrow(GetWorld(), DesiredLoc + ToOrigin * 0.5f, ArmOrigin, 7.5f,
-			                          bClampedDist ? FColor::Red : FColor::Green);
-		}
-#endif
 	}
 	DesiredLoc.X = ArmOrigin.X;
 	DesiredLoc.Y = ArmOrigin.Y;
@@ -223,10 +298,14 @@ void UVehicleSpringArm::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocation
 	// Convert to relative to component
 	FTransform RelCamTM = WorldCamTM.GetRelativeTransform(GetComponentTransform());
 
+	
 	// Update socket location/rotation
-	RelativeSocketLocation = RelCamTM.GetLocation();
-	RelativeSocketRotation = RelCamTM.GetRotation();
-
+	if(!RelCamTM.ContainsNaN())
+	{
+		RelativeSocketLocation = RelCamTM.GetLocation();
+		RelativeSocketRotation = RelCamTM.GetRotation();
+	}
+	RelativeSocketRotation.Normalize();
 	UpdateChildTransforms();
 }
 
@@ -296,6 +375,7 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 					{
 						APlayerController* PC = Cast<APlayerController>(OwningPawn->GetController());
 						PC->ClientStartCameraShake(CameraShake);
+						
 					}
 				}
 				AirborneTime = 0.f;
@@ -333,7 +413,7 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 			}
 			else
 			{
-				if(AutoCorrect)
+				if(AutoCorrect&&!bLockToOrientation)
 				{
 					//orient camera towards the speed vector
 
@@ -396,14 +476,33 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 		{
 			LastAutoRot= OwningPawn->GetControlRotation();
 		}
+
+
+		//Shake loop
+
+	
+		
 	}
 
 
 
-
+	
 	
 	
 	UpdateDesiredArmLocation(bDoCollisionTest, bEnableCameraLag, bEnableCameraRotationLag, DeltaTime);
+
+	if(ChromaticAberration)
+	{
+		if( UCameraComponent* Camera=Cast<UCameraComponent>( GetChildComponent(0)))
+		{
+			Camera->PostProcessSettings.ChromaticAberrationStartOffset=0.5;
+			Camera->PostProcessSettings.SceneFringeIntensity=UKismetMathLibrary::MapRangeClamped(PreviousSpeed,ChromaticAberrationMinSpeed,ChromaticAberrationMaxSpeed,0,MaxAberration);
+
+			Camera->PostProcessSettings.bOverride_SceneFringeIntensity=true;
+		}
+	}
+
+
 }
 
 FTransform UVehicleSpringArm::GetSocketTransform(FName InSocketName, ERelativeTransformSpace TransformSpace) const

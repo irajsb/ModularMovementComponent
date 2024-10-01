@@ -77,7 +77,7 @@ void USemiTruckGearBox::Update(float DeltaTime, UModularMovementComponent* Movem
 
 					int ClosestGearIndex;
 					CalculateIdealGear(IdealGearRatio, ClosestGearIndex,CurrentGear );
-					if(CurrentGear!=ClosestGearIndex)
+					if(CurrentGear!=ClosestGearIndex&&FMath::Abs(IdealRPMRatio-CurrentRpm)>MaxVariance)
 					{
 						
 							

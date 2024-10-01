@@ -308,10 +308,18 @@ public:
     UPROPERTY(BlueprintReadWrite,Category=Clutch)
     float ClutchInput=1.f;
 
+    //range 0-1  Will drop engine power and vehicle will turn of when 0 
+    UFUNCTION(BlueprintCallable,Category=Engine)
+    void SetEngineHealth(float Input);
+    //range 0-1  Will drop engine power and vehicle will turn of when 0 
+    UPROPERTY(BlueprintReadOnly,Category=Engine)
+    float VehicleHealth=1.f;
+
+  
     UPROPERTY(Transient, BlueprintReadOnly, Category = Input)
     float RawThrottleInput;
 
-    UPROPERTY(Transient)
+    UPROPERTY(Transient,BlueprintReadOnly,Category=Input)
     bool HandBrakeInput;
 
     UPROPERTY(Transient)

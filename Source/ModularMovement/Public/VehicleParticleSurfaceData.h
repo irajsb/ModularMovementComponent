@@ -7,6 +7,7 @@
 #include "UObject/NoExportTypes.h"
 #include "NiagaraSystem.h"
 #include "Components/AudioComponent.h"
+#include "Components/ForceFeedbackComponent.h"
 #include "Sound/SoundAttenuation.h"
 #include "VehicleParticleSurfaceData.generated.h"
 
@@ -32,6 +33,8 @@ struct FSurfaceParticleCouple
 
 	UPROPERTY(EditAnywhere,Category = "Setup")
 	TObjectPtr<USoundBase> Sound;
+
+	
 
 	
 	
@@ -98,4 +101,21 @@ private:
 	TArray<USceneComponent*>GarbageEmitters;
 	void CleanupEmitters();
 	FTimerHandle CleanupTimerHandle;
+
+
+
+	
+	UPROPERTY(EditAnywhere,Category = "Squeak")
+	TObjectPtr<USoundBase> SuspensionSqueakSound;
+	// The amnount of susp Len change to play squeak sound
+	UPROPERTY(EditAnywhere,Category = "Squeak")
+	float SuspLenChange=0.2;
+	UPROPERTY(EditAnywhere,Category = "Squeak")
+	float SqueakCooldownMin=2.f;
+	UPROPERTY(EditAnywhere,Category = "Squeak")
+	float SqueakCooldownMax=3.f;
+
+	// Prevent initial Squeaking
+	float SuspensionSqueakTime=2.f;
+	float LastSuspSize;
 };

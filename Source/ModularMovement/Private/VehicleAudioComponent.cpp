@@ -8,6 +8,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "GenericPlatform/GenericPlatformMath.h"
 #include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
 
 void UVehicleAudioComponent::BeginPlay()
 {
@@ -20,25 +21,38 @@ void UVehicleAudioComponent::BeginPlay()
 		{
 			MC->OnEngineStateChange.AddDynamic(
 				this, &UVehicleAudioComponent::UVehicleAudioComponent::OnEngineStateChange);
+
+			if(EngineHealthSound)
+			{
+				HealthAudioComponent=Cast<UAudioComponent> (Pawn->AddComponentByClass(UAudioComponent::StaticClass(),false,FTransform::Identity,false));
+				HealthAudioComponent->SetSound(EngineHealthSound);
+				HealthAudioComponent->Stop();
+				
+			}
+			
+			
+			
 		}
 	}
+	
+	
 }
 
 UVehicleAudioComponent::UVehicleAudioComponent(): Load(0), CurrentTurbo(0), LastHandBrakeInput(false),
                                                   LastBrakeInput(false),
                                                   LastReverseInput(false),
                                                   BrakeAudioComponent(nullptr),
-                                                  ReverseAudioComponent(nullptr)
+                                                  ReverseAudioComponent(nullptr), HealthAudioComponent(nullptr)
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	bAutoActivate = false;
 }
 
-void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-                                           FActorComponentTickFunction* ThisTickFunction)
+void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	
 	APawn* Pawn = Cast<APawn>(GetOwner());
 	if (!Pawn)
 	{
@@ -50,6 +64,23 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	{
 		return;
 	}
+
+
+	//Particles
+
+
+	if(MC->VehicleState.IsEngineOn)
+	{
+		ColdStart-=DeltaTime;
+	}
+	for (auto Particle:Particles)
+	{
+		Particle->SetFloatParameter("Health",MC->VehicleHealth);
+		Particle->SetFloatParameter("Strentgh",MC->VehicleState.IsEngineOn?(FMath::Max(Load,ColdStart)):0.f);
+	}
+
+
+	//Audio
 	LastBrakePlayTime=LastBrakePlayTime-DeltaTime;
 	const float RPMRatio = MC->VehicleState.CurrentRpm / MC->VehicleState.VehicleData->GetMaxRPM();
 	const float RPMChange = RPMRatio - RPM;
@@ -64,6 +95,9 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	CurrentTurbo = UKismetMathLibrary::FInterpTo_Constant(CurrentTurbo, RPMRatio, DeltaTime, TurboInterpolationSpeed);
 	SetFloatParameter("Turbo", CurrentTurbo * TurboMultiplier);
 
+	HealthAudioComponent->SetFloatParameter("Health", MC->VehicleHealth);
+	HealthAudioComponent->SetFloatParameter("RPM", RPM * RPMMultiplier);
+	
 	if (LastHandBrakeInput != MC->HandBrakeInput)
 	{
 		LastHandBrakeInput = MC->HandBrakeInput;
@@ -87,7 +121,7 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			UGameplayStatics::PlaySoundAtLocation(GetWorld(), BrakeStartSound, GetComponentLocation());
 			if (BrakeLoopSound)
 			{
-				if (BrakeAudioComponent)
+				if (BrakeAudioComponent&&MC->VehicleState.IsEngineOn)
 				{
 					BrakeAudioComponent->FadeIn(0.2, 1);
 				}
@@ -159,8 +193,15 @@ void UVehicleAudioComponent::OnEngineStateChange(bool IsEngineOn, bool IsStartin
 	{
 		if (IsStarting)
 		{
-			SetSound(StarterSound);
-			Play();
+			if(GetSound()==StarterSound&&IsPlaying())
+			{
+				
+			}else
+			{
+				SetSound(StarterSound);
+				Play();
+			}
+		
 		}
 		else
 		{
@@ -170,12 +211,14 @@ void UVehicleAudioComponent::OnEngineStateChange(bool IsEngineOn, bool IsStartin
 				UGameplayStatics::PlaySoundAtLocation(GetWorld(), StarterReleaseSound, GetComponentLocation());
 			}
 		}
+		HealthAudioComponent->Stop();
 	}
 	else
 	{
 		if (Sound != TempEngineSound)
 		{
 			Play();
+			HealthAudioComponent->Play();
 			UGameplayStatics::PlaySoundAtLocation(GetWorld(), EngineStartSound, GetComponentLocation());
 			SetSound(TempEngineSound);
 		}

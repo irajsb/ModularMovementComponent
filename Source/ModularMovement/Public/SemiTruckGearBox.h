@@ -17,7 +17,9 @@ class MODULARMOVEMENT_API USemiTruckGearBox : public UModularGearBox
 
 	UPROPERTY(Category="Setup",EditAnywhere)
 	float Cooldown=3.f;
-	
+	//Maximum RPM ratio difference between ideal rpm and current rpm before shift happens
+	UPROPERTY(Category="Setup",EditAnywhere)
+	float MaxVariance=0.3;
 	float CurrentCooldown=0.f;
 
 	virtual void Update(float DeltaTime, UModularMovementComponent* MovementComponent) override;

@@ -59,7 +59,7 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	float WheelWidth=30;
 	// Wheel mass . Changes inertia and how fast the wheel speed changes. you can use this to stablizie the wheel if needed
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
-	float WheelMass=50;
+	float WheelMass=250;
 	//Offset to apply to trace start 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	FVector TraceStartOffset;

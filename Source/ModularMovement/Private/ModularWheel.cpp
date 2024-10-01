@@ -158,6 +158,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	{
 		FVector Lin, Ang;
 		SuspensionConstraint->GetConstraintForce(Lin, Ang);
+		WheelState.HitResult.Time=GetSpringCompressionRatio();
 		
 		WheelState.WheelLoad.Z = FMath::Abs(Lin.Z);
 		
@@ -827,4 +828,22 @@ void UModularWheel::ToggleAxleSuspensionXYLock(bool NewLock)
 	SuspensionConstraint->SetLinearYLimit(NewLock?LCM_Locked:LCM_Limited,GetWheelSetup()-> XYAxisMoveLimit);
 	
 	
+}
+
+
+float UModularWheel::GetSpringCompressionRatio() const
+{
+	if (SuspensionConstraint  && ConstraintParent)
+	{
+		const FTransform WheelTransform = GetComponentTransform();
+		const FTransform ParentTransform = MovementComponentRef->GetOwner()->GetTransform();
+		const FTransform RelativeTransform = WheelTransform.GetRelativeTransform(ParentTransform);
+		 float Compress=	SuspensionConstraint->ConstraintInstance.Pos2.Z-RelativeTransform.GetLocation().Z;
+		Compress=1-Compress/(GetWheelSetup()->SuspensionLength*2);
+		Compress=FMath::Clamp(Compress,0.f,1.f);
+		return Compress;
+	}
+
+	// Return 0 if the constraint, wheel setup, or constraint parent is not valid
+	return 0.0f;
 }
