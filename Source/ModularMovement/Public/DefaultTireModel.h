@@ -40,11 +40,11 @@ public:
 	bool AutoGenerateTheLateralGraph;
 
 	// Minimum lateral friction force for auto-generated graph.
-	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateGraph))
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateTheLateralGraph))
 	float MinFrictionLateralForce = 0.8;
 
 	// Maximum lateral friction force for auto-generated graph.
-	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateGraph))
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateTheLateralGraph))
 	float MaxFrictionLateralForce = 1.5;
 
 	// Lateral grip curve for the tire.

@@ -16,6 +16,26 @@
 DECLARE_CYCLE_STAT(TEXT("Modular Updage Suspension"), STAT_ModularSuspension, STATGROUP_MovementPhysics);
 DECLARE_CYCLE_STAT(TEXT("Modular Updage Forces"), STAT_ModularForces, STATGROUP_MovementPhysics);
 
+
+
+static float CalculateAngleFromDisplacement(float RightDisplacement, float DownDisplacement)
+{
+	// Ensure we don't divide by zero
+	if (FMath::IsNearlyZero(RightDisplacement))
+	{
+		// If right displacement is zero, angle is either 90 or -90 degrees
+		return (DownDisplacement >= 0.0f) ? 90.0f : -90.0f;
+	}
+
+	// Calculate the angle using arctangent
+	float AngleRadians = FMath::Atan2(DownDisplacement, RightDisplacement);
+
+	// Convert radians to degrees
+	float AngleDegrees = FMath::RadiansToDegrees(AngleRadians);
+
+	return AngleDegrees;
+}
+
 // Sets default values for this component's properties
 UModularWheel::UModularWheel(): WheelState(), ParentBodyOverride(nullptr), SurfaceData(nullptr),
                                 NoFrictionDefaultPhysMaterial(nullptr),
@@ -767,9 +787,32 @@ void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponen
 	}
 }
 
+void UModularWheel::SetupAngularConstraint(UModularMovementComponent* MovementComponent,
+	UPrimitiveComponent* ParentBody, UPrimitiveComponent* PivotPointMesh, UPrimitiveComponent* InWheelCollision,
+	UPhysicsConstraintComponent* InConstraint, bool IsAxle)
+{
+
+
+	SuspensionConstraint=InConstraint;
+	SuspensionConstraint->SetConstrainedComponents(PivotPointMesh, NAME_None, ParentBody, NAME_None);
+	WheelCollision = InWheelCollision;
+	ConstraintParent=ParentBody;
+	NoFrictionDefaultPhysMaterial = NewObject<UPhysicalMaterial>();
+	NoFrictionDefaultPhysMaterial->Friction = 0.f;
+	NoFrictionDefaultPhysMaterial->StaticFriction = 0.f;
+	NoFrictionDefaultPhysMaterial->Restitution = 0.5;
+	NoFrictionDefaultPhysMaterial->FrictionCombineMode = EFrictionCombineMode::Min;
+	if (WheelCollision)
+	{
+		WheelCollision->SetPhysMaterialOverride(NoFrictionDefaultPhysMaterial);
+	}
+	
+	
+}
+
 void UModularWheel::SetupCustomConstraint(UModularMovementComponent* MovementComponent,
-	UPhysicsConstraintComponent* ConstraintComponent, UPrimitiveComponent* ParentBody,
-	UPrimitiveComponent* WheelOrDifferential, UPrimitiveComponent* InWheelCollision)
+                                          UPhysicsConstraintComponent* ConstraintComponent, UPrimitiveComponent* ParentBody,
+                                          UPrimitiveComponent* WheelOrDifferential, UPrimitiveComponent* InWheelCollision)
 {
 
 
@@ -838,10 +881,27 @@ float UModularWheel::GetSpringCompressionRatio() const
 		const FTransform WheelTransform = GetComponentTransform();
 		const FTransform ParentTransform = MovementComponentRef->GetOwner()->GetTransform();
 		const FTransform RelativeTransform = WheelTransform.GetRelativeTransform(ParentTransform);
-		 float Compress=	SuspensionConstraint->ConstraintInstance.Pos2.Z-RelativeTransform.GetLocation().Z;
-		Compress=1-Compress/(GetWheelSetup()->SuspensionLength*2);
-		Compress=FMath::Clamp(Compress,0.f,1.f);
-		return Compress;
+		
+		if(GetWheelSetup()->UserControlArmSuspension)
+		{
+			 float Angle=UKismetMathLibrary::ComposeRotators(	ConstraintParent->GetComponentRotation(),WheelTransform.GetRotation().Rotator().GetInverse()).Roll;
+			if(SuspensionConstraint->GetRelativeRotation().Yaw<0)
+			{
+				Angle=Angle*-1;
+			}
+			
+			return UKismetMathLibrary::MapRangeClamped(Angle,0,GetWheelSetup()->MaxCompressAngle,0,1);
+			 
+			
+		}else
+		{
+			
+			float Compress=	SuspensionConstraint->ConstraintInstance.Pos2.Z-RelativeTransform.GetLocation().Z;
+			Compress=1-Compress/(GetWheelSetup()->SuspensionLength*2);
+			Compress=FMath::Clamp(Compress,0.f,1.f);
+			return Compress;
+		}
+		
 	}
 
 	// Return 0 if the constraint, wheel setup, or constraint parent is not valid

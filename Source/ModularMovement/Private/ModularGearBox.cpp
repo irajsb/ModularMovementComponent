@@ -157,7 +157,7 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 			//Calculate RPM from vehicle speed instead of wheel because wheel can get locked or spin
 			const float CurrentRpm = (VehicleState.ForwardSpeed / 100 * Gears[CurrentGear].GearRatio * MovementComponent
 				->CurrentDifferentialRatio / DriveWheelRadius) * 30 / PI;
-
+			
 			GearBoxRPMRatio = UKismetMathLibrary::MapRangeClamped(
 				CurrentRpm, MovementComponent->GetSetup()->GetIdleRPM(),
 				MovementComponent->GetSetup()->GetMaxRPM(), 0, 1);

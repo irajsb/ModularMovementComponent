@@ -54,6 +54,11 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	//to allow solid axle drop there should be move limit in other axis
 	UPROPERTY(EditAnywhere,AdvancedDisplay,BlueprintReadWrite,Category=Essential,meta=(EditCondition="SuspensionType==Constraint",EditConditionHides))
 	float XYAxisMoveLimit=5.f;
+	UPROPERTY(EditAnywhere,AdvancedDisplay,BlueprintReadWrite,Category=Essential,meta=(EditCondition="SuspensionType==Constraint",EditConditionHides))
+	bool UserControlArmSuspension;
+	//The maximum angle of compression. This has no impact on physics of supension but helps determine how much is wheel compressed based on its angle 
+	UPROPERTY(EditAnywhere,AdvancedDisplay,BlueprintReadWrite,Category=Essential,meta=(EditCondition="SuspensionType==Constraint",EditConditionHides))
+	float MaxCompressAngle=50.f;
 	//trace wheel radius
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelWidth=30;

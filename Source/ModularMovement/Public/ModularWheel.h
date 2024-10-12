@@ -139,6 +139,10 @@ private:
     UFUNCTION(BlueprintCallable, Category="Game|Components|ModularVehicleMovement")
     void SetupConstraints(UModularMovementComponent* MovementComponent, UPrimitiveComponent* ParentBody, UPrimitiveComponent* WheelOrDifferential, UPrimitiveComponent* InWheelCollision, UPhysicsConstraintComponent* InOptionalConstraint, bool IsAxle);
 
+   
+    UFUNCTION(BlueprintCallable, Category="Game|Components|ModularVehicleMovement")
+    void SetupAngularConstraint(UModularMovementComponent* MovementComponent, UPrimitiveComponent* ParentBody, UPrimitiveComponent* PivotPointMesh, UPrimitiveComponent* InWheelCollision, UPhysicsConstraintComponent* InConstraint, bool IsAxle);
+    
     UFUNCTION(BlueprintCallable, Category="Game|Components|ModularVehicleMovement")
     void SetupCustomConstraint(UModularMovementComponent* MovementComponent, UPhysicsConstraintComponent* ConstraintComponent, UPrimitiveComponent* ParentBody, UPrimitiveComponent* WheelOrDifferential, UPrimitiveComponent* InWheelCollision);
 
