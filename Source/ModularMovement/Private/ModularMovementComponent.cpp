@@ -157,6 +157,11 @@ int UModularMovementComponent::GetNumberOfDriveWheelsTouchingGround() const
 	return VehicleState.DriveWheelsOnGround;
 }
 
+int UModularMovementComponent::GetNumberOfWheelsTouchingGround() const
+{
+	return VehicleState.WheelsOnGround;
+}
+
 float UModularMovementComponent::GetRPMRatio()
 {
 	if (!GetSetup())
@@ -231,13 +236,19 @@ void UModularMovementComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
 	UMeshComponent* MeshComponent = GetMesh();
+
+	
 	if (!MeshComponent)
 	{
 		return ShowSetupError("No Mesh Found at root component of the vehicle");
 	}
 
+	OriginalCOM= MeshComponent->GetCenterOfMass();
 
-	if (VehicleState.VehicleDataClass.LoadSynchronous())
+	OriginalDampening=FVector2D(MeshComponent->GetLinearDamping(),MeshComponent->GetAngularDamping());
+
+
+	if (VehicleState.VehicleDataClass)
 	{
 		VehicleState.VehicleData = NewObject<UModularVehicleData>(this, VehicleState.VehicleDataClass.Get());
 	}
@@ -266,7 +277,7 @@ void UModularMovementComponent::InitializeComponent()
 
 	if (ApplyRecommendedMeshProperties)
 	{
-		MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
+		//MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
 		MeshComponent->BodyInstance.bSimulatePhysics = true;
 		if (MeshComponent->GetCollisionObjectType())
 
@@ -483,7 +494,14 @@ void UModularMovementComponent::BeginPlay()
 	{
 		UE_LOG(LogModularVehicle, Error, TEXT("Assign The Vehicle DataAsset "));
 		UModularVehicleFunctionLibrary::NotifyError(
-			"No Vehicle Data class in movement component. Please assign one in the details panel");
+			"No Vehicle Data class in movement component or . Please assign one in the details panel");
+		return;
+	}
+	if(!GetSetup()->GetGearBox())
+	{
+		UE_LOG(LogModularVehicle, Error, TEXT("GearboxMissing"));
+		UModularVehicleFunctionLibrary::NotifyError(
+			"GearboxMissing");
 		return;
 	}
 
@@ -564,36 +582,56 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 	VehicleState.SideSpeed = FVector::DotProduct(GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity(),
 	                                             GetMesh()->GetRightVector());
 
+	VehicleState.SlipAngle = FMath::Atan(
+			VehicleState.SideSpeed / FMath::Abs(VehicleState.ForwardSpeed + 5.f/*Denominator*/));
 
-	if(AllowSleep)
+
+
+	float BiggestSlip=-1.f;
+	for(auto Comp: Components)
 	{
-		const float EffectiveThrottle=FMath::Min(RawThrottleInput,ClutchInput);
-		// Wake if control input pressed
-		if (VehicleState.bSleeping && (EffectiveThrottle!=0.f||RawSteeringInput!=0.f||GetMesh()->IsAnyRigidBodyAwake()))
+
+		const float FSlip=FMath::Abs(Comp->GetWheelState()->SlipRatio);
+		if(FSlip>BiggestSlip)
 		{
-			
-			SetSleeping(false);
-			VehicleState.SleepTimer=0.f;
-		}else if (VehicleState.WheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->SleepSlopeLimit))
-		{
-			if(VehicleState.SleepTimer>SleepDelay)
+			BiggestSlip = FSlip;
+		}
+	}
+	VehicleState.WheelTraction=FMath::Min(BiggestSlip,1);
+	VehicleState.WheelTraction=1.f-VehicleState.WheelTraction;
+	
+	if(AllowSleep&&(AllowTankSleep))
+	{
+		if(GetSetup()->GetSteerType()!=Tank&&AllowTankSleep){
+		
+			const float EffectiveThrottle=FMath::Min(RawThrottleInput,ClutchInput);
+			// Wake if control input pressed
+			if (VehicleState.bSleeping && (EffectiveThrottle!=0.f||RawSteeringInput!=0.f||GetMesh()->IsAnyRigidBodyAwake()))
 			{
-				const float SpeedSqr = GetMesh()->GetPhysicsLinearVelocity().SizeSquared();
 			
-				const float SleepThreshold=GetSetup()->SleepThreshold;
-				if (SpeedSqr < (SleepThreshold * SleepThreshold))
+				SetSleeping(false);
+				VehicleState.SleepTimer=0.f;
+			}else if (VehicleState.WheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->SleepSlopeLimit))
+			{
+				if(VehicleState.SleepTimer>SleepDelay)
 				{
+					const float SpeedSqr = GetMesh()->GetPhysicsLinearVelocity().SizeSquared();
+			
+					const float SleepThreshold=GetSetup()->SleepThreshold;
+					if (SpeedSqr < (SleepThreshold * SleepThreshold))
+					{
 				
-					SetSleeping(true);
+						SetSleeping(true);
 					
+					}
+				}else
+				{
+					VehicleState.SleepTimer+=DeltaTime;
 				}
 			}else
 			{
-				VehicleState.SleepTimer+=DeltaTime;
+				VehicleState.SleepTimer=0.f;
 			}
-		}else
-		{
-			VehicleState.SleepTimer=0.f;
 		}
 	}
 }
@@ -1336,6 +1374,40 @@ void UModularMovementComponent::SetSleepOnBody(UPrimitiveComponent* PrimitiveCom
 			}
 		}
 	}
+}
+
+void UModularMovementComponent::ApplyAirbornePhysics()
+{
+	const auto Setup=GetSetup();
+	if(Setup->ApplyAirbornePhysics)
+	{
+
+		if(GetNumberOfWheelsTouchingGround()==0)
+		{
+			GetMesh()->SetCenterOfMass(Setup->AirborneCOM);
+			GetMesh()->SetLinearDamping(Setup->AirborneDampening.X);
+			GetMesh()->SetLinearDamping(Setup->AirborneDampening.Y);
+		}else
+		{
+			GetMesh()->SetCenterOfMass(OriginalCOM);
+			GetMesh()->SetLinearDamping(OriginalDampening.X);
+			GetMesh()->SetLinearDamping(OriginalDampening.Y);
+		}
+
+		
+	}
+}
+
+bool UModularMovementComponent::IsInReverse() const
+{
+	if(GetSetup())
+	{
+		if(const auto Gearbox=GetSetup()->GetGearBox())
+		{
+			return Gearbox->CurrentGear<Gearbox->IdleGear;
+		}
+	}
+	return false;
 }
 
 

@@ -104,7 +104,7 @@ void UModularWheel::DisableSurfaceEffects()
 void UModularWheel::SetupWheels(UModularMovementComponent* ModularMovementComponent)
 {
 	//Initialize WheelSetup from WheelSetupClass
-	if (WheelState.WheelSetupClass.LoadSynchronous())
+	if (WheelState.WheelSetupClass)
 	{
 		WheelState.WheelSetup = NewObject<UModularVehicleWheelData>(this, WheelState.WheelSetupClass.Get());
 
@@ -179,8 +179,13 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 		FVector Lin, Ang;
 		SuspensionConstraint->GetConstraintForce(Lin, Ang);
 		WheelState.HitResult.Time=GetSpringCompressionRatio();
-		
-		WheelState.WheelLoad.Z = FMath::Abs(Lin.Z);
+		if(GetWheelSetup()->UserControlArmSuspension)
+		{
+			WheelState.WheelLoad.Z = FMath::Abs(Ang.Z);
+		}else
+		{
+			WheelState.WheelLoad.Z = FMath::Abs(Lin.Z);
+		}
 		
 		WheelState.HitResult.TraceStart = GetComponentLocation();
 		if (WheelState.WheelLoad.Z > 100.f)
@@ -238,11 +243,13 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 		{
 			
 			const FVector Position = MeshTransform.InverseTransformPosition(Hit.ImpactPoint) - WheelState.InitialLocalLocation;
-			if (FMath::Abs(Position.Y) < WheelSetup->WheelWidth ||WheelCollision )
+			if ((FMath::Abs(Position.Y) < WheelSetup->WheelWidth&&Position.Z<0 )||WheelCollision )
 			{
 				
 				ValidHitFound = true;
 				TraceResult = Hit;
+
+				
 				break;
 			}
 			
@@ -547,7 +554,7 @@ UModularVehicleWheelData* UModularWheel::GetWheelSetup() const
 		return WheelState.WheelSetup;
 	}
 
-	return Cast<UModularVehicleWheelData>(WheelState.WheelSetupClass.LoadSynchronous()->ClassDefaultObject);
+	return Cast<UModularVehicleWheelData>(WheelState.WheelSetupClass.Get()->ClassDefaultObject);
 }
 
 void UModularWheel::UpdateWheelSetup(UModularVehicleWheelData* VehicleWheelData)
@@ -559,7 +566,7 @@ void UModularWheel::SetupWheelClass(TSoftClassPtr<UModularVehicleWheelData> Whee
 {
 	if(!WheelSetupClass.IsNull())
 	{
-		WheelState.WheelSetupClass=WheelSetupClass;
+		WheelState.WheelSetupClass=WheelSetupClass.LoadSynchronous();
 	}
 }
 
@@ -806,6 +813,9 @@ void UModularWheel::SetupAngularConstraint(UModularMovementComponent* MovementCo
 	{
 		WheelCollision->SetPhysMaterialOverride(NoFrictionDefaultPhysMaterial);
 	}
+
+	const auto Setup=GetWheelSetup();
+	SuspensionConstraint->SetAngularDriveParams(Setup->SpringRate,Setup->DampingCompress,0);
 	
 	
 }
@@ -843,6 +853,11 @@ void UModularWheel::CallCustomEvent(uint8 Index)
 	}
 }
 
+void UModularWheel::SetWheelRadius(float Input)
+{
+	GetWheelSetup()->WheelRadius=Input;
+}
+
 UPhysicalMaterial* UModularWheel::GetActivePhysicalMaterial()
 {
 	const auto PhysMat=PhysicalMaterialOverride?PhysicalMaterialOverride:WheelState.HitResult.PhysMaterial.Get();
@@ -859,7 +874,8 @@ void UModularWheel::ApplyAccumulatedForces()
 	{
 		Mesh=ConstraintParent;
 	}
-	AddForceAtPosition(Mesh, WheelState.HitResult.ImpactPoint, TotalForces, NAME_None);
+	
+	AddForceAtPosition(Mesh, WheelState.HitResult.ImpactPoint+(GetUpVector()*GetWheelSetup()->ForceApplyOffset), TotalForces, NAME_None);
 	TotalForces=FVector::ZeroVector;
 	
 }

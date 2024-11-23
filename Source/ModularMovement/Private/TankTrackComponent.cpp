@@ -137,7 +137,7 @@ void UTankTrackComponent::RebuildSplines(float DeltaTime, bool Editor)
 				}
 				else
 				{
-					if (const auto Obj = Wheel->WheelState.WheelSetupClass.LoadSynchronous()->ClassDefaultObject)
+					if (const auto Obj = Wheel->WheelState.WheelSetupClass.Get()->ClassDefaultObject)
 					{
 						Radius = Cast<UModularVehicleWheelData>(Obj)->WheelRadius;
 					}

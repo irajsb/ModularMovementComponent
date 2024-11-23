@@ -45,6 +45,10 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	float WheelRadius=30;
 
+	//trace wheel radius in cm
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential,AdvancedDisplay)
+	float FlatWheelRadius=25;
+
 	// Trace channel
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	TEnumAsByte<ESuspensionType> SuspensionType;
@@ -91,13 +95,18 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	// Prevent wheels locking while braking and try to maintain perfect grip
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	bool ABS=true;
+	//Min slip for ABS
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
+	float ABSSlip=0.3;
 	//Prevent engine from spinning the wheels by reducing power and trying to keep perfect grip
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	bool TractionControl=false;
 	// Makes vehicle lose less power when going up hill . 0 is physically realistic 1 is no power loss
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
 	float SteepSurfaceAssistance=0.0;
-
+	//Positive values will move force apply position higher (Arcade style. Will make vehicle harder to flip over . Don't move this higher than COM)
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category = Friction)
+	float ForceApplyOffset=0.f;
 
 	
 	//Angle in degrees
@@ -138,7 +147,7 @@ struct FModularWheelState{
 
 	//Base class to create an instance from for setup of this wheel only changeable in construction script 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere,Category=Setup)
-	TSoftClassPtr<UModularVehicleWheelData> WheelSetupClass;
+	TSubclassOf<UModularVehicleWheelData> WheelSetupClass;
 
 	
 	//Instanced setup which can be edited at runtime without conflicit

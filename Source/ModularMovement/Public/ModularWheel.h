@@ -150,6 +150,8 @@ private:
     UFUNCTION(BlueprintCallable, Category="Game|Components|ModularVehicleMovement")
     void CallCustomEvent(uint8 Index);
 
+    UFUNCTION(BlueprintCallable, Category="Game|Components|ModularVehicleMovement")
+    void SetWheelRadius(float Input);
 public:
     // Public properties
     UFUNCTION(BlueprintCallable, BlueprintPure, Category="Game|Components|ModularVehicleMovement")
@@ -189,4 +191,7 @@ public:
     UFUNCTION(BlueprintCallable,Category=ConstraintWheels)
     void ToggleAxleSuspensionXYLock(bool NewLock);
     float GetSpringCompressionRatio() const;
+
+    UPROPERTY(BlueprintReadWrite,Category=MiscData)
+    uint8 WheelStatus;
 };

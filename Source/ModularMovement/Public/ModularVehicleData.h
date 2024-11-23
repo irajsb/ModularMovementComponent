@@ -104,7 +104,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	//Suspension Trace  trace 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
     TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
-	//Tire available grip will divided between drive wheels (Realistic value is: true)
+	//Tire available grip will be divided between drive wheels (Realistic value is: true)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
 	bool ScaleTireFrictionWithSurfaceAngle=true;
 	//Wheel divide drive torque to number of wheels touching the ground should be on to simulate a differential 
@@ -150,7 +150,9 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	// How much to press the brake when the player has release throttle
 	UPROPERTY(EditAnywhere, Category=Advanced,BlueprintReadWrite)
 	float IdleBrakeInput;
-
+	//brake when engine is off
+	UPROPERTY(EditAnywhere, Category=Advanced,BlueprintReadWrite)
+	bool ParkBrake=false;
 	//Multiply steer limit angle by this value in order to make AI vehicles move easier
 	UPROPERTY(EditAnywhere, Category=AI,meta = (ClampMin = "1.0", UIMin = "1.0", ClampMax = "2.0", UIMax = "2.0"))
 	float AIMaxSteerMultiplier;
@@ -222,8 +224,50 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AntiRollover, meta = (editcondition = "bEnableAntiRollover"))
 	FRuntimeFloatCurve AntiRolloverForceCurve;
 
+
+
+	//Drift assist
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drift Settings")
+	bool DriftAssistEnabled=false;
+	// Configuration parameters
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drift Settings")
+	float DriftAngleThreshold=14.f;
+
+	//Speed where optimal angle is at its base 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drift Settings")
+	float MinDriftSpeed=750.0f;
+
+	//Speed where optimal angle peaks
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drift Settings")
+	float MaxDriftSpeed=1750.0f;
+	//If we are past this angle cut of drift assistance
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drift Settings")
+	float MaxDriftAngle=90.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drift Settings")
+	float BaseOptimalAngle=45.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drift Settings")
+	float MaxSpeedOptimalAngle=35.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drift Settings")
+	float ThrottleCutoffAngle=65.0f;
+
 	
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drift Settings")
+	float DriftAssistTorque=300000000.f;
+
+
+	//Makes vehicle feel heavier when airbone
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airborne",AdvancedDisplay)
+	bool ApplyAirbornePhysics=true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airborne",AdvancedDisplay)
+	FVector AirborneCOM=FVector::ZeroVector;
+	// Linear and angular
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airborne",AdvancedDisplay)
+	FVector2D AirborneDampening=FVector2D(1.f,1.f);
+	
 	
 //engine
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Setup)

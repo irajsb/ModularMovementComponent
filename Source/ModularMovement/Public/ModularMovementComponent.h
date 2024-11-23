@@ -178,7 +178,7 @@ struct FModularVehicleState
 
     // Class pointer to the vehicle data asset
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Setup)
-    TSoftClassPtr<UModularVehicleData> VehicleDataClass;
+    TSubclassOf<UModularVehicleData> VehicleDataClass;
 
     // Pointer to the vehicle data
     UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
@@ -195,6 +195,11 @@ struct FModularVehicleState
     // Side speed of the vehicle
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     float SideSpeed = 0.f;
+
+    // Side speed of the vehicle
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    float SlipAngle = 0.f;
+    
 
     // Wheel torque
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
@@ -249,6 +254,13 @@ struct FModularVehicleState
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     float SleepTimer=0.f;
 
+
+    // Traction for drifting assistance Should range from 0-1
+
+    UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
+    float WheelTraction=0.f;
+    
+   
     // Axle RPM
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     float AxleRPM = 0.f;
@@ -361,7 +373,10 @@ public:
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool AllowSleep = true;
 
- 
+
+    //Backwards compatibility
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly,AdvancedDisplay)
+    bool AllowTankSleep = false;
 
     
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
@@ -384,6 +399,9 @@ public:
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
     int GetNumberOfDriveWheelsTouchingGround() const;
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
+    int GetNumberOfWheelsTouchingGround() const;
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
     float GetRPMRatio();
@@ -516,6 +534,14 @@ public:
     }
 
 
+    void ApplyAirbornePhysics();
+    bool IsInReverse() const;
     UPROPERTY(Transient)
     float LastAntiRollover;
+
+    UPROPERTY(Transient)
+    FVector OriginalCOM;
+    UPROPERTY(Transient)
+    FVector2D OriginalDampening;
+    
 };

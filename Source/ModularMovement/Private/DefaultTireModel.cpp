@@ -33,6 +33,9 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
                                          UPrimitiveComponent* Mesh, UModularMovementComponent* ModularMovementComponent, UModularWheel* Wheel)
 {
 
+
+	const bool UseArcadeFrictionMultiplier= ModularMovementComponent->ThrottleInput!=0.f||Wheel->WheelState.BrakeTorque!=0.f;
+	
 	Super::UpdateSimulation(DeltaTime, FinalForceVector, Mesh, ModularMovementComponent, Wheel);
 	// Gather necessary data 
 	const FTransform WorldTransform = Mesh->GetBodyInstance()->GetUnrealWorldTransform();
@@ -56,8 +59,8 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 
 
 	const float WheelRadius = Wheel->WheelState.WheelSetup->WheelRadius / 100;
-	const float WheelVelocity = Wheel->WheelState.AngularVelocity * WheelRadius;
-
+	 float WheelVelocity = Wheel->WheelState.AngularVelocity * WheelRadius;
+	
 	const bool Combine=UseCombinedFriction||(Wheel->WheelState.IsHandBrakeTorque&&UseCombinedFrictionWhenHandBraking);
 	const float MassPerWheel = ModularMovementComponent->GetMassPerWheel();
 	const float WheelLoad=UseConstantWheelLoad?MassPerWheel*10.f:Wheel->WheelState.WheelLoad.Size() ;
@@ -101,7 +104,7 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 	else
 	{
 		
-		const float NewStress=UKismetMathLibrary::MapRangeClamped(TotalSlip,0.3,0.6,0,1);
+		const float NewStress=UKismetMathLibrary::MapRangeClamped(TotalSlip,0.5,1.f,0,1);
 		
 			Wheel->WheelState.TireStress=NewStress;
 		
@@ -173,8 +176,8 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 		}
 	}
 
-	FinalForceVector.X *= WheelLoad * SurfaceFriction;
-	FinalForceVector.Y *= WheelLoad* SurfaceFriction;
+	FinalForceVector.X *= WheelLoad * SurfaceFriction*( UseArcadeFrictionMultiplier?ArcadeForceMultiplier:1.f);
+	FinalForceVector.Y *= WheelLoad* SurfaceFriction*(UseArcadeFrictionMultiplier?ArcadeForceLateral:1.f);
 
 	//RELAXATION2(FinalForceVector.X, LastFX, 50.0f);
 	//RELAXATION2(FinalForceVector.Y, LastFY, 50.0f);
@@ -204,10 +207,11 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 
 
 	 float BrakeTorque = - FMath::Sign(Wheel->WheelState.AngularVelocity) * Wheel->WheelState.BrakeTorque;
+
 	
 	if(Wheel->WheelState.WheelSetup->ABS&&!Wheel->WheelState.IsHandBrakeTorque)
 	{
-		if(FMath::Abs(SlipForward)>Speak)
+		if(FMath::Abs(SlipForward)>Speak&&SlipForward>Wheel->WheelState.WheelSetup->ABSSlip)
 		{
 			//release the brakes
 			BrakeTorque=0.f;
@@ -223,7 +227,10 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 
 	Wheel->WheelState.AngularVelocity += AngularAcceleration;
 
-
+	if(ModularMovementComponent->GetMesh()->GetPhysicsLinearVelocity().Size()<ModularMovementComponent->GetSetup()->StopThreshold&&ModularMovementComponent->ThrottleInput==0.f)
+	{
+		Wheel->WheelState.AngularVelocity=WheelVelocity=0.f;
+	}
 	//Gather Debug
 	const FVector TireForce = (FinalForceVector / WheelLoad);
 	

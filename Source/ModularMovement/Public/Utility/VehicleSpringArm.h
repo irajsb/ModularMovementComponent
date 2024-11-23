@@ -245,7 +245,7 @@ public :
 
 	// Adjust this to control shake intensity . this is an automated shake calculated by angular velocity of the vehicle 
 	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
-	float AngularVelocityShakeMultiplier = 0.3f; 
+	float AngularVelocityShakeMultiplier = 0.01; 
 
 	// Smooth the angular velocity
 	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)

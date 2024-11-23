@@ -52,6 +52,14 @@ public:
 	FRuntimeFloatCurve LateralGripCurve;
 
 
+
+	//increas friction by this number if throttle or brake is pressed
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateTheLateralGraph))
+	float ArcadeForceMultiplier=1.f;
+	//increas friction by this number if throttle or brake is pressed
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = TireModel, meta = (EditCondition = AutoGenerateTheLateralGraph))
+	float ArcadeForceLateral=1.f;
+
 	float LastSlipX;
 	FVector2f TireForceNormalized;
 	float LastFX, LastFY, Speak, SideSlipPeak;

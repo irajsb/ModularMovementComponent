@@ -58,7 +58,7 @@ public:
 	bool IsManual;
 
 	//Desired ideal rpm for this vehicle
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission,meta=(EditCondition=CanSkipGears))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Transmission)
 	float IdealRPMRatio=0.3;
 	
 

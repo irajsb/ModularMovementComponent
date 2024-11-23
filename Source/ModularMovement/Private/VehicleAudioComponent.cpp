@@ -95,8 +95,11 @@ void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	CurrentTurbo = UKismetMathLibrary::FInterpTo_Constant(CurrentTurbo, RPMRatio, DeltaTime, TurboInterpolationSpeed);
 	SetFloatParameter("Turbo", CurrentTurbo * TurboMultiplier);
 
-	HealthAudioComponent->SetFloatParameter("Health", MC->VehicleHealth);
-	HealthAudioComponent->SetFloatParameter("RPM", RPM * RPMMultiplier);
+	if(HealthAudioComponent)
+	{
+		HealthAudioComponent->SetFloatParameter("Health", MC->VehicleHealth);
+		HealthAudioComponent->SetFloatParameter("RPM", RPM * RPMMultiplier);
+	}
 	
 	if (LastHandBrakeInput != MC->HandBrakeInput)
 	{
@@ -211,14 +214,20 @@ void UVehicleAudioComponent::OnEngineStateChange(bool IsEngineOn, bool IsStartin
 				UGameplayStatics::PlaySoundAtLocation(GetWorld(), StarterReleaseSound, GetComponentLocation());
 			}
 		}
-		HealthAudioComponent->Stop();
+		if(HealthAudioComponent)
+		{
+			HealthAudioComponent->Stop();
+		}
 	}
 	else
 	{
 		if (Sound != TempEngineSound)
 		{
 			Play();
-			HealthAudioComponent->Play();
+			if(HealthAudioComponent)
+			{
+				HealthAudioComponent->Play();
+			}
 			UGameplayStatics::PlaySoundAtLocation(GetWorld(), EngineStartSound, GetComponentLocation());
 			SetSound(TempEngineSound);
 		}

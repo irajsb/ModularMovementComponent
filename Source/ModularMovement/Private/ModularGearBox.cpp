@@ -38,6 +38,10 @@ void UModularGearBox::SetupGearBox()
 
 void UModularGearBox::SetTargetGear(int32 GearNum, bool bImmediate, class UModularMovementComponent* MovementComponent)
 {
+	if(CurrentGear == GearNum)
+	{
+		return;
+	}
 	
 		if(GearNum>MaxGear)
 		{
@@ -111,7 +115,7 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 	MC = MovementComponent;
 	if (!IsManual)
 	{
-		FModularVehicleState VehicleState = MovementComponent->VehicleState;
+		const FModularVehicleState VehicleState = MovementComponent->VehicleState;
 		if (VehicleState.DriveWheelsOnGround != 0)
 		{
 			if (MovementComponent->GetSetup()->ShouldReverseAsBrake())
@@ -120,10 +124,10 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 				if (FMath::Abs(VehicleState.ForwardSpeed) < MovementComponent->GetSetup()->GetWrongDirectionThreshold())
 				//we only shift between reverse and first if the car is slow enough.
 				{
-					if (MovementComponent->RawThrottleInput < -1 * KINDA_SMALL_NUMBER && CurrentGear >= IdleGear &&
-						TargetGear >= IdleGear)
-					{
+					if (MovementComponent->RawThrottleInput < -1 * KINDA_SMALL_NUMBER &&( CurrentGear >= IdleGear &&TargetGear >= IdleGear))
+					{	
 						SetTargetGear(IdleGear - 1, true, MovementComponent);
+						return;
 					}
 					if (MovementComponent->RawThrottleInput > KINDA_SMALL_NUMBER && CurrentGear <= IdleGear &&
 						TargetGear <= IdleGear)
@@ -141,6 +145,12 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 						CurrentGear < IdleGear)
 					{
 						SetTargetGear(IdleGear + 1, true, MovementComponent);
+					}
+
+					//if car is moving in forward speed and  its in back gear (happens after a -180 degree flip in reverse
+					if (VehicleState.ForwardSpeed < KINDA_SMALL_NUMBER && MovementComponent->RawThrottleInput <KINDA_SMALL_NUMBER &&CurrentGear == IdleGear+1)
+					{
+						SetTargetGear(IdleGear - 1, true, MovementComponent);
 					}
 				}
 			}
