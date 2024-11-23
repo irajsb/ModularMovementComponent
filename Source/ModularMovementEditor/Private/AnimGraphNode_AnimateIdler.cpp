@@ -3,7 +3,7 @@
 
 #include "AnimGraphNode_AnimateIdler.h"
 
-#include "ModularVehicleAnimationInstance.h"
+#include "MMVehicleAnimationInstance.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/CompilerResultsLog.h"
 
@@ -60,7 +60,7 @@ FText UAnimGraphNode_AnimateIdler::GetNodeTitle(ENodeTitleType::Type TitleType) 
 void UAnimGraphNode_AnimateIdler::ValidateAnimNodePostCompile(class FCompilerResultsLog& MessageLog, class UAnimBlueprintGeneratedClass* CompiledClass, int32 CompiledNodeIndex)
 {
 	// we only support vehicle anim instance
-	if ( CompiledClass->IsChildOf(UModularVehicleAnimationInstance::StaticClass())  == false )
+	if ( CompiledClass->IsChildOf(UMMVehicleAnimationInstance::StaticClass())  == false )
 	{
 		MessageLog.Error(TEXT("@@ is only allowwed in ModularVehicleAnimInstance. If this is for vehicle, please change parent to be VehicleAnimInstance (Reparent Class)."), this);
 	}
@@ -69,7 +69,7 @@ void UAnimGraphNode_AnimateIdler::ValidateAnimNodePostCompile(class FCompilerRes
 bool UAnimGraphNode_AnimateIdler::IsCompatibleWithGraph(const UEdGraph* TargetGraph) const
 {
 	const UBlueprint* Blueprint = FBlueprintEditorUtils::FindBlueprintForGraph(TargetGraph);
-	return (Blueprint != nullptr) && Blueprint->ParentClass->IsChildOf<UModularVehicleAnimationInstance>() && Super::IsCompatibleWithGraph(TargetGraph);
+	return (Blueprint != nullptr) && Blueprint->ParentClass->IsChildOf<UMMVehicleAnimationInstance>() && Super::IsCompatibleWithGraph(TargetGraph);
 }
 
 #undef LOCTEXT_NAMESPACE

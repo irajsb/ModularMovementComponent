@@ -6,7 +6,7 @@
 #include "UObject/ObjectMacros.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimInstanceProxy.h"
-#include "ModularVehicleAnimationInstance.generated.h"
+#include "MMVehicleAnimationInstance.generated.h"
 
 class UModularMovementComponent;
 
@@ -19,11 +19,11 @@ struct FModularWheelAnimationData
 
 /** Proxy override for this UAnimInstance-derived class */
 USTRUCT()
-struct MODULARMOVEMENT_API FModularVehicleAnimationInstanceProxy : public FAnimInstanceProxy
+struct MODULARMOVEMENT_API FMMVehicleAnimationInstanceProxy : public FAnimInstanceProxy
 {
 	GENERATED_BODY()
 
-	FModularVehicleAnimationInstanceProxy()
+	FMMVehicleAnimationInstanceProxy()
 		: FAnimInstanceProxy()
 		  , WheelSpokeCount(0)
 		  , MaxAngularVelocity(256.f)
@@ -32,7 +32,7 @@ struct MODULARMOVEMENT_API FModularVehicleAnimationInstanceProxy : public FAnimI
 	{
 	}
 
-	FModularVehicleAnimationInstanceProxy(UAnimInstance* Instance)
+	FMMVehicleAnimationInstanceProxy(UAnimInstance* Instance)
 		: FAnimInstanceProxy(Instance)
 		  , WheelSpokeCount(0)
 		  , MaxAngularVelocity(256.f)
@@ -72,7 +72,7 @@ private:
 };
 
 UCLASS(transient)
-class MODULARMOVEMENT_API UModularVehicleAnimationInstance : public UAnimInstance
+class MODULARMOVEMENT_API UMMVehicleAnimationInstance : public UAnimInstance
 {
 	GENERATED_UCLASS_BODY()
 
@@ -99,7 +99,7 @@ public:
 	virtual void DestroyAnimInstanceProxy(FAnimInstanceProxy* InProxy) override;
 	/** UAnimInstance interface end*/
 
-	FModularVehicleAnimationInstanceProxy AnimInstanceProxy;
+	FMMVehicleAnimationInstanceProxy AnimInstanceProxy;
 
 	UPROPERTY(transient)
 	TObjectPtr<const UModularMovementComponent> WheeledVehicleComponent;

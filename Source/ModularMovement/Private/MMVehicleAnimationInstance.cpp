@@ -1,11 +1,11 @@
 //Copyright Aurelion Iraj Mohtasham 2023. For distribution in epic store only 
 
 /*=============================================================================
-	UModularVehicleAnimationInstance.cpp: Single Node Tree Instance 
+	UMMVehicleAnimationInstance.cpp: Single Node Tree Instance 
 	Only plays one animation at a time. 
 =============================================================================*/ 
 
-#include "ModularVehicleAnimationInstance.h"
+#include "MMVehicleAnimationInstance.h"
 #include "ModularMovementComponent.h"
 #include "AnimationRuntime.h"
 #include "ModularVehicleFunctionLibrary.h"
@@ -13,17 +13,17 @@
 
 
 /////////////////////////////////////////////////////
-	// UModularVehicleAnimationInstance
+	// UMMVehicleAnimationInstance
 	/////////////////////////////////////////////////////
 
-	UModularVehicleAnimationInstance::UModularVehicleAnimationInstance(const FObjectInitializer& ObjectInitializer)
+	UMMVehicleAnimationInstance::UMMVehicleAnimationInstance(const FObjectInitializer& ObjectInitializer)
 		: Super(ObjectInitializer)
 	{
 	}
 
 
 
-	void UModularVehicleAnimationInstance::NativeInitializeAnimation()
+	void UMMVehicleAnimationInstance::NativeInitializeAnimation()
 	{
 		Super::NativeInitializeAnimation();
 		// Find a wheeled movement component
@@ -36,12 +36,12 @@
 		}
 	}
 
-	FAnimInstanceProxy* UModularVehicleAnimationInstance::CreateAnimInstanceProxy()
+	FAnimInstanceProxy* UMMVehicleAnimationInstance::CreateAnimInstanceProxy()
 	{
 		return &AnimInstanceProxy;
 	}
 
-	void UModularVehicleAnimationInstance::DestroyAnimInstanceProxy(FAnimInstanceProxy* InProxy)
+	void UMMVehicleAnimationInstance::DestroyAnimInstanceProxy(FAnimInstanceProxy* InProxy)
 	{
 	}
 
@@ -49,7 +49,7 @@
 	//// PROXY ///
 	/////////////////////////////////////////////////////
 
-	void FModularVehicleAnimationInstanceProxy::SetWheeledVehicleComponent(const UModularMovementComponent* InWheeledVehicleComponent)
+	void FMMVehicleAnimationInstanceProxy::SetWheeledVehicleComponent(const UModularMovementComponent* InWheeledVehicleComponent)
 	{
 		const UModularMovementComponent* WheeledVehicleComponent = InWheeledVehicleComponent;
 
@@ -74,13 +74,13 @@
 		}
 	}
 
-	void FModularVehicleAnimationInstanceProxy::PreUpdate(UAnimInstance* InAnimInstance, float DeltaSeconds)
+	void FMMVehicleAnimationInstanceProxy::PreUpdate(UAnimInstance* InAnimInstance, float DeltaSeconds)
 	{
 		Super::PreUpdate(InAnimInstance, DeltaSeconds);
 
 		
 		
-		const UModularVehicleAnimationInstance* VehicleAnimInstance = CastChecked<UModularVehicleAnimationInstance>(InAnimInstance);
+		const UMMVehicleAnimationInstance* VehicleAnimInstance = CastChecked<UMMVehicleAnimationInstance>(InAnimInstance);
 		const UModularMovementComponent* ModularMovementComponent=VehicleAnimInstance->GetWheeledVehicleComponent();
 		if(!VehicleAnimInstance->GetWheeledVehicleComponent())
 		{

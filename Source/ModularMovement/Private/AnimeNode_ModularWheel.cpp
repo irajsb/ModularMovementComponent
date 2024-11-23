@@ -152,6 +152,6 @@ void FAnimNode_ModularWheel::InitializeBoneReferences(const FBoneContainer& Requ
 
 void FAnimNode_ModularWheel::Initialize_AnyThread(const FAnimationInitializeContext& Context)
 {
-	AnimInstanceProxy = static_cast<FModularVehicleAnimationInstanceProxy*>(Context.AnimInstanceProxy);
+	AnimInstanceProxy = static_cast<FMMVehicleAnimationInstanceProxy*>(Context.AnimInstanceProxy);
 	
 }

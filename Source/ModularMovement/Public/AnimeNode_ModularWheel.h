@@ -6,7 +6,7 @@
 #include "UObject/ObjectMacros.h"
 #include "BoneContainer.h"
 #include "BonePose.h"
-#include "ModularVehicleAnimationInstance.h"
+#include "MMVehicleAnimationInstance.h"
 #include "BoneControllers/AnimNode_SkeletalControlBase.h"
 
 #include "AnimeNode_ModularWheel.generated.h"
@@ -50,5 +50,5 @@ struct MODULARMOVEMENT_API FAnimNode_ModularWheel : public FAnimNode_SkeletalCon
 	};
 
 	TArray<FWheelLookupData> Wheels;
-	const FModularVehicleAnimationInstanceProxy* AnimInstanceProxy;	//TODO: we only cache this to use in eval where it's safe. Should change API to pass proxy into eval
+	const FMMVehicleAnimationInstanceProxy* AnimInstanceProxy;	//TODO: we only cache this to use in eval where it's safe. Should change API to pass proxy into eval
 };
