@@ -6,9 +6,9 @@ public class ModularMovement : ModuleRules
 {
 	public ModularMovement(ReadOnlyTargetRules Target) : base(Target)
 	{
-		//PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		PCHUsage = ModuleRules.PCHUsageMode.NoPCHs;
-		bUseUnity = false;
+		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		//PCHUsage = ModuleRules.PCHUsageMode.NoPCHs;
+		//bUseUnity = false;
 		
         
 		PublicIncludePaths.AddRange(
