@@ -5,6 +5,7 @@
 
 #include "ModularGearBox.h"
 #include "ModularMovementComponent.h"
+#include "GameFramework/Pawn.h"
 #include "Kismet/KismetMathLibrary.h"
 
 float UVehicleInputProcessor::CalcBrakeInput_Implementation(UModularMovementComponent* MovementComponent,

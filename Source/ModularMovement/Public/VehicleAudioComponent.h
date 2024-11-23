@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/AudioComponent.h"
 #include "GameFramework/Pawn.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "VehicleAudioComponent.generated.h"
 
 /**

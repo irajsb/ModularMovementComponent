@@ -38,8 +38,9 @@ struct FModularVehicleDebugParams
 };
 
 // Enum for vehicle network mode
+
 UENUM(BlueprintType)
-enum EVehicleNetworkMode
+enum class  EVehicleNetworkMode : uint8
 {
     Default,
     ClientAuthoritative,
@@ -383,7 +384,7 @@ public:
     bool SpawnWithTurnedOffEngine = false;
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
-    TEnumAsByte<EVehicleNetworkMode> NetworkMode;
+    EVehicleNetworkMode NetworkMode;
 
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)

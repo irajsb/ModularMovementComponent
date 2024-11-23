@@ -459,7 +459,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		Component->UpdateAnimation(DeltaTime, this);
 	}
 
-	if (NetworkMode == Default)
+	if (NetworkMode == EVehicleNetworkMode::Default)
 	{
 		if (GetOwnerRole() < ROLE_Authority)
 		{
@@ -523,7 +523,7 @@ void UModularMovementComponent::BeginPlay()
 
 	GetMesh()->SetSimulatePhysics(true);
 
-	if (NetworkMode == Default)
+	if (NetworkMode == EVehicleNetworkMode::Default)
 	{
 		if (GetOwnerRole() < ROLE_AutonomousProxy)
 		{
@@ -1051,7 +1051,7 @@ bool UModularMovementComponent::ShouldProcessPhysics()
 		CachedShouldProcessPhysics=true;
 		return true;
 	}
-	if (NetworkMode == Default)
+	if (NetworkMode == EVehicleNetworkMode::Default)
 	{
 		CachedShouldProcessPhysics= GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
 		return CachedShouldProcessPhysics.GetValue();
@@ -1067,7 +1067,7 @@ bool UModularMovementComponent::ShouldProcessCosmetics()
 	{
 		return CachedShouldProcessCosmetics.GetValue();
 	}
-	if (NetworkMode == Default)
+	if (NetworkMode == EVehicleNetworkMode::Default)
 	{
 		CachedShouldProcessCosmetics= GetOwnerRole() < ROLE_AutonomousProxy;
 		return CachedShouldProcessCosmetics.GetValue();
@@ -1080,7 +1080,7 @@ bool UModularMovementComponent::ShouldProcessCosmetics()
 
 bool UModularMovementComponent::ShouldReplicateInput() const
 {
-	if (NetworkMode == Default)
+	if (NetworkMode == EVehicleNetworkMode::Default)
 	{
 		return (GetPawnOwner()->GetLocalRole() != ROLE_Authority && GetPawnOwner()->IsLocallyControlled());
 	}
@@ -1112,7 +1112,7 @@ void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuanti
 
 void UModularMovementComponent::UpdateReplicatedCosmeticData()
 {
-	if (NetworkMode == Default)
+	if (NetworkMode == EVehicleNetworkMode::Default)
 	{
 		if (GetOwnerRole() < ROLE_Authority)
 		{
@@ -1141,11 +1141,11 @@ void UModularMovementComponent::UpdateReplicatedCosmeticData()
 void UModularMovementComponent::OnRep_RepCosmeticData()
 {
 	CosmeticDataInitialized = true;
-	if (NetworkMode == ClientAuthoritative && IsLocal())
+	if (NetworkMode == EVehicleNetworkMode::ClientAuthoritative && IsLocal())
 	{
 		return;
 	}
-	if (GetOwnerRole() == ROLE_SimulatedProxy || NetworkMode == ClientAuthoritative)
+	if (GetOwnerRole() == ROLE_SimulatedProxy || NetworkMode == EVehicleNetworkMode::ClientAuthoritative)
 	{
 		VehicleState.CurrentRpm = UKismetMathLibrary::MapRangeClamped(RepCosmeticData.EngineRPM, 0, 255,
 		                                                              GetSetup()->IdleRpm,
@@ -1219,7 +1219,7 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 		const float DeltaSize=DeltaPos.Size();
 	
 
-		// Snap position by default (big correction, or we are moving too slowly)
+		// Snap position by EVehicleNetworkMode::Default (big correction, or we are moving too slowly)
 		FVector UpdatedPos = CurrentState.Position;
 		FVector FixLinVel = FVector::ZeroVector;
 
@@ -1250,7 +1250,7 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 		DeltaQuat.ToAxisAndAngle(DeltaAxis, DeltaAng);
 		DeltaAng = FMath::UnwindRadians(DeltaAng);
 
-		// Snap rotation by default (big correction, or we are moving too slowly)
+		// Snap rotation by EVehicleNetworkMode::Default (big correction, or we are moving too slowly)
 		FQuat UpdatedQuat = CurrentState.Quaternion;
 		FVector FixAngVel = FVector::ZeroVector; // degrees per second
 
@@ -1502,8 +1502,9 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 			}
 		}
 		break;
-	default:
+	 default:
 		UE_LOG(LogModularVehicle, Error, TEXT("Unimplemented differential Setup"));
+	
 	}
 
 
