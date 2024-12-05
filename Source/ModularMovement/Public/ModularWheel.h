@@ -166,12 +166,15 @@ public:
     UPROPERTY(BlueprintReadOnly, Category=Constraint)
     UPrimitiveComponent* ConstraintParent = nullptr;
 
-private:
+
     // Private properties
     UPROPERTY()
     UPhysicalMaterial* NoFrictionDefaultPhysMaterial;
 
-public:
+   
+    UPROPERTY()
+    UPhysicalMaterial* FullFrictionDefaultPhysMaterial;
+
     // Public properties
     UPROPERTY(BlueprintReadOnly, Category=Wheel)
     TArray<USceneComponent*> ChildWheels;

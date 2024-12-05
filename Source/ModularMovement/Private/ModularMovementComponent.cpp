@@ -405,6 +405,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 
+	
 
 		CaptureState(DeltaTime);
 
@@ -600,16 +601,17 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 	VehicleState.WheelTraction=FMath::Min(BiggestSlip,1);
 	VehicleState.WheelTraction=1.f-VehicleState.WheelTraction;
 	
-	if(AllowSleep&&(AllowTankSleep))
+	if(AllowSleep)
 	{
-		if(GetSetup()->GetSteerType()!=Tank&&AllowTankSleep){
+		if(GetSetup()->GetSteerType()!=Tank||AllowTankSleep){
 		
 			const float EffectiveThrottle=FMath::Min(RawThrottleInput,ClutchInput);
 			// Wake if control input pressed
-			if (VehicleState.bSleeping && (EffectiveThrottle!=0.f||RawSteeringInput!=0.f||GetMesh()->IsAnyRigidBodyAwake()))
+			if (VehicleState.bSleeping && (EffectiveThrottle!=0.f||RawSteeringInput!=0.f||(GetMesh()->IsAnyRigidBodyAwake()&&!AllowSleepUsingFriction)))
 			{
 			
 				SetSleeping(false);
+				UE_LOG(LogTemp,Log,TEXT("Sleep Off"))
 				VehicleState.SleepTimer=0.f;
 			}else if (VehicleState.WheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->SleepSlopeLimit))
 			{
@@ -620,7 +622,8 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 					const float SleepThreshold=GetSetup()->SleepThreshold;
 					if (SpeedSqr < (SleepThreshold * SleepThreshold))
 					{
-				
+
+						UE_LOG(LogTemp,Log,TEXT("Sleep On"))
 						SetSleeping(true);
 					
 					}
@@ -1552,52 +1555,70 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 {
 	VehicleState.bSleeping=bEnableSleep;
-
-	
 	VehicleState.CurrentRpm=VehicleState.IsEngineOn? GetSetup()->IdleRpm:0.f;
-	if(bEnableSleep)
+	if(!AllowSleepUsingFriction)
 	{
-		if(GetSetup())
+		
+		if(bEnableSleep)
 		{
-			if(GetSetup()->GetSteerType()!=Tank)
+			if(GetSetup())
 			{
-				if(GetSetup()->GetGearBox())
+				if(GetSetup()->GetSteerType()!=Tank)
 				{
-					GetSetup()->GetGearBox()->SetToIdle();
+					if(GetSetup()->GetGearBox())
+					{
+						GetSetup()->GetGearBox()->SetToIdle();
+					}
 				}
 			}
 		}
-	}
 	
-	for (const auto Comp:Components)
-	{
-		Comp->WheelState.AngularVelocity=0.f;
-	}
-	
-	
+		for (const auto Comp:Components)
+		{
+			Comp->WheelState.AngularVelocity=0.f;
+		}
+		
 		SetSleepOnBody(GetMesh(),bEnableSleep);
 	
-	for(const auto Comp:Components)
-	{
-		if(Comp->ConstraintParent)
+		for(const auto Comp:Components)
 		{
+			if(Comp->ConstraintParent)
+			{
 			
 				SetSleepOnBody(Comp->ConstraintParent,bEnableSleep);
 				SetSleepOnBody(Comp->WheelCollision,bEnableSleep);
 			
 			
+			}
+			if(Comp->SurfaceData)
+			{
+				Comp->SurfaceData->OnSleep();
+			}
 		}
-		if(Comp->SurfaceData)
+		TArray<UActorComponent*> Comps;
+		GetOwner()->GetComponents(Comps,true);
+		for(const auto Comp:Comps)
 		{
-			Comp->SurfaceData->OnSleep();
+			if(const auto Prim=Cast<UPrimitiveComponent>(Comp))
+				SetSleepOnBody(Prim,bEnableSleep);
 		}
-	}
-	TArray<UActorComponent*> Comps;
-	GetOwner()->GetComponents(Comps,true);
-	for(const auto Comp:Comps)
+	
+	}else
 	{
-		if(const auto Prim=Cast<UPrimitiveComponent>(Comp))
-		SetSleepOnBody(Prim,bEnableSleep);
+
+		for(auto Comp :GetWheels())
+		{
+			
+			Comp->WheelCollision->SetPhysMaterialOverride(bEnableSleep?Comp->FullFrictionDefaultPhysMaterial:Comp->NoFrictionDefaultPhysMaterial);
+			
+				Comp->WheelState.AngularVelocity=0.f;
+			
+	
+			if(Comp->SurfaceData)
+			{
+				Comp->SurfaceData->OnSleep();
+			}
+		}
 	}
 	OnSleepChange.Broadcast(bEnableSleep);
 }

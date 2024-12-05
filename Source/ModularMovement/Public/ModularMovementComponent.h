@@ -374,6 +374,9 @@ public:
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool AllowSleep = true;
 
+    // only for physical wheels
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly,meta=(AdvancedDisplay="true"))
+    bool AllowSleepUsingFriction = false;
 
     //Backwards compatibility
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly,AdvancedDisplay)
