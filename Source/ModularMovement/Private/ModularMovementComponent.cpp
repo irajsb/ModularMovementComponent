@@ -277,7 +277,7 @@ void UModularMovementComponent::InitializeComponent()
 
 	if (ApplyRecommendedMeshProperties)
 	{
-		//MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
+		MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
 		MeshComponent->BodyInstance.bSimulatePhysics = true;
 		if (MeshComponent->GetCollisionObjectType())
 
