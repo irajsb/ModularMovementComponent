@@ -1156,7 +1156,10 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 		if (const auto CurrentGear = GetSetup()->GetGearBox()->CurrentGear != RepCosmeticData.CurrentGear)
 		{
 			OnGearChange.Broadcast(CurrentGear, RepCosmeticData.CurrentGear, true);
-			GetSetup()->GetGearBox()->SetCurrentGear(RepCosmeticData.CurrentGear);
+			if (!GetSetup()->GetGearBox()->IsManual||GetOwnerRole()==ROLE_AutonomousProxy)
+			{
+				GetSetup()->GetGearBox()->SetCurrentGear(RepCosmeticData.CurrentGear);
+			}
 		}
 		SteeringInput = RepCosmeticData.SteeringInput;
 
