@@ -183,7 +183,7 @@ void UModularMovementComponent::HoldStarter(float StartTime)
 	if (StartTime == 0.f)
 	{
 		VehicleState.IsEngineOn = true;
-
+		ServerSetEngineOn(VehicleState.IsEngineOn );
 		StarterTimerHandle.Invalidate();
 
 		OnEngineStateChange.Broadcast(true, false);
@@ -208,6 +208,7 @@ void UModularMovementComponent::StopEngine()
 	if (VehicleState.IsEngineOn)
 	{
 		VehicleState.IsEngineOn = false;
+		ServerSetEngineOn(VehicleState.IsEngineOn );
 		OnEngineStateChange.Broadcast(false, false);
 	}
 }
@@ -675,9 +676,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 		//Use curve 
-		const float EngineTorque = VehicleState.IsEngineOn
-			                           ? ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm)
-			                           : 0;
+		const float EngineTorque = TransientTorqueMultiplier*VehicleState.IsEngineOn? ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm): 0;
 		//Engine braking 
 		if(DriveRPM>MaxRads)
 		{
@@ -1184,6 +1183,11 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 	{
 		ApplyBodyInstanceData();
 	}
+}
+
+void UModularMovementComponent::ServerSetEngineOn_Implementation(bool NewOn)
+{
+	VehicleState.IsEngineOn = NewOn;
 }
 
 void UModularMovementComponent::SetCosmeticDataOnServer_Implementation(FRepCosmeticData Data)

@@ -249,6 +249,7 @@ void UModularGearBox::SetCurrentGear(int InGear)
 	if (Gears.IsValidIndex(InGear))
 	{
 		TargetGear = CurrentGear = InGear;
+		
 	}
 	else
 	{

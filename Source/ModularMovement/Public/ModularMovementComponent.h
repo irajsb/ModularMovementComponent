@@ -481,6 +481,8 @@ public:
     UFUNCTION(reliable, server, WithValidation)
     void ServerUpdateState(uint16 InQuantizeInput);
 
+    UFUNCTION(reliable, server)
+    void ServerSetEngineOn(bool NewOn);
     UPROPERTY(Transient)
     uint16 QuantizeInput;
 
@@ -547,5 +549,16 @@ public:
     FVector OriginalCOM;
     UPROPERTY(Transient)
     FVector2D OriginalDampening;
+
+
+    UPROPERTY(BlueprintReadOnly)
+    TOptional<float> LastDampening;
+
+
+    //This is for my own game. if you can see this ignore it  or remove it :P
+    UPROPERTY(BlueprintReadWrite)
+    float TransientTorqueMultiplier=1;
+
+
     
 };
