@@ -455,8 +455,9 @@ void UVehicleSpringArm::TickComponent(float DeltaTime, enum ELevelTick TickType,
 		
 			//Find lag amount by acceleration
 			if (bEnableCameraLag)
-			{
+			{	
 				const float Acceleration = ((Velocity * FVector(1, 1, 0)).Size() - PreviousSpeed) / DeltaTime;
+				LastAcceleration=UKismetMathLibrary::FInterpTo_Constant(LastAcceleration,Acceleration,DeltaTime,AccelerationLerpSpeed);
 				const float InterpolationTarget = UKismetMathLibrary::MapRangeClamped(
 					Acceleration, MinAcceleration, MaxAcceleration, TargetArmLength - MaxArmLenChange,
 					TargetArmLength + MaxArmLenChange);

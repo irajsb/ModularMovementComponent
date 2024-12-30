@@ -3,3 +3,18 @@
 
 #include "ModularMovementPhysicalMaterial.h"
 
+float UModularMovementPhysicalMaterial::GetModifiedThrottleForSurface(UModularWheel* Wheel,float Velocity)
+{
+
+	if (Wheel)
+	{
+		if (const auto PhysMat= Cast<UModularMovementPhysicalMaterial>( Wheel->GetActivePhysicalMaterial()))
+		{
+			if (PhysMat->MaxDesiredSpeed!=0.f&&PhysMat->MaxDesiredSpeed<FMath::Abs(Velocity))
+			{
+				return 0.01;
+			}
+		}
+	}
+	return 1.f;
+}

@@ -276,4 +276,9 @@ private:
 	FRotator LastOwnerRot=FRotator::ZeroRotator;
 	FVector AngularVelocity=FVector::ZeroVector;
 	FVector SmoothedAngularVelocity=FVector::ZeroVector;
+
+
+	UPROPERTY(EditAnyWhere,Category=VehicleSpringArm)
+	float AccelerationLerpSpeed=100.f;
+	float LastAcceleration;
 };

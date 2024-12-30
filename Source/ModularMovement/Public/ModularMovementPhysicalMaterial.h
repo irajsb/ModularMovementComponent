@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ModularWheel.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "ModularMovementPhysicalMaterial.generated.h"
 
@@ -22,4 +23,12 @@ public:
 	//Drag force on body
 	UPROPERTY(EditAnywhere,Category="ModularPhysicsMaterial")
 	float BodyDragCoefficient=500;
+
+	// Meta data not used directly in Plugin
+	UPROPERTY(EditAnywhere,Category="ModularPhysicsMaterial")
+	float MaxDesiredSpeed=0.f;
+
+
+	UFUNCTION(BlueprintCallable)
+	static float GetModifiedThrottleForSurface(UModularWheel* Wheel,float Velocity);
 };
