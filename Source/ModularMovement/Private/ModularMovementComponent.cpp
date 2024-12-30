@@ -676,7 +676,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 		//Use curve 
-		const float EngineTorque = TransientTorqueMultiplier*VehicleState.IsEngineOn? ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm): 0;
+		const float EngineTorque = VehicleState.IsEngineOn? TransientTorqueMultiplier*ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm): 0;
 		//Engine braking 
 		if(DriveRPM>MaxRads)
 		{
