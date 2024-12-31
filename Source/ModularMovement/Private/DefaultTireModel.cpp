@@ -155,12 +155,12 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 		{
 			const float AngularVelocity= Wheel->WheelState.AngularVelocity;
 			const float LinearVelocity = AngularVelocity * WheelRadius;
-			const float  DragForce = 0.5f * Material->DragCoefficient  * LinearVelocity * LinearVelocity;
+			const float  DragForce = ModularMovementComponent->GetMassPerWheel()*0.5f * Material->DragCoefficient  * LinearVelocity * LinearVelocity;
 			
 			Wheel->WheelState.BrakeTorque+= DragForce * WheelRadius;
 
 			ModularMovementComponent->UseCustomDrag=true;
-			ModularMovementComponent->CustomDragCoefficient=Material->BodyDragCoefficient;
+			ModularMovementComponent->CustomDragCoefficient=Material->BodyDragCoefficient*ModularMovementComponent->GetMesh()->GetMass();
 
 			if(	Wheel->ParentBodyOverride)
 			{
