@@ -18,11 +18,11 @@ class MODULARMOVEMENT_API UModularMovementPhysicalMaterial : public UPhysicalMat
 public:
 	//Drag this surface has on wheel
 	UPROPERTY(EditAnywhere,Category="ModularPhysicsMaterial")
-	float DragCoefficient=0.625f;
+	float DragCoefficient=0.0;
 
 	//Drag force on body
 	UPROPERTY(EditAnywhere,Category="ModularPhysicsMaterial")
-	float BodyDragCoefficient=0.625f;
+	float BodyDragCoefficient=0.0625;
 
 	// Meta data not used directly in Plugin
 	UPROPERTY(EditAnywhere,Category="ModularPhysicsMaterial")
