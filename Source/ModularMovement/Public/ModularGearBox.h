@@ -125,6 +125,9 @@ public:
 	UModularMovementComponent* MC;
 
 
+	UPROPERTY(Transient)
+	float CurrentRpm=0.f;
+
 	int32 MaxGear=9999;
 	//
 	UFUNCTION(BlueprintCallable,Category=Transmission)

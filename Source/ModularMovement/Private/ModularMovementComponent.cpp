@@ -652,7 +652,13 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 	const bool EngineFree=GetSetup()->GetGearBox()->GetDriveRatio()==0.f||VehicleState.DriveWheelsOnGround==0;
 	const float Clutch=EngineFree?0.f:ClutchInput;
 	const float MinRads = VehicleState.IsEngineOn ? RPMToOmega(GetSetup()->IdleRpm) : 0.f;
-	const float DriveRPM=FMath::Lerp( ThrottleInput * MaxRads,VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio(),Clutch);
+	float AxleRPM=VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio();
+	if (GetSetup()->bUseGearboxRpm)
+	{
+		AxleRPM=GetSetup()->GetGearBox()->CurrentRpm;
+		UE_LOG(LogTemp,Log,TEXT("Axle RPM %f"),AxleRPM);
+	}
+	const float DriveRPM=FMath::Lerp( ThrottleInput * MaxRads,AxleRPM,Clutch);
 	const bool GearChange=GetSetup()->ZeroRpmWhenShifting && GetSetup()->GetGearBox()->IsChangingGear();
 	 float TargetRPM =UKismetMathLibrary::MapRangeClamped(DriveRPM,0,MaxRads,MinRads,MaxRads);
 	if(GearChange)
@@ -660,6 +666,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 		TargetRPM=0.f;
 		WheelTorque=0.f;
 	}
+	
 	VehicleState.EngineRads = FMath::FInterpConstantTo(VehicleState.EngineRads, TargetRPM, DeltaTime,
 	                                                   VehicleState.VehicleData->GetEngineInertia() * VehicleState.VehicleData->GetMaxRPM());
 

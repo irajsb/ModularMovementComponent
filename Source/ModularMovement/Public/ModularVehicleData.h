@@ -97,6 +97,9 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	// minimum engine power when engine health is low
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
 	float EngineBrokenMinTorqueFactor=0.2;
+	// Use gearbox RPM for engine calculations. This ignores wheel spin for RPM speed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
+	bool bUseGearboxRpm=false;
 
 	//Gearbox Data
 	UPROPERTY(Instanced,EditAnywhere,Category=Essential)
