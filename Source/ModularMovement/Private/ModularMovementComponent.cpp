@@ -656,7 +656,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 	if (GetSetup()->bUseGearboxRpm)
 	{
 		AxleRPM=GetSetup()->GetGearBox()->CurrentRpm;
-		UE_LOG(LogTemp,Log,TEXT("Axle RPM %f"),AxleRPM);
+		
 	}
 	const float DriveRPM=FMath::Lerp( ThrottleInput * MaxRads,AxleRPM,Clutch);
 	const bool GearChange=GetSetup()->ZeroRpmWhenShifting && GetSetup()->GetGearBox()->IsChangingGear();
