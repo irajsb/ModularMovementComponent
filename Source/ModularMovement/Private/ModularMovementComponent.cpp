@@ -1237,7 +1237,7 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 			}
 		}
 	
-	DrawDebugSphere(GetWorld(),NewestBodyInstance.Position,250,20,FColor::White,false,-1,1);
+	//DrawDebugSphere(GetWorld(),NewestBodyInstance.Position,250,20,FColor::White,false,-1,1);
 
 	FBodyInstance* BI = GetMesh()->GetBodyInstance();
 	FRigidBodyState CurrentState;
