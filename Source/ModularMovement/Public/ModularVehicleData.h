@@ -202,6 +202,10 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	// The drag coefficient is a dimensionless quantity that is used to quantify the drag or resistance of an object in a fluid environment, such as air or water.
 	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
 	float AirDragCoefficient=0.3;
+
+	//Max AirDrag to limit air drag to no become too much
+	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
+	float MaximumAirDragSpeedKMH=10;
 	
 	
 

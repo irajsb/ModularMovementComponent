@@ -731,8 +731,9 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 void UModularMovementComponent::UpdateAirDrag(UPrimitiveComponent * CompToApplyForceTo) 
 {
 	
-	const float DragConstant=UseCustomDrag?CustomDragCoefficient:AirDragConstant;
-	const FVector BodyVelocity = GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity() / 100.f; //CM/s To Meter/s
+	const float DragConstant=UseCustomDrag?CustomDragCoefficient:GetSetup()->GetAirDragConstant();
+	FVector BodyVelocity = GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity() / 100.f; //CM/s To Meter/s
+	BodyVelocity=BodyVelocity.GetClampedToMaxSize(GetSetup()->MaximumAirDragSpeedKMH/3.6f);
 	const FVector DragForce = BodyVelocity * BodyVelocity.Size() * DragConstant * -1;
 	if(CompToApplyForceTo==GetMesh())
 	{
