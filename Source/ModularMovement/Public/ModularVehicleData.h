@@ -205,7 +205,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 
 	//Max AirDrag to limit air drag to no become too much
 	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
-	float MaximumAirDragSpeedKMH=10;
+	float MaximumAirDragSpeedKMH=30;
 	
 	
 
