@@ -612,7 +612,7 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 			{
 			
 				SetSleeping(false);
-				UE_LOG(LogTemp,Log,TEXT("Sleep Off"))
+				
 				VehicleState.SleepTimer=0.f;
 			}else if (VehicleState.WheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->SleepSlopeLimit))
 			{
@@ -624,7 +624,7 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 					if (SpeedSqr < (SleepThreshold * SleepThreshold))
 					{
 
-						UE_LOG(LogTemp,Log,TEXT("Sleep On"))
+						
 						SetSleeping(true);
 					
 					}
@@ -711,6 +711,11 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 			if (VehicleState.CurrentFuel == 0.f)
 			{
 				StopEngine();
+				AsyncTask(ENamedThreads::Type::GameThread,[this]()
+				{
+					OnOutOfFuel.Broadcast();
+				});
+				
 			}
 		}
 

@@ -21,6 +21,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange, int, CurrentGear, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEngineStateChange, bool, IsEngineOn, bool, IsStarting);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSleepChange, bool, Sleep);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCustomEvent, uint8, EventType, UModularWheel*, Wheel);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNoParamDelegate);
 
 // Debug parameters structure
 struct FModularVehicleDebugParams
@@ -495,6 +496,8 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FOnEngineStateChange OnEngineStateChange;
+    UPROPERTY(BlueprintAssignable)
+    FNoParamDelegate OnOutOfFuel;
 
     // Debug
     UPROPERTY()
