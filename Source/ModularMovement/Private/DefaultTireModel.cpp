@@ -175,7 +175,7 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 			ModularMovementComponent->UseCustomDrag=false;
 		}
 	}
-
+	SurfaceFriction=FMath::Max(MinFrictionClamp,SurfaceFriction);
 	FinalForceVector.X *= WheelLoad * SurfaceFriction*( UseArcadeFrictionMultiplier?ArcadeForceMultiplier:1.f);
 	FinalForceVector.Y *= WheelLoad* SurfaceFriction*(UseArcadeFrictionMultiplier?ArcadeForceLateral:1.f);
 
