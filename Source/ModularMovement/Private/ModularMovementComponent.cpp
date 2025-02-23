@@ -720,7 +720,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 		}
 
 
-		WheelTorque = EngineTorque * TransmissionTorque*FMath::Max(VehicleHealth,GetSetup()->EngineBrokenMinTorqueFactor);
+		WheelTorque = EngineTorque * TransmissionTorque*FMath::GetMappedRangeValueClamped(FVector2D(0.f,1),FVector2D(GetSetup()->EngineBrokenMinTorqueFactor,1),VehicleHealth);
 		VehicleState.EngineBrake=VehicleState.EngineBrake*TransmissionTorque;
 	
 		if (ModularVehicleDebugger)

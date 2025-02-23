@@ -30,5 +30,5 @@ public:
 
 
 	UFUNCTION(BlueprintCallable)
-	static float GetModifiedThrottleForSurface(UModularWheel* Wheel,float Velocity);
+	static float GetModifiedThrottleForSurface(UModularWheel* Wheel,float Velocity,float MaxSpeedMultiplier=1.f);
 };
