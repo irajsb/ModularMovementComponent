@@ -1199,12 +1199,20 @@ void UModularMovementComponent::ShowSetupError(const FString& Error)
 
 void UModularMovementComponent::ApplyBodyInstanceData() 
 {
-	
 
 	if (GetMesh() == nullptr || !CosmeticDataInitialized)
 	{
 		return;
 	}
+
+	
+	
+	if (NetworkMode==EVehicleNetworkMode::Default){
+		// if we are not sleeping on server then let unreal handle replication otherwise blend to current position that vehicle is sleeping since unreal doesn't do that if server one is sleeping 
+		if (RepCosmeticData.IsSleep==VehicleState.bSleeping )
+		return;
+	}
+
 
 	FBodyInstance* BI = GetMesh()->GetBodyInstance();
 	if (BI && BI->IsInstanceSimulatingPhysics())
@@ -1212,6 +1220,7 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 		FRigidBodyState CurrentState;
 		GetMesh()->GetRigidBodyState(CurrentState);
 
+		
 		/////// POSITION CORRECTION ///////
 
 		// Find out how much of a correction we are making
@@ -1219,21 +1228,26 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 		const float DeltaSize=DeltaPos.Size();
 	
 
-		// Snap position by EVehicleNetworkMode::Default (big correction, or we are moving too slowly)
+		// Snap position by default (big correction, or we are moving too slowly)
 		FVector UpdatedPos = CurrentState.Position;
 		FVector FixLinVel = FVector::ZeroVector;
 
+		//Error correction is more aggresive on simulated pawns 
+		const float MaxDistanceToFix=GetOwnerRole()==ROLE_SimulatedProxy?ErrorCorrection.MaxDistanceToFix:ErrorCorrection.MaxDistanceToFix;
+		const float MaxAngleToFix=GetOwnerRole()==ROLE_SimulatedProxy?ErrorCorrection.MaxAngleToFix:ErrorCorrection.MaxAngleToFix;
 		
 		// If its a small correction and velocity is above threshold, only make a partial correction,
 		// and calculate a velocity that would fix it over 'fixTime'.
-		if (ErrorCorrection.MinDistanceToFix<DeltaSize&&DeltaSize<ErrorCorrection.MaxDistanceToFix)
+
+		
+		if (ErrorCorrection.MinDistanceToFix<DeltaSize&&DeltaSize<MaxDistanceToFix)
 		{
-			const float LerpAlpha=UKismetMathLibrary::MapRangeClamped(DeltaSize,ErrorCorrection.MinDistanceToFix,ErrorCorrection.MaxDistanceToFix,0,ErrorCorrection.MaxAlpha);
+			const float LerpAlpha=UKismetMathLibrary::MapRangeClamped(DeltaSize,ErrorCorrection.MinDistanceToFix,MaxDistanceToFix,0,ErrorCorrection.MaxAlpha);
 			UpdatedPos = FMath::Lerp(CurrentState.Position, NewestBodyInstance.Position, LerpAlpha);
 			FixLinVel = (NewestBodyInstance.Position - UpdatedPos) * ErrorCorrection.SpeedFactor;
 			FixLinVel=FixLinVel.GetClampedToMaxSize(CurrentState.LinVel.Size());
 			
-		}else if(DeltaSize > ErrorCorrection.MaxDistanceToFix)
+		}else if(DeltaSize > MaxDistanceToFix)
 		{
 			UpdatedPos=NewestBodyInstance.Position;
 		}
@@ -1250,19 +1264,19 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 		DeltaQuat.ToAxisAndAngle(DeltaAxis, DeltaAng);
 		DeltaAng = FMath::UnwindRadians(DeltaAng);
 
-		// Snap rotation by EVehicleNetworkMode::Default (big correction, or we are moving too slowly)
+		// Snap rotation by default (big correction, or we are moving too slowly)
 		FQuat UpdatedQuat = CurrentState.Quaternion;
 		FVector FixAngVel = FVector::ZeroVector; // degrees per second
 
 	
 		// If the error is small, and we are moving, try to move smoothly to it
-		if (ErrorCorrection.MinAngleToFix<FMath::Abs(DeltaAng)  &&FMath::Abs(DeltaAng) < ErrorCorrection.MaxAngleToFix)
+		if (ErrorCorrection.MinAngleToFix<FMath::Abs(DeltaAng)  &&FMath::Abs(DeltaAng) < MaxAngleToFix)
 		{
-			const float LerpAlpha=UKismetMathLibrary::MapRangeClamped(FMath::Abs(DeltaAng),ErrorCorrection.MinAngleToFix,ErrorCorrection.MaxAngleToFix,0,ErrorCorrection.MaxAngularAlpha);
+			const float LerpAlpha=UKismetMathLibrary::MapRangeClamped(FMath::Abs(DeltaAng),ErrorCorrection.MinAngleToFix,MaxAngleToFix,0,ErrorCorrection.MaxAngularAlpha);
 			UpdatedQuat = FMath::Lerp(CurrentState.Quaternion, NewestBodyInstance.Quaternion,LerpAlpha);
 			FixAngVel = DeltaAxis.GetSafeNormal() * FMath::RadiansToDegrees(DeltaAng) * (1.f - LerpAlpha);
 		
-		}else if(FMath::Abs(DeltaAng) > ErrorCorrection.MaxAngleToFix)
+		}else if(FMath::Abs(DeltaAng) > MaxAngleToFix)
 		{
 			UpdatedQuat=NewestBodyInstance.Quaternion;
 		}
@@ -1270,13 +1284,15 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 	
 
 		/////// BODY UPDATE ///////
+		///
 		BI->SetBodyTransform(FTransform(UpdatedQuat, UpdatedPos), ETeleportType::TeleportPhysics);
 		BI->SetLinearVelocity(CurrentState.LinVel + FixLinVel, false);
-	//	BI->SetAngularVelocityInRadians(FMath::DegreesToRadians(UpdatedQuat.Vector()), false);
+		BI->SetAngularVelocityInRadians(FMath::DegreesToRadians(UpdatedQuat.Vector()), false);
 
+	
 		// state is restored when no velocity corrections are required
-		const bool bRestoredState = (FixLinVel.SizeSquared() < KINDA_SMALL_NUMBER) && (FixAngVel.SizeSquared() <
-			KINDA_SMALL_NUMBER);
+		const bool bRestoredState = (FixLinVel.SizeSquared() < 0.01f) && (FixAngVel.SizeSquared() <
+			0.01f);
 	
 
 		
