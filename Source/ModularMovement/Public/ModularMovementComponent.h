@@ -553,10 +553,7 @@ public:
     FVector OriginalCOM;
     UPROPERTY(Transient)
     FVector2D OriginalDampening;
-
-
-    UPROPERTY(BlueprintReadOnly)
-    TOptional<float> LastDampening;
+    
 
 
     //This is for my own game. if you can see this ignore it  or remove it :P
