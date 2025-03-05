@@ -7,6 +7,7 @@
 #include "Components/MeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/PawnMovementComponent.h"
+#include "Misc/Optional.h"
 #include "ModularMovementComponent.generated.h"
 
 // Macro to convert SI force to Unreal force
