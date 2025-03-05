@@ -9,8 +9,7 @@
 #include "Kismet/KismetMathLibrary.h"
 
 
-UModularGearBox::UModularGearBox(): IsManual(false), IdleGear(0), CurrentGear(0), TargetGear(0),
-                                    MC(nullptr)
+UModularGearBox::UModularGearBox(): IsManual(false), IdleGear(0), CurrentGear(0), TargetGear(0), MC(nullptr)
 {
 	//reverse
 	Gears.Add(FModularGearInfo(3));
@@ -38,16 +37,16 @@ void UModularGearBox::SetupGearBox()
 
 void UModularGearBox::SetTargetGear(int32 GearNum, bool bImmediate, class UModularMovementComponent* MovementComponent)
 {
-	if(CurrentGear == GearNum)
+	if (CurrentGear == GearNum)
 	{
 		return;
 	}
-	
-		if(GearNum>MaxGear)
-		{
-			return;
-		}
-	
+
+	if (GearNum > MaxGear)
+	{
+		return;
+	}
+
 	if (Gears.IsValidIndex(GearNum))
 	{
 		if (GearChangeTime == 0.f || bImmediate)
@@ -65,8 +64,7 @@ void UModularGearBox::SetTargetGear(int32 GearNum, bool bImmediate, class UModul
 	if (MovementComponent->ModularVehicleDebugger)
 	{
 		FString Message = ("Setting Target Gear:");
-		Message += FString::FromInt(TargetGear) + TEXT(" Current: ") + FString::FromInt(
-			CurrentGear);
+		Message += FString::FromInt(TargetGear) + TEXT(" Current: ") + FString::FromInt(CurrentGear);
 		if (bImmediate)
 		{
 			Message += " Immediate shift";
@@ -79,43 +77,58 @@ void UModularGearBox::SetTargetGear(int32 GearNum, bool bImmediate, class UModul
 	}
 }
 
-void UModularGearBox::CalculateIdealGear(const float IdealGearRatio, int& ClosestGearIndex,int DefaultGear)
+void UModularGearBox::CalculateIdealGear(const float IdealGearRatio, int& ClosestGearIndex, int DefaultGear)
 {
 	float ClosestGear = BIG_NUMBER;
 	ClosestGearIndex = DefaultGear;
-	bool DownShift=DefaultGear<CurrentGear;
-	
-	for (int Index = IdleGear+1; Index != Gears.Num(); Index++)
+	bool DownShift = DefaultGear < CurrentGear;
+
+	for (int Index = IdleGear + 1; Index != Gears.Num(); Index++)
 	{
-		if(!DownShift)
+		if (!DownShift)
 		{
-			if (Gears[Index].GearRatio <IdealGearRatio&& IdealGearRatio-Gears[Index].GearRatio   < ClosestGear)
+			if (Gears[Index].GearRatio < IdealGearRatio && IdealGearRatio - Gears[Index].GearRatio < ClosestGear)
 			{
-			
-				ClosestGear =IdealGearRatio-Gears[Index].GearRatio ;
+				ClosestGear = IdealGearRatio - Gears[Index].GearRatio;
 				ClosestGearIndex = Index;
-			
 			}
-		}else
+		}
+		else
 		{
-			if (Gears[Index].GearRatio >IdealGearRatio&&FMath::Abs( IdealGearRatio-Gears[Index].GearRatio )  < ClosestGear)
+			if (Gears[Index].GearRatio > IdealGearRatio && FMath::Abs(IdealGearRatio - Gears[Index].GearRatio) < ClosestGear)
 			{
-			
-				ClosestGear =FMath::Abs(IdealGearRatio-Gears[Index].GearRatio) ;
+				ClosestGear = FMath::Abs(IdealGearRatio - Gears[Index].GearRatio);
 				ClosestGearIndex = Index;
-			
 			}
 		}
 	}
-	
 }
 
 void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* MovementComponent)
 {
 	MC = MovementComponent;
+
+
+	float DriveWheelRadius = 0.f;
+	const FModularVehicleState VehicleState = MovementComponent->VehicleState;
+	for (const auto Wheel : MovementComponent->GetWheels())
+	{
+		if (Wheel->WheelState.ApplyDriveForce)
+		{
+			DriveWheelRadius = Wheel->GetWheelSetup()->WheelRadius / 100;
+			break;
+		}
+	}
+	//Calculate RPM from vehicle speed instead of wheel because wheel can get locked or spin
+	 CurrentRpm = (VehicleState.ForwardSpeed / 100 * Gears[CurrentGear].GearRatio * MovementComponent->CurrentDifferentialRatio / DriveWheelRadius) * 30 / PI;
+
+	GearBoxRPMRatio = UKismetMathLibrary::MapRangeClamped(CurrentRpm, MovementComponent->GetSetup()->GetIdleRPM(), MovementComponent->GetSetup()->GetMaxRPM(), 0, 1);
+	const float TargetRpm = UKismetMathLibrary::MapRangeUnclamped(IdealRPMRatio, 0, 1, MovementComponent->GetSetup()->GetIdleRPM(), MovementComponent->GetSetup()->GetMaxRPM());
+	const float IdealGearRatio = (TargetRpm * PI * DriveWheelRadius) / (VehicleState.ForwardSpeed / 100 * MovementComponent->CurrentDifferentialRatio * 30);
+
+
 	if (!IsManual)
 	{
-		const FModularVehicleState VehicleState = MovementComponent->VehicleState;
 		if (VehicleState.DriveWheelsOnGround != 0)
 		{
 			if (MovementComponent->GetSetup()->ShouldReverseAsBrake())
@@ -124,13 +137,12 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 				if (FMath::Abs(VehicleState.ForwardSpeed) < MovementComponent->GetSetup()->GetWrongDirectionThreshold())
 				//we only shift between reverse and first if the car is slow enough.
 				{
-					if (MovementComponent->RawThrottleInput < -1 * KINDA_SMALL_NUMBER &&( CurrentGear >= IdleGear &&TargetGear >= IdleGear))
-					{	
+					if (MovementComponent->RawThrottleInput < -1 * KINDA_SMALL_NUMBER && (CurrentGear >= IdleGear && TargetGear >= IdleGear))
+					{
 						SetTargetGear(IdleGear - 1, true, MovementComponent);
 						return;
 					}
-					if (MovementComponent->RawThrottleInput > KINDA_SMALL_NUMBER && CurrentGear <= IdleGear &&
-						TargetGear <= IdleGear)
+					if (MovementComponent->RawThrottleInput > KINDA_SMALL_NUMBER && CurrentGear <= IdleGear && TargetGear <= IdleGear)
 					{
 						SetTargetGear(IdleGear + 1, true, MovementComponent);
 					}
@@ -140,44 +152,21 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 					// situations when  car is moving fast and needs to change gear 
 
 					//if car is moving in forward speed and  its in back gear (happens after a -180 degree flip in reverse
-					if (VehicleState.ForwardSpeed > KINDA_SMALL_NUMBER && MovementComponent->RawThrottleInput >
-						KINDA_SMALL_NUMBER &&
-						CurrentGear < IdleGear)
+					if (VehicleState.ForwardSpeed > KINDA_SMALL_NUMBER && MovementComponent->RawThrottleInput > KINDA_SMALL_NUMBER && CurrentGear < IdleGear)
 					{
 						SetTargetGear(IdleGear + 1, true, MovementComponent);
 					}
 
 					//if car is moving in forward speed and  its in back gear (happens after a -180 degree flip in reverse
-					if (VehicleState.ForwardSpeed < KINDA_SMALL_NUMBER && MovementComponent->RawThrottleInput <KINDA_SMALL_NUMBER &&CurrentGear == IdleGear+1)
+					if (VehicleState.ForwardSpeed < KINDA_SMALL_NUMBER && MovementComponent->RawThrottleInput < KINDA_SMALL_NUMBER && CurrentGear == IdleGear + 1)
 					{
 						SetTargetGear(IdleGear - 1, true, MovementComponent);
 					}
 				}
 			}
-			float DriveWheelRadius = 0.f;
 
-			for (const auto Wheel : MovementComponent->GetWheels())
-			{
-				if (Wheel->WheelState.ApplyDriveForce)
-				{
-					DriveWheelRadius = Wheel->GetWheelSetup()->WheelRadius / 100;
-					break;
-				}
-			}
-			//Calculate RPM from vehicle speed instead of wheel because wheel can get locked or spin
-			const float CurrentRpm = (VehicleState.ForwardSpeed / 100 * Gears[CurrentGear].GearRatio * MovementComponent
-				->CurrentDifferentialRatio / DriveWheelRadius) * 30 / PI;
-			
-			GearBoxRPMRatio = UKismetMathLibrary::MapRangeClamped(
-				CurrentRpm, MovementComponent->GetSetup()->GetIdleRPM(),
-				MovementComponent->GetSetup()->GetMaxRPM(), 0, 1);
-			const float TargetRpm = UKismetMathLibrary::MapRangeUnclamped(
-				IdealRPMRatio, 0, 1, MovementComponent->GetSetup()->GetIdleRPM(),
-				MovementComponent->GetSetup()->GetMaxRPM());
-			const float IdealGearRatio = (TargetRpm * PI * DriveWheelRadius) / (VehicleState.ForwardSpeed / 100 *
-				MovementComponent->CurrentDifferentialRatio * 30);
 
-			if(CurrentGear>MaxGear)
+			if (CurrentGear > MaxGear)
 			{
 				SetTargetGear(MaxGear, true, MovementComponent);
 				return;
@@ -189,22 +178,15 @@ void UModularGearBox::Update(float DeltaTime, UModularMovementComponent* Movemen
 				{
 					if (GearBoxRPMRatio >= Gears[CurrentGear].UpRatio)
 					{
-						if(Gears.IsValidIndex(CurrentGear + 1))
+						if (Gears.IsValidIndex(CurrentGear + 1))
 						{
-						
-							
-							
-								SetTargetGear(CurrentGear + 1, false, MovementComponent);
-							
+							SetTargetGear(CurrentGear + 1, false, MovementComponent);
 						}
 					}
-					else if ( GearBoxRPMRatio <= Gears[CurrentGear].DownRatio && CurrentGear > IdleGear + 1)
+					else if (GearBoxRPMRatio <= Gears[CurrentGear].DownRatio && CurrentGear > IdleGear + 1)
 					// don't change down to neutral
 					{
-						
-							SetTargetGear(CurrentGear - 1, true, MovementComponent);
-						
-						
+						SetTargetGear(CurrentGear - 1, true, MovementComponent);
 					}
 				}
 			}
@@ -258,8 +240,8 @@ void UModularGearBox::SetCurrentGear(int InGear)
 
 void UModularGearBox::SetToIdle()
 {
-	CurrentGear=TargetGear=IdleGear;
-	CurrentGearChangeTime=0.f;
+	CurrentGear = TargetGear = IdleGear;
+	CurrentGearChangeTime = 0.f;
 }
 
 
@@ -270,7 +252,7 @@ bool UModularGearBox::IsInReverse()
 
 void UModularGearBox::SetMaxGear(int32 InGear)
 {
-	MaxGear=InGear;
+	MaxGear = InGear;
 }
 
 bool UModularGearBox::IsChangingGear()

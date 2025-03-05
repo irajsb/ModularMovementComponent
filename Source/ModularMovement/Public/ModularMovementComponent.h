@@ -21,6 +21,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange, int, CurrentGear, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEngineStateChange, bool, IsEngineOn, bool, IsStarting);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSleepChange, bool, Sleep);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCustomEvent, uint8, EventType, UModularWheel*, Wheel);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNoParamDelegate);
 
 // Debug parameters structure
 struct FModularVehicleDebugParams
@@ -374,6 +375,9 @@ public:
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool AllowSleep = true;
 
+    // only for physical wheels
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly,meta=(AdvancedDisplay="true"))
+    bool AllowSleepUsingFriction = false;
 
     //Backwards compatibility
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly,AdvancedDisplay)
@@ -478,6 +482,8 @@ public:
     UFUNCTION(reliable, server, WithValidation)
     void ServerUpdateState(uint16 InQuantizeInput);
 
+    UFUNCTION(reliable, server)
+    void ServerSetEngineOn(bool NewOn);
     UPROPERTY(Transient)
     uint16 QuantizeInput;
 
@@ -490,6 +496,8 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FOnEngineStateChange OnEngineStateChange;
+    UPROPERTY(BlueprintAssignable)
+    FNoParamDelegate OnOutOfFuel;
 
     // Debug
     UPROPERTY()
@@ -544,5 +552,16 @@ public:
     FVector OriginalCOM;
     UPROPERTY(Transient)
     FVector2D OriginalDampening;
+
+
+    UPROPERTY(BlueprintReadOnly)
+    TOptional<float> LastDampening;
+
+
+    //This is for my own game. if you can see this ignore it  or remove it :P
+    UPROPERTY(BlueprintReadWrite)
+    float TransientTorqueMultiplier=1;
+
+
     
 };

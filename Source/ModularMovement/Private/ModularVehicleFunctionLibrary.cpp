@@ -282,7 +282,7 @@ void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,
 }
 
 void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh, TArray<UTrackableComponent* >Wheels,
-                                                                const FString& BoneNamePrefix)
+                                                                const FString& BoneNamePrefix,FVector Offset)
 {
 	if(!Mesh)
 	{
@@ -297,7 +297,7 @@ void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalM
 	{
 		if(Wheel){
 			const FName BoneName=FName(BoneNamePrefix+Wheel->GetName());
-			Wheel->SetWorldLocation(	Mesh->GetSocketLocation(BoneName));
+			Wheel->SetWorldLocation(	Mesh->GetSocketLocation(BoneName)+Offset);
 
 			if(const auto WheelCast=Cast<UModularWheel>(Wheel))
 			{

@@ -90,6 +90,7 @@ public:
 	UPROPERTY(BlueprintReadOnly,Transient,Category=Transmission)
 	float GearBoxRPMRatio=0.f;
 	// Sets the target gear, either immediately or not, depending on 'bImmediate'
+	UFUNCTION(BlueprintCallable,Category=Transmission)
 	void SetTargetGear(int32 GearNum, bool bImmediate, class UModularMovementComponent* MovementComponent);
 	void CalculateIdealGear(float IdealGearRatio, int& ClosestGearIndex,int DefaultGear);
 
@@ -123,6 +124,9 @@ public:
 	UPROPERTY(Transient)
 	UModularMovementComponent* MC;
 
+
+	UPROPERTY(Transient)
+	float CurrentRpm=0.f;
 
 	int32 MaxGear=9999;
 	//

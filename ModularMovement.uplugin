@@ -10,7 +10,7 @@
 	"DocsURL": "https://irajsb.github.io/ModularMovementDocs/",
 	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/1f5d877874e543e0971dea0d3c9da9ec",
 	"SupportURL": "",
-	"EngineVersion": "5.4.0",
+	"EngineVersion": "5.5.0",
 	"CanContainContent": true,
 	"Installed": true,
 	"Modules": [

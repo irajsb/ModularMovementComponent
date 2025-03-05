@@ -96,7 +96,10 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	float EngineMaxBrakeTorque=1000.f;
 	// minimum engine power when engine health is low
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
-	float EngineBrokenMinTorqueFactor=0.2;
+	float EngineBrokenMinTorqueFactor=0.8;
+	// Use gearbox RPM for engine calculations. This ignores wheel spin for RPM speed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
+	bool bUseGearboxRpm=false;
 
 	//Gearbox Data
 	UPROPERTY(Instanced,EditAnywhere,Category=Essential)
@@ -199,6 +202,10 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	// The drag coefficient is a dimensionless quantity that is used to quantify the drag or resistance of an object in a fluid environment, such as air or water.
 	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
 	float AirDragCoefficient=0.3;
+
+	//Max AirDrag to limit air drag to no become too much
+	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
+	float MaximumAirDragSpeedKMH=30;
 	
 	
 
