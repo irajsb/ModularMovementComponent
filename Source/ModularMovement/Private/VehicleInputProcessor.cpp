@@ -119,10 +119,15 @@ float UVehicleInputProcessor::CalcSteerInput_Implementation(UModularMovementComp
 		
 		Result = CalculateSteeringCorrection(AngleError, MovementComponent, Result);
 	}
+if (!MovementComponent->InstantWheelAnim)
+{
+	
 
+	
 	// Interpolate between the current steering input and the target
 	Result = FMath::FInterpTo(MovementComponent->SteeringInput, Result, DeltaTime,
-	                          InterpolationSpeed / SteerSpeedScale);
+							  InterpolationSpeed / SteerSpeedScale);
+}
 
 	// Clamp the steering input to ensure it's within valid range
 	Result = FMath::Clamp(Result, -1.0f, 1.0f);

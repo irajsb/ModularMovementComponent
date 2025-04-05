@@ -563,5 +563,8 @@ public:
     float TransientTorqueMultiplier=1;
 
 
+    UPROPERTY(BlueprintReadWrite)
+    bool InstantWheelAnim=false;
+
     
 };
