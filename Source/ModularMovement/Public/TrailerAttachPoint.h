@@ -63,14 +63,14 @@ public:
 
 	
 	UPROPERTY(BlueprintReadWrite,Category=AttachPoint)
-	UTrailerAttachPoint* OtherAttachPoint;
+	TObjectPtr<UTrailerAttachPoint> OtherAttachPoint;
 
 	UPROPERTY(BlueprintAssignable,Category=AttachPoint)
 	FOnTrailerPromptShow OnTrailerPromptShow;
 
 
 	UPROPERTY(Transient,BlueprintReadOnly,Category="Trailer")
-	UPhysicsConstraintComponent * ConstraintComponent;
+	TObjectPtr<UPhysicsConstraintComponent> ConstraintComponent;
 
 
 	UPROPERTY(BlueprintAssignable,Category=AttachPoint)

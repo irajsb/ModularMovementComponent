@@ -2,12 +2,13 @@
 
 #pragma once
 
+#include "BaseModularMovementComponent.h"
 #include "ModularVehicleData.h"
 #include "VehicleInputProcessor.h"
 #include "Components/MeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/PawnMovementComponent.h"
-#include "Misc/Optional.h"
+#include "Physics/NetworkPhysicsComponent.h"
 #include "ModularMovementComponent.generated.h"
 
 // Macro to convert SI force to Unreal force
@@ -22,7 +23,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnGearChange, int, CurrentGear, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEngineStateChange, bool, IsEngineOn, bool, IsStarting);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSleepChange, bool, Sleep);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnCustomEvent, uint8, EventType, UModularWheel*, Wheel);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNoParamDelegate);
+
 
 // Debug parameters structure
 struct FModularVehicleDebugParams
@@ -40,12 +41,11 @@ struct FModularVehicleDebugParams
 };
 
 // Enum for vehicle network mode
-
 UENUM(BlueprintType)
-enum class  EVehicleNetworkMode : uint8
+enum EVehicleNetworkMode
 {
     Default,
-    ClientAuthoritative,
+    ClientAuthoritative
 };
 
 // Structure for old rigid body error correction
@@ -65,6 +65,10 @@ struct FOldRigidBodyErrorCorrection
     // Maximum distance to fix error
     UPROPERTY(EditAnywhere, Category = Network)
     float MaxDistanceToFix;
+	
+	// Maximum distance to fix error
+	UPROPERTY(EditAnywhere, Category = Network)
+	float MaxDistanceToFixOnSimulatedPawn;
 
     // Speed factor for error correction
     UPROPERTY(EditAnywhere, Category = Network)
@@ -82,8 +86,20 @@ struct FOldRigidBodyErrorCorrection
     UPROPERTY(EditAnywhere, Category = Network)
     float MaxAngleToFix;
 
-    FOldRigidBodyErrorCorrection() : MaxAlpha(0.5), MinDistanceToFix(0), MaxDistanceToFix(2000), SpeedFactor(0.001),
-                                     MaxAngularAlpha(0.1), MinAngleToFix(0), MaxAngleToFix(1.1775)
+	// Maximum angle to fix error
+	UPROPERTY(EditAnywhere, Category = Network)
+	float MaxAngleToFixOnSimulatedPawn;
+
+    FOldRigidBodyErrorCorrection()
+	    : MaxAlpha(1.f)
+	    , MinDistanceToFix(0)
+	    , MaxDistanceToFix(1000)
+	    , MaxDistanceToFixOnSimulatedPawn(500)
+	    , SpeedFactor(0.1)
+	    , MaxAngularAlpha(0.5)
+	    , MinAngleToFix(0)
+	    , MaxAngleToFix(0.6)
+	    , MaxAngleToFixOnSimulatedPawn(0.3)
     {
     }
 };
@@ -150,16 +166,18 @@ struct FRepCosmeticData
     UPROPERTY()
     float CurrentFuel;
 
+	UPROPERTY()
+	bool IsBraking;
     // Engine state
     UPROPERTY()
     bool EngineOn;
     UPROPERTY()
     bool IsSleep;
 
-    FRepCosmeticData() : CurrentFuel(0), EngineOn(0), IsSleep(false)
+    FRepCosmeticData() : CurrentFuel(0), IsBraking(false), EngineOn(0), IsSleep(false)
     {
-        EngineRPM = 0;
-        CurrentGear = 0;
+	    EngineRPM = 0;
+	    CurrentGear = 0;
     }
 };
 
@@ -185,7 +203,7 @@ struct FModularVehicleState
 
     // Pointer to the vehicle data
     UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
-    UModularVehicleData* VehicleData = nullptr;
+    TObjectPtr<UModularVehicleData> VehicleData = nullptr;
 
     // Current RPM (Revolutions Per Minute) of the vehicle's engine
     UPROPERTY(BlueprintReadWrite, Category = MovementComponent)
@@ -262,8 +280,8 @@ struct FModularVehicleState
 
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     float WheelTraction=0.f;
-    
-   
+
+
     // Axle RPM
     UPROPERTY(BlueprintReadOnly, Category = MovementComponent)
     float AxleRPM = 0.f;
@@ -273,8 +291,11 @@ struct FModularVehicleState
 };
 
 UCLASS(meta = (BlueprintSpawnableComponent))
-class MODULARMOVEMENT_API UModularMovementComponent : public UPawnMovementComponent
+class MODULARMOVEMENT_API UModularMovementComponent : public UBaseModularMovementComponent
 {
+
+
+	
 public:
     GENERATED_BODY()
     friend class UModularWheel;
@@ -288,11 +309,11 @@ public:
 
     // Actors to ignore for wheel trace. Collected here because wheels can have different owners (such as a semi truck)
     UPROPERTY(BlueprintReadWrite, Category = "Trace")
-    TArray<AActor*> ActorsToIgnore;
+    TArray<TObjectPtr<AActor>> ActorsToIgnore;
 
     // Wheels
     UPROPERTY()
-    TArray<UModularWheel*> Components;
+    TArray<TObjectPtr<UModularWheel>> Components;
 
 public:
     // Get List of wheels
@@ -312,7 +333,7 @@ public:
     UPROPERTY(Transient)
     float RawSteeringInput;
 
-    UPROPERTY(Transient)
+    UPROPERTY(Transient,BlueprintReadOnly)
     float SteeringInput;
 
     UPROPERTY(Transient,BlueprintReadOnly,Category=Input)
@@ -351,20 +372,17 @@ public:
     FORCEINLINE UModularVehicleData* GetSetup() const {return VehicleState.VehicleData;}
 
     // Set input functions
-    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-    void SetThrottleInput(float Input);
 
-    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-    void SetSteeringInput(float Input);
+    virtual void SetThrottleInput(float Input) override;
 
-    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-    void SetBrakeInput(float Brake);
+    virtual void SetSteeringInput(float Input) override;
 
-    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-    void SetHandBrakeInput(bool Brake);
+    virtual void SetBrakeInput(float Brake) override;
+
+    virtual void SetHandBrakeInput(bool Brake) override;
 
     // Data holder
-    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly, meta = (ShowOnlyInnerProperties))
+    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadWrite, meta = (ShowOnlyInnerProperties))
     FModularVehicleState VehicleState;
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
@@ -376,28 +394,29 @@ public:
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool AllowSleep = true;
 
-    // only for physical wheels
-    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly,meta=(AdvancedDisplay="true"))
-    bool AllowSleepUsingFriction = false;
 
-    //Backwards compatibility
-    UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly,AdvancedDisplay)
-    bool AllowTankSleep = false;
+
+	
 
     
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool SpawnWithTurnedOffEngine = false;
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
-    EVehicleNetworkMode NetworkMode;
+    TEnumAsByte<EVehicleNetworkMode> NetworkMode=Default;
 
+	UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
+	bool bUsingNetworkPhysicsPrediction=false;
 
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly)
     bool IsTrailer;
    
     UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadOnly,AdvancedDisplay)
     TSubclassOf<UVehicleInputProcessor> InputProcessor=UVehicleInputProcessor::StaticClass();
-    
+
+
+	UPROPERTY()
+	TObjectPtr<UNetworkPhysicsComponent> NetworkPhysicsComponent = nullptr;
     
     // Engine functions
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
@@ -412,14 +431,14 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
     float GetRPMRatio();
 
-    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-    void HoldStarter(float StartTime);
 
-    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-    void ReleaseStarter();
+    virtual void HoldStarter(float StartTime) override;
 
-    UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-    void StopEngine();
+
+    virtual void ReleaseStarter() override;
+
+
+    virtual void StopEngine() override;
 
     // Fuel functions
     UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
@@ -480,11 +499,11 @@ public:
     UFUNCTION(Server, Reliable)
     void SetCosmeticDataOnServer(FRepCosmeticData Data);
 
-    UFUNCTION(reliable, server, WithValidation)
+	
+	UFUNCTION(reliable, server, WithValidation)
     void ServerUpdateState(uint16 InQuantizeInput);
 
-    UFUNCTION(reliable, server)
-    void ServerSetEngineOn(bool NewOn);
+	
     UPROPERTY(Transient)
     uint16 QuantizeInput;
 
@@ -497,12 +516,10 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FOnEngineStateChange OnEngineStateChange;
-    UPROPERTY(BlueprintAssignable)
-    FNoParamDelegate OnOutOfFuel;
 
     // Debug
     UPROPERTY()
-    UModularVehicleDebugger* ModularVehicleDebugger;
+    TObjectPtr<UModularVehicleDebugger> ModularVehicleDebugger;
 
     UPROPERTY(EditAnywhere, Category = Network)
     FOldRigidBodyErrorCorrection ErrorCorrection;
@@ -525,9 +542,7 @@ public:
     void SetCanSleep(bool Input);
     bool IsLocal();
 
-    TOptional<bool> CachedIsLocal;
-    TOptional<bool> CachedShouldProcessPhysics;
-    TOptional<bool> CachedShouldProcessCosmetics;
+
 
     UPROPERTY()
     FVector BodyForces;
@@ -553,16 +568,9 @@ public:
     FVector OriginalCOM;
     UPROPERTY(Transient)
     FVector2D OriginalDampening;
-    
 
 
-    //This is for my own game. if you can see this ignore it  or remove it :P
-    UPROPERTY(BlueprintReadWrite)
-    float TransientTorqueMultiplier=1;
 
-
-    UPROPERTY(BlueprintReadWrite)
-    bool InstantWheelAnim=false;
 
     
 };

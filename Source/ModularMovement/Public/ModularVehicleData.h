@@ -56,7 +56,7 @@ struct FDifferentialData
 	
 
 	UPROPERTY()
-	TArray<UModularWheel* > Wheels;
+	TArray<TObjectPtr<UModularWheel> > Wheels;
 	
 };
 UCLASS(Blueprintable)
@@ -96,14 +96,11 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	float EngineMaxBrakeTorque=1000.f;
 	// minimum engine power when engine health is low
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
-	float EngineBrokenMinTorqueFactor=0.8;
-	// Use gearbox RPM for engine calculations. This ignores wheel spin for RPM speed
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category=Engine,AdvancedDisplay)
-	bool bUseGearboxRpm=false;
+	float EngineBrokenMinTorqueFactor=0.2;
 
 	//Gearbox Data
 	UPROPERTY(Instanced,EditAnywhere,Category=Essential)
-	UModularGearBox* GearBoxData;
+	TObjectPtr<UModularGearBox> GearBoxData;
 	//Suspension Trace  trace 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Suspension)
     TEnumAsByte<ETraceTypeQuery> SuspensionTraceTypeQuery;
@@ -139,7 +136,7 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = Advanced)
 	bool bReverseAsBrake=true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = Advanced)
-	float SleepThreshold=10.f;
+	float SleepThreshold=3.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category = Advanced)
 	float SleepSlopeLimit=0.866f;;
 	
@@ -202,10 +199,6 @@ class MODULARMOVEMENT_API UModularVehicleData : public UObject
 	// The drag coefficient is a dimensionless quantity that is used to quantify the drag or resistance of an object in a fluid environment, such as air or water.
 	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
 	float AirDragCoefficient=0.3;
-
-	//Max AirDrag to limit air drag to no become too much
-	UPROPERTY(EditAnywhere,Category=AirDrag,AdvancedDisplay)
-	float MaximumAirDragSpeedKMH=30;
 	
 	
 

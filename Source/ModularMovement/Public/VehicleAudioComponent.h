@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "Components/AudioComponent.h"
 #include "GameFramework/Pawn.h"
-#include "Particles/ParticleSystemComponent.h"
 #include "VehicleAudioComponent.generated.h"
 
 /**
@@ -39,11 +38,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
 	TObjectPtr<USoundBase> ReverseSound;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+	TObjectPtr<USoundBase> HornSound;
+	
 	// param Health will be passed to this sound. It should be silent at 1 and max at 0. RPM will be also passed 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
 	TObjectPtr<USoundBase> EngineHealthSound;
 	
-	
+	UFUNCTION(BlueprintCallable)
+	void HoldHorn();
+	UFUNCTION(BlueprintCallable)
+	void ReleaseHorn() const;
 	
 	UPROPERTY(EditAnywhere,Category="EngineSound")
 	float RPMInterpolationSpeed=0.5;
@@ -59,6 +64,9 @@ public:
     float TurboInterpolationSpeed=0.25;
     UPROPERTY(EditAnywhere,Category="EngineSound")
     float TurboMultiplier=1;
+
+	UPROPERTY(EditAnywhere,Category="EngineSound")
+	bool FireAndForgetStartSound=true;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION()
@@ -69,7 +77,7 @@ public:
 
 	//you can pass particles to this system to handle params on them Strentgh and Health will be passed
 	UPROPERTY(BlueprintReadWrite,Category=Particle)
-	TArray<UParticleSystemComponent*> Particles;
+	TArray<TObjectPtr<UParticleSystemComponent>> Particles;
 	
 	
 	UPROPERTY(BlueprintReadOnly,Category="EngineSound")
@@ -85,10 +93,13 @@ private:
 	bool LastReverseInput;
 	float LastBrakePlayTime=0.f;
 	UPROPERTY(Transient)
-	UAudioComponent * BrakeAudioComponent;
+	TObjectPtr<UAudioComponent>  BrakeAudioComponent;
 	UPROPERTY(Transient)
-	UAudioComponent * ReverseAudioComponent;
+	TObjectPtr<UAudioComponent>  ReverseAudioComponent;
 
 	UPROPERTY(Transient)
-	UAudioComponent * HealthAudioComponent;
+	TObjectPtr<UAudioComponent> HealthAudioComponent;
+	
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> HornAudioComponent;
 };

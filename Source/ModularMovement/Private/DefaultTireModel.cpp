@@ -34,7 +34,9 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 {
 
 
-	const bool UseArcadeFrictionMultiplier= ModularMovementComponent->ThrottleInput!=0.f||Wheel->WheelState.BrakeTorque!=0.f;
+	 bool UseArcadeFrictionMultiplier= ModularMovementComponent->ThrottleInput!=0.f||Wheel->WheelState.BrakeTorque!=0.f;
+	 bool UseArcadeFrictionLateral=UseArcadeFrictionMultiplier&&!(ModularMovementComponent->IsInReverse());
+
 	
 	Super::UpdateSimulation(DeltaTime, FinalForceVector, Mesh, ModularMovementComponent, Wheel);
 	// Gather necessary data 
@@ -155,12 +157,12 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 		{
 			const float AngularVelocity= Wheel->WheelState.AngularVelocity;
 			const float LinearVelocity = AngularVelocity * WheelRadius;
-			const float  DragForce = ModularMovementComponent->GetMassPerWheel()*0.5f * Material->DragCoefficient  * LinearVelocity * LinearVelocity;
+			const float  DragForce = 0.5f * Material->DragCoefficient  * LinearVelocity * LinearVelocity;
 			
 			Wheel->WheelState.BrakeTorque+= DragForce * WheelRadius;
 
 			ModularMovementComponent->UseCustomDrag=true;
-			ModularMovementComponent->CustomDragCoefficient=Material->BodyDragCoefficient*ModularMovementComponent->GetMesh()->GetMass();
+			ModularMovementComponent->CustomDragCoefficient=Material->BodyDragCoefficient;
 
 			if(	Wheel->ParentBodyOverride)
 			{
@@ -175,9 +177,21 @@ void UDefaultTireModel::UpdateSimulation(float DeltaTime, FVector& FinalForceVec
 			ModularMovementComponent->UseCustomDrag=false;
 		}
 	}
-	SurfaceFriction=FMath::Max(MinFrictionClamp,SurfaceFriction);
+
+	if (Wheel->WheelDeflation>0.f)
+	{
+		const float AngularVelocity= Wheel->WheelState.AngularVelocity;
+		const float LinearVelocity = AngularVelocity * WheelRadius;
+		const float  DragForce = 0.5f *Wheel->GetWheelSetup()->FlatWheelDragForce  * LinearVelocity * LinearVelocity*Wheel->WheelDeflation;
+			
+		Wheel->WheelState.BrakeTorque+= DragForce * WheelRadius;
+
+		UseArcadeFrictionLateral=UseArcadeFrictionMultiplier=false;
+		
+	}
+
 	FinalForceVector.X *= WheelLoad * SurfaceFriction*( UseArcadeFrictionMultiplier?ArcadeForceMultiplier:1.f);
-	FinalForceVector.Y *= WheelLoad* SurfaceFriction*(UseArcadeFrictionMultiplier?ArcadeForceLateral:1.f);
+	FinalForceVector.Y *= WheelLoad* SurfaceFriction*(UseArcadeFrictionLateral?ArcadeForceLateral:1.f);
 
 	//RELAXATION2(FinalForceVector.X, LastFX, 50.0f);
 	//RELAXATION2(FinalForceVector.Y, LastFY, 50.0f);

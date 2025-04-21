@@ -5,14 +5,13 @@
 
 #include "ModularGearBox.h"
 #include "ModularMovementComponent.h"
-#include "GameFramework/Pawn.h"
 #include "Kismet/KismetMathLibrary.h"
 
 float UVehicleInputProcessor::CalcBrakeInput_Implementation(UModularMovementComponent* MovementComponent,
                                                             float DeltaTime, const float RawBrakeInput,
                                                             const float RawThrottleInput)
 {
-	MovementComponent->IsBraking = false;
+	MovementComponent->IsBraking = MovementComponent->HandBrakeInput;
 
 	const auto Setup = MovementComponent->GetSetup();
 	float NewBrakeInput = 0.f;
@@ -83,9 +82,14 @@ float UVehicleInputProcessor::CalcBrakeInput_Implementation(UModularMovementComp
 		}
 	}
 
-	if(MovementComponent->GetSetup()->ParkBrake&&MovementComponent->GetPawnOwner()->GetController()&&!MovementComponent->GetPawnOwner()->GetController()->IsPlayerController())
+	if(MovementComponent->GetSetup()->ParkBrake)
 	{
-		NewBrakeInput=1.f;
+		if (!MovementComponent->bShouldReplicateInput)
+			{
+				NewBrakeInput=1.f;
+			}
+		
+		
 	}
 	return NewBrakeInput;
 }
@@ -116,18 +120,15 @@ float UVehicleInputProcessor::CalcSteerInput_Implementation(UModularMovementComp
 			OptimalDriftAngle=0.f;
 		}
 		const float AngleError = OptimalDriftAngle - FMath::Abs(MovementComponent->VehicleState.SlipAngle);
-		
-		Result = CalculateSteeringCorrection(AngleError, MovementComponent, Result);
-	}
-if (!MovementComponent->InstantWheelAnim)
-{
-	
 
+		SteerSpeedScale=SteerSpeedScale/4;
+		Result = CalculateSteeringCorrection(AngleError, MovementComponent, Result);
+		
+	}
 	
 	// Interpolate between the current steering input and the target
 	Result = FMath::FInterpTo(MovementComponent->SteeringInput, Result, DeltaTime,
-							  InterpolationSpeed / SteerSpeedScale);
-}
+	                          InterpolationSpeed / SteerSpeedScale);
 
 	// Clamp the steering input to ensure it's within valid range
 	Result = FMath::Clamp(Result, -1.0f, 1.0f);
@@ -152,7 +153,7 @@ float UVehicleInputProcessor::CalcThrottleInput_Implementation(UModularMovementC
 		else
 		{
 			//If the user is changing direction we should really be braking first and not applying any gas, so wait until they've changed gears
-			if (RawInput > 0.f && IsInReverse || RawInput < 0.f && !IsInReverse)
+			if ((RawInput > 0.f && IsInReverse) || (RawInput < 0.f && !IsInReverse))
 			{
 				NewThrottleInput = 0.f;
 			}
@@ -240,9 +241,9 @@ float UVehicleInputProcessor::CalculateOptimalDriftAngle(const UModularMovementC
 
 bool UVehicleInputProcessor::IsDrifting(const UModularMovementComponent* ModularMovement)
 {
-	if (ModularMovement->GetSetup()->DriftAssistEnabled && !ModularMovement->GetSetup()->GetGearBox()->IsInReverse())
+	if (ModularMovement->GetSetup()->DriftAssistEnabled && !ModularMovement->IsInReverse())
 	{
-		if(ModularMovement->GetNumberOfWheelsTouchingGround()==ModularMovement->GetNumberOfWheels())
+		if(ModularMovement->GetNumberOfWheelsTouchingGround()!=0)
 		{
 			if(ModularMovement->GetMesh()->GetPhysicsLinearVelocity().Size() > ModularMovement->GetSetup()->MinDriftSpeed)
 				return (FMath::Abs(ModularMovement->VehicleState.SlipAngle) > FMath::DegreesToRadians(

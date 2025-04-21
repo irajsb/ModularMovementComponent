@@ -6,6 +6,7 @@
 
 #include "CollisionQueryParams.h"
 #include "ModularVehicleWheelData.h"
+#include "Animation/PoseSnapshot.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Engine/HitResult.h"
@@ -91,9 +92,13 @@ public:
 	static void GetWheelAnimationData(UModularWheel* Wheel, FVector& Location, FRotator& Rotation, float DeltaTime);
 
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
-	static void SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh,TArray<UTrackableComponent* >Wheels, const FString& BoneNamePrefix,FVector Offset);
+	static void SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh,TArray<UTrackableComponent* >Wheels, const FString& BoneNamePrefix);
 
 	static void NotifyError(FString Error);
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void ChangeCollisionOnPhysicsBody(USkeletalMeshComponent* skeletalMesh, FName boneName, ECollisionEnabled::Type CollisionType);
+
+
+	UFUNCTION(BlueprintCallable,BlueprintPure, Category = "Game|Components|ModularVehicleMovement")
+	static FPoseSnapshot ModifyPoseSnapshot(UAnimInstance* AnimInstance,FTransform ModifyTransform,FName BoneToModify,bool InverseApply);
 };

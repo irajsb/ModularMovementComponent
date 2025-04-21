@@ -28,11 +28,11 @@ public:
 	void RebuildSplines(float DeltaTime, bool Editor);
 	void UpdateMeshes(float DeltaTime, bool Editor);
 	UPROPERTY()
-	TArray<UTrackableComponent* > Wheels;
+	TArray<TObjectPtr<UTrackableComponent>> Wheels;
 
 
 	UPROPERTY(EditAnywhere, Category = "Tank Track")
-	UStaticMesh* TrackMesh;
+	TObjectPtr<UStaticMesh> TrackMesh;
 
 	
 
@@ -57,7 +57,7 @@ public:
 	virtual void BeginPlay() override;
 
 	UPROPERTY()
-	UInstancedStaticMeshComponent * InstancedStaticMeshComponent;
+	TObjectPtr<UInstancedStaticMeshComponent> InstancedStaticMeshComponent;
 
 
 

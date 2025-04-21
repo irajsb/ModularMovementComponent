@@ -48,6 +48,23 @@ UVehicleAudioComponent::UVehicleAudioComponent(): Load(0), CurrentTurbo(0), Last
 	bAutoActivate = false;
 }
 
+void UVehicleAudioComponent::HoldHorn()
+{
+	if(HornSound)
+	{
+		HornAudioComponent=	UGameplayStatics::SpawnSoundAttached(HornSound,this,NAME_None);
+	}
+}
+
+void UVehicleAudioComponent::ReleaseHorn() const
+{
+	if(HornAudioComponent)
+	{
+		HornAudioComponent->Stop();
+		HornAudioComponent->DestroyComponent();
+	}
+}
+
 void UVehicleAudioComponent::TickComponent(float DeltaTime, ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -198,11 +215,17 @@ void UVehicleAudioComponent::OnEngineStateChange(bool IsEngineOn, bool IsStartin
 		{
 			if(GetSound()==StarterSound&&IsPlaying())
 			{
-				
+				 
 			}else
 			{
-				SetSound(StarterSound);
-				Play();
+				if (!FireAndForgetStartSound)
+				{
+					SetSound(StarterSound);
+					Play();
+				}else
+				{
+					UGameplayStatics::PlaySoundAtLocation(GetWorld(), StarterSound, GetComponentLocation(),FRotator(0,0,0),1,1,0,AttenuationSettings);
+				}
 			}
 		
 		}
@@ -221,6 +244,12 @@ void UVehicleAudioComponent::OnEngineStateChange(bool IsEngineOn, bool IsStartin
 	}
 	else
 	{
+		if (FireAndForgetStartSound)
+		{
+			Play();
+			FadeIn(1.f, 1);
+			return;
+		}
 		if (Sound != TempEngineSound)
 		{
 			Play();
@@ -230,6 +259,7 @@ void UVehicleAudioComponent::OnEngineStateChange(bool IsEngineOn, bool IsStartin
 			}
 			UGameplayStatics::PlaySoundAtLocation(GetWorld(), EngineStartSound, GetComponentLocation());
 			SetSound(TempEngineSound);
+			FadeIn(1.f, 1);
 		}
 	}
 }

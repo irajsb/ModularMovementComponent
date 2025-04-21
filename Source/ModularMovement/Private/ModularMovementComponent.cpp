@@ -46,6 +46,15 @@ FORCEINLINE float RPMToOmega(float RPM)
 UModularMovementComponent::UModularMovementComponent()
 {
 	SetIsReplicatedByDefault(true);
+
+	if (bUsingNetworkPhysicsPrediction)
+	{ 
+		/*static const FName NetworkPhysicsComponentName(TEXT("PC_NetworkPhysicsComponent"));
+
+		NetworkPhysicsComponent = CreateDefaultSubobject<UNetworkPhysicsComponent, UNetworkPhysicsComponent>(NetworkPhysicsComponentName);
+		NetworkPhysicsComponent->SetNetAddressable(); // Make DSO components net addressable
+		NetworkPhysicsComponent->SetIsReplicated(true);*/
+	}
 }
 
 void UModularMovementComponent::UpdateComponents(const TArray<UModularWheel*> AdditionalWheels)
@@ -183,7 +192,7 @@ void UModularMovementComponent::HoldStarter(float StartTime)
 	if (StartTime == 0.f)
 	{
 		VehicleState.IsEngineOn = true;
-		ServerSetEngineOn(VehicleState.IsEngineOn );
+
 		StarterTimerHandle.Invalidate();
 
 		OnEngineStateChange.Broadcast(true, false);
@@ -208,7 +217,6 @@ void UModularMovementComponent::StopEngine()
 	if (VehicleState.IsEngineOn)
 	{
 		VehicleState.IsEngineOn = false;
-		ServerSetEngineOn(VehicleState.IsEngineOn );
 		OnEngineStateChange.Broadcast(false, false);
 	}
 }
@@ -278,7 +286,7 @@ void UModularMovementComponent::InitializeComponent()
 
 	if (ApplyRecommendedMeshProperties)
 	{
-		MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
+		//MeshComponent->SetCollisionProfileName(UCollisionProfile::Vehicle_ProfileName);
 		MeshComponent->BodyInstance.bSimulatePhysics = true;
 		if (MeshComponent->GetCollisionObjectType())
 
@@ -320,7 +328,7 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 	
 	if(VehicleState.bSleeping)
 	{
-		for(const auto Comp:Components)
+		for(const auto& Comp : Components)
 		{
 			Comp->UpdateSteering(fDeltaTime, this, SteeringInput);
 		}
@@ -328,11 +336,8 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 	}
 	if (ShouldProcessPhysics())
 	{
-		
 		if (!IsTrailer)
 		{
-		
-
 			
 				UpdateAirDrag(GetMesh());
 				
@@ -353,8 +358,15 @@ void UModularMovementComponent::VehicleTick(float DeltaTime, bool SubstepTick)
 				{
 					Component->UpdateSteering(fDeltaTime, this, SteeringInput);
 					Component->UpdateSuspension(fDeltaTime, this);
-					
-					Component->WheelState.AngularPosition += Component->WheelState.AngularVelocity * fDeltaTime;
+					Component->ApplyAccumulatedForces();
+					// if tire is slipping then get the tire velocity from network other wise match ground speed 
+					if (FMath::Abs(Component->WheelState.TireStress)>0.5)
+					{
+						Component->WheelState.AngularPosition+=Component->GetGroundOmega(this)*fDeltaTime;
+					}else
+					{
+						Component->WheelState.AngularPosition+=Component->GetGroundOmega(this)*fDeltaTime;
+					}
 
 
 					float IntegerPart;
@@ -406,14 +418,48 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 
+	if (!GetWorld()->IsGameWorld())
+	{
+		return;
+	}
 	
+	if (!InputProcessor)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UModularMovementComponent::TickComponent invalid preprocessor "));
+		return;
+	}
 
+	
 		CaptureState(DeltaTime);
+
+	if (ShouldProcessPhysics())
+	{
+		UpdateReplicatedCosmeticData();
+	}
 
 	const auto Processor= Cast<UVehicleInputProcessor>( InputProcessor->ClassDefaultObject);
 	SteeringInput = Processor->CalcSteerInput(this,DeltaTime,RawSteeringInput);
 	ThrottleInput = Processor->CalcThrottleInput(this,DeltaTime,RawThrottleInput,RawBrakeInput,RawSteeringInput);
 	BrakeInput = Processor->CalcBrakeInput(this,DeltaTime,RawBrakeInput,RawThrottleInput);
+	
+	
+	if (ShouldReplicateInput())
+	{
+		//code from Prv Vehicle
+		const int32 QThrottleInput = FMath::FloorToInt(RawThrottleInput * 127.f) & 0xFF;
+		const int32 QSteeringInput = (FMath::FloorToInt(RawSteeringInput * 63.f) & 0x7F) << 8;
+		const int32 QHandbrakeInput = HandBrakeInput ? (1 << 15) : 0;
+		const uint16 NewQuantizeInput = QHandbrakeInput | QSteeringInput | QThrottleInput;
+
+		if (QuantizeInput != NewQuantizeInput)
+		{
+			QuantizeInput = NewQuantizeInput;
+
+			
+			ServerUpdateState(QuantizeInput);
+			
+		}
+	}
 	
 	if(IsActive()&&!VehicleState.bSleeping)
 	{
@@ -429,20 +475,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 	
 
-		if (ShouldReplicateInput())
-		{
-			//code from Prv Vehicle
-			const int32 QThrottleInput = FMath::FloorToInt(RawThrottleInput * 127.f) & 0xFF;
-			const int32 QSteeringInput = (FMath::FloorToInt(RawSteeringInput * 63.f) & 0x7F) << 8;
-			const int32 QHandbrakeInput = HandBrakeInput ? (1 << 15) : 0;
-			const uint16 NewQuantizeInput = QHandbrakeInput | QSteeringInput | QThrottleInput;
-
-			if (QuantizeInput != NewQuantizeInput)
-			{
-				QuantizeInput = NewQuantizeInput;
-				ServerUpdateState(QuantizeInput);
-			}
-		}
+		
 
 		if (ShouldProcessPhysics())
 		{
@@ -461,7 +494,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		Component->UpdateAnimation(DeltaTime, this);
 	}
 
-	if (NetworkMode == EVehicleNetworkMode::Default)
+	if (NetworkMode == Default)
 	{
 		if (GetOwnerRole() < ROLE_Authority)
 		{
@@ -489,6 +522,7 @@ void UModularMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 void UModularMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
 
 
 	//Check data 
@@ -525,20 +559,8 @@ void UModularMovementComponent::BeginPlay()
 
 	GetMesh()->SetSimulatePhysics(true);
 
-	if (NetworkMode == EVehicleNetworkMode::Default)
-	{
-		if (GetOwnerRole() < ROLE_AutonomousProxy)
-		{
-			GetMesh()->SetEnableGravity(false);
-		}
-	}
-	else
-	{
-		if (!IsLocal())
-		{
-			GetMesh()->SetEnableGravity(false);
-		}
-	}
+
+	
 
 	if (!VehicleState.IsEngineOn && !SpawnWithTurnedOffEngine)
 	{
@@ -548,6 +570,8 @@ void UModularMovementComponent::BeginPlay()
 	VehicleState.CurrentFuel = GetSetup()->TankCapacity;
 	
 }
+
+
 
 void UModularMovementComponent::CaptureState(float DeltaTime)
 {
@@ -604,15 +628,13 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 	
 	if(AllowSleep)
 	{
-		if(GetSetup()->GetSteerType()!=Tank||AllowTankSleep){
-		
+	
 			const float EffectiveThrottle=FMath::Min(RawThrottleInput,ClutchInput);
 			// Wake if control input pressed
-			if (VehicleState.bSleeping && (EffectiveThrottle!=0.f||RawSteeringInput!=0.f||(GetMesh()->IsAnyRigidBodyAwake()&&!AllowSleepUsingFriction)))
+			if (VehicleState.bSleeping && (EffectiveThrottle!=0.f||RawSteeringInput!=0.f||GetMesh()->IsAnyRigidBodyAwake()))
 			{
-			
 				SetSleeping(false);
-				
+				RepCosmeticData.IsSleep=false;
 				VehicleState.SleepTimer=0.f;
 			}else if (VehicleState.WheelsOnGround==Components.Num() &&!VehicleState.bSleeping && RawThrottleInput==0.f &&  (GetMesh()->GetUpVector().Z > GetSetup()->SleepSlopeLimit))
 			{
@@ -622,14 +644,16 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 			
 					const float SleepThreshold=GetSetup()->SleepThreshold;
 					if (SpeedSqr < (SleepThreshold * SleepThreshold))
-					{
+					{	
 
-						
-						SetSleeping(true);
+						if (GetOwnerRole()==ROLE_Authority)
+						{
+							SetSleeping(true);
+						}
 					
 					}
 				}else
-				{
+				{	
 					VehicleState.SleepTimer+=DeltaTime;
 				}
 			}else
@@ -637,7 +661,7 @@ void UModularMovementComponent::CaptureState(float DeltaTime)
 				VehicleState.SleepTimer=0.f;
 			}
 		}
-	}
+	
 }
 
 
@@ -652,13 +676,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 	const bool EngineFree=GetSetup()->GetGearBox()->GetDriveRatio()==0.f||VehicleState.DriveWheelsOnGround==0;
 	const float Clutch=EngineFree?0.f:ClutchInput;
 	const float MinRads = VehicleState.IsEngineOn ? RPMToOmega(GetSetup()->IdleRpm) : 0.f;
-	float AxleRPM=VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio();
-	if (GetSetup()->bUseGearboxRpm)
-	{
-		AxleRPM=GetSetup()->GetGearBox()->CurrentRpm;
-		
-	}
-	const float DriveRPM=FMath::Lerp( ThrottleInput * MaxRads,AxleRPM,Clutch);
+	const float DriveRPM=FMath::Lerp( ThrottleInput * MaxRads,VehicleState.AxleRPM * GetSetup()->GetGearBox()->GetDriveRatio(),Clutch);
 	const bool GearChange=GetSetup()->ZeroRpmWhenShifting && GetSetup()->GetGearBox()->IsChangingGear();
 	 float TargetRPM =UKismetMathLibrary::MapRangeClamped(DriveRPM,0,MaxRads,MinRads,MaxRads);
 	if(GearChange)
@@ -666,12 +684,13 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 		TargetRPM=0.f;
 		WheelTorque=0.f;
 	}
-	
 	VehicleState.EngineRads = FMath::FInterpConstantTo(VehicleState.EngineRads, TargetRPM, DeltaTime,
 	                                                   VehicleState.VehicleData->GetEngineInertia() * VehicleState.VehicleData->GetMaxRPM());
 
 
 	VehicleState.CurrentRpm = OmegaToRPM(VehicleState.EngineRads);
+
+
 
 
 	
@@ -681,9 +700,10 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 		//Engine Torque 
 
-
 		//Use curve 
-		const float EngineTorque = VehicleState.IsEngineOn? TransientTorqueMultiplier*ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm): 0;
+		const float EngineTorque = VehicleState.IsEngineOn
+			                           ? ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm)
+			                           : 0;
 		//Engine braking 
 		if(DriveRPM>MaxRads)
 		{
@@ -711,16 +731,11 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 			if (VehicleState.CurrentFuel == 0.f)
 			{
 				StopEngine();
-				AsyncTask(ENamedThreads::Type::GameThread,[this]()
-				{
-					OnOutOfFuel.Broadcast();
-				});
-				
 			}
 		}
 
 
-		WheelTorque = EngineTorque * TransmissionTorque*FMath::GetMappedRangeValueClamped(FVector2D(0.f,1),FVector2D(GetSetup()->EngineBrokenMinTorqueFactor,1),VehicleHealth);
+		WheelTorque = EngineTorque * TransmissionTorque*FMath::Max(VehicleHealth,GetSetup()->EngineBrokenMinTorqueFactor);
 		VehicleState.EngineBrake=VehicleState.EngineBrake*TransmissionTorque;
 	
 		if (ModularVehicleDebugger)
@@ -736,9 +751,8 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 void UModularMovementComponent::UpdateAirDrag(UPrimitiveComponent * CompToApplyForceTo) 
 {
 	
-	const float DragConstant=UseCustomDrag?CustomDragCoefficient:GetSetup()->GetAirDragConstant();
-	FVector BodyVelocity = GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity() / 100.f; //CM/s To Meter/s
-	BodyVelocity=BodyVelocity.GetClampedToMaxSize(GetSetup()->MaximumAirDragSpeedKMH/3.6f);
+	const float DragConstant=UseCustomDrag?CustomDragCoefficient:AirDragConstant;
+	const FVector BodyVelocity = GetMesh()->GetBodyInstance()->GetUnrealWorldVelocity() / 100.f; //CM/s To Meter/s
 	const FVector DragForce = BodyVelocity * BodyVelocity.Size() * DragConstant * -1;
 	if(CompToApplyForceTo==GetMesh())
 	{
@@ -870,7 +884,7 @@ void UModularMovementComponent::UpdateWheels(float DeltaTime, float WheelTorque)
 	// Apply accumulated forces
 	GetMesh()->AddForce(BodyForces);
 	BodyForces=FVector::ZeroVector;
-	for (const auto Wheel:Components)
+	for (const auto& Wheel : Components)
 	{
 		Wheel->ApplyAccumulatedForces();
 	}
@@ -1056,50 +1070,47 @@ float UModularMovementComponent::CmToM(float In)
 
 bool UModularMovementComponent::ShouldProcessPhysics()
 {
-	if(CachedShouldProcessPhysics.IsSet())
-	{
-		
-		return CachedShouldProcessPhysics.GetValue();
-	}
+
 	if (GetNetMode() == NM_Standalone)
 	{
-		CachedShouldProcessPhysics=true;
+	
 		return true;
 	}
-	if (NetworkMode == EVehicleNetworkMode::Default)
+	if (NetworkMode == Default)
 	{
-		CachedShouldProcessPhysics= GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
-		return CachedShouldProcessPhysics.GetValue();
+		
+		return GetOwner()->GetLocalRole() > ROLE_SimulatedProxy;
 		
 	}
-	CachedShouldProcessPhysics= IsLocal();
-	return CachedShouldProcessPhysics.GetValue();
+	return  IsLocal();
+	
 }
 
 bool UModularMovementComponent::ShouldProcessCosmetics()
 {
-	if(CachedShouldProcessCosmetics.IsSet())
+
+	if (NetworkMode == Default)
 	{
-		return CachedShouldProcessCosmetics.GetValue();
-	}
-	if (NetworkMode == EVehicleNetworkMode::Default)
-	{
-		CachedShouldProcessCosmetics= GetOwnerRole() < ROLE_AutonomousProxy;
-		return CachedShouldProcessCosmetics.GetValue();
+		return GetOwnerRole() < ROLE_AutonomousProxy;
+		
 	}
 	
-	CachedShouldProcessCosmetics= !IsLocal();
-	return CachedShouldProcessCosmetics.GetValue();
+	return !IsLocal();
 	
 }
 
 bool UModularMovementComponent::ShouldReplicateInput() const
 {
-	if (NetworkMode == EVehicleNetworkMode::Default)
+	
+	/*if (NetworkMode == Default||NetworkMode==NetworkPrediction)
 	{
-		return (GetPawnOwner()->GetLocalRole() != ROLE_Authority && GetPawnOwner()->IsLocallyControlled());
-	}
-	return false;
+		return GetOwnerRole() == ROLE_AutonomousProxy;
+	}*/
+
+	// This is helix input forwarding specific set by take ownership func in MMVehicelePawn
+
+
+	return bShouldReplicateInput||GetOwnerRole()==ROLE_AutonomousProxy;
 }
 
 
@@ -1110,6 +1121,9 @@ bool UModularMovementComponent::ServerUpdateState_Validate(uint16 InQuantizeInpu
 
 void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuantizeInput)
 {
+
+	
+	
 	const int32 QThrottleInput = static_cast<int8>(InQuantizeInput & 0xFF);
 	const int32 QSteeringInput = static_cast<int8>(((InQuantizeInput >> 8) & 0x7F) << 1) / 2;
 	const int32 QHandbrakeInput = (InQuantizeInput >> 15) & 1;
@@ -1127,7 +1141,7 @@ void UModularMovementComponent::ServerUpdateState_Implementation(uint16 InQuanti
 
 void UModularMovementComponent::UpdateReplicatedCosmeticData()
 {
-	if (NetworkMode == EVehicleNetworkMode::Default)
+	if (NetworkMode == Default)
 	{
 		if (GetOwnerRole() < ROLE_Authority)
 		{
@@ -1140,6 +1154,7 @@ void UModularMovementComponent::UpdateReplicatedCosmeticData()
 	RepCosmeticData.CurrentFuel = VehicleState.CurrentFuel;
 	RepCosmeticData.EngineOn = VehicleState.IsEngineOn;
 	RepCosmeticData.IsSleep=VehicleState.bSleeping;
+	RepCosmeticData.IsBraking=IsBraking;
 	const auto BI = GetMesh()->GetBodyInstance();
 
 	BI->GetRigidBodyState(RepCosmeticData.RigidBodyState);
@@ -1156,11 +1171,11 @@ void UModularMovementComponent::UpdateReplicatedCosmeticData()
 void UModularMovementComponent::OnRep_RepCosmeticData()
 {
 	CosmeticDataInitialized = true;
-	if (NetworkMode == EVehicleNetworkMode::ClientAuthoritative && IsLocal())
+	if (NetworkMode == ClientAuthoritative && IsLocal())
 	{
 		return;
 	}
-	if (GetOwnerRole() == ROLE_SimulatedProxy || NetworkMode == EVehicleNetworkMode::ClientAuthoritative)
+	if (GetOwnerRole() == ROLE_SimulatedProxy || NetworkMode == ClientAuthoritative)
 	{
 		VehicleState.CurrentRpm = UKismetMathLibrary::MapRangeClamped(RepCosmeticData.EngineRPM, 0, 255,
 		                                                              GetSetup()->IdleRpm,
@@ -1169,10 +1184,7 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 		if (const auto CurrentGear = GetSetup()->GetGearBox()->CurrentGear != RepCosmeticData.CurrentGear)
 		{
 			OnGearChange.Broadcast(CurrentGear, RepCosmeticData.CurrentGear, true);
-			if (!GetSetup()->GetGearBox()->IsManual||GetOwnerRole()==ROLE_AutonomousProxy)
-			{
-				GetSetup()->GetGearBox()->SetCurrentGear(RepCosmeticData.CurrentGear);
-			}
+			GetSetup()->GetGearBox()->SetCurrentGear(RepCosmeticData.CurrentGear);
 		}
 		SteeringInput = RepCosmeticData.SteeringInput;
 
@@ -1188,6 +1200,7 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 	}
 
 	VehicleState.CurrentFuel = RepCosmeticData.CurrentFuel;
+	IsBraking=RepCosmeticData.IsBraking;
 	if (VehicleState.IsEngineOn != RepCosmeticData.EngineOn)
 	{
 		VehicleState.IsEngineOn = RepCosmeticData.EngineOn;
@@ -1195,16 +1208,19 @@ void UModularMovementComponent::OnRep_RepCosmeticData()
 	}
 
 	NewestBodyInstance = RepCosmeticData.RigidBodyState;
+
+			
+
+	
 	if (!IsLocal())
 	{
 		ApplyBodyInstanceData();
 	}
 }
 
-void UModularMovementComponent::ServerSetEngineOn_Implementation(bool NewOn)
-{
-	VehicleState.IsEngineOn = NewOn;
-}
+
+
+
 
 void UModularMovementComponent::SetCosmeticDataOnServer_Implementation(FRepCosmeticData Data)
 {
@@ -1230,7 +1246,7 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 
 	
 	
-	if (NetworkMode==EVehicleNetworkMode::Default){
+	if (NetworkMode==Default){
 		// if we are not sleeping on server then let unreal handle replication otherwise blend to current position that vehicle is sleeping since unreal doesn't do that if server one is sleeping 
 		if (RepCosmeticData.IsSleep==VehicleState.bSleeping )
 		return;
@@ -1256,8 +1272,8 @@ void UModularMovementComponent::ApplyBodyInstanceData()
 		FVector FixLinVel = FVector::ZeroVector;
 
 		//Error correction is more aggresive on simulated pawns 
-		const float MaxDistanceToFix=GetOwnerRole()==ROLE_SimulatedProxy?ErrorCorrection.MaxDistanceToFix:ErrorCorrection.MaxDistanceToFix;
-		const float MaxAngleToFix=GetOwnerRole()==ROLE_SimulatedProxy?ErrorCorrection.MaxAngleToFix:ErrorCorrection.MaxAngleToFix;
+		const float MaxDistanceToFix=GetOwnerRole()==ROLE_SimulatedProxy?ErrorCorrection.MaxDistanceToFixOnSimulatedPawn:ErrorCorrection.MaxDistanceToFix;
+		const float MaxAngleToFix=GetOwnerRole()==ROLE_SimulatedProxy?ErrorCorrection.MaxAngleToFixOnSimulatedPawn:ErrorCorrection.MaxAngleToFix;
 		
 		// If its a small correction and velocity is above threshold, only make a partial correction,
 		// and calculate a velocity that would fix it over 'fixTime'.
@@ -1345,10 +1361,8 @@ void UModularMovementComponent::SetCanSleep(bool Input)
 bool UModularMovementComponent::IsLocal()
 {
 	// Check if the cached result is available
-	if (CachedIsLocal.IsSet())
-	{
-		return CachedIsLocal.GetValue();
-	}
+
+	
 
 	const ENetMode NetMode = GetNetMode();
 	const auto Owner = GetOwner();
@@ -1356,26 +1370,25 @@ bool UModularMovementComponent::IsLocal()
 	{
 		// Not networked.
 	
-		CachedIsLocal = true;
+		
 		return true;
 	}
 
 	if (NetMode == NM_Client && Owner->GetLocalRole() == ROLE_AutonomousProxy)
 	{
 		// Networked client in control.
-		CachedIsLocal = true;
+		
 		return true;
 	}
 
 	if (NetMode == NM_ListenServer &&static_cast<AController*>( GetWorld()->GetFirstPlayerController()) == GetPawnOwner()->GetController())
 	{
-		CachedIsLocal = true;
 		
 		return true;
 	}
 
 	// If none of the conditions are met, the result is false
-	CachedIsLocal = true;
+	
 	return false;
 }
 
@@ -1453,7 +1466,10 @@ bool UModularMovementComponent::IsInReverse() const
 void UModularMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(UModularMovementComponent, RepCosmeticData);
+	FDoRepLifetimeParams SharedParams;
+	SharedParams.bIsPushBased = true;
+	DOREPLIFETIME_WITH_PARAMS_FAST(UModularMovementComponent, RepCosmeticData,SharedParams)
+	
 }
 
 
@@ -1541,9 +1557,8 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 			}
 		}
 		break;
-	 default:
+	default:
 		UE_LOG(LogModularVehicle, Error, TEXT("Unimplemented differential Setup"));
-	
 	}
 
 
@@ -1590,71 +1605,54 @@ void UModularMovementComponent::ApplyDifferential(FDifferentialData DiffData, fl
 
 void UModularMovementComponent::SetSleeping(bool bEnableSleep)
 {
+	IsBraking=false;
 	VehicleState.bSleeping=bEnableSleep;
+
+	
 	VehicleState.CurrentRpm=VehicleState.IsEngineOn? GetSetup()->IdleRpm:0.f;
-	if(!AllowSleepUsingFriction)
+	if(bEnableSleep)
 	{
-		
-		if(bEnableSleep)
+		if(GetSetup())
 		{
-			if(GetSetup())
+			if(GetSetup()->GetSteerType()!=Tank)
 			{
-				if(GetSetup()->GetSteerType()!=Tank)
+				if(GetSetup()->GetGearBox())
 				{
-					if(GetSetup()->GetGearBox())
-					{
-						GetSetup()->GetGearBox()->SetToIdle();
-					}
+					GetSetup()->GetGearBox()->SetToIdle();
 				}
 			}
 		}
+	}
 	
-		for (const auto Comp:Components)
-		{
-			Comp->WheelState.AngularVelocity=0.f;
-		}
-		
+	for (const auto& Comp : Components)
+	{
+		Comp->WheelState.AngularVelocity=0.f;
+	}
+	
+	
 		SetSleepOnBody(GetMesh(),bEnableSleep);
 	
-		for(const auto Comp:Components)
+	for(const auto& Comp : Components)
+	{
+		if(Comp->ConstraintParent)
 		{
-			if(Comp->ConstraintParent)
-			{
 			
 				SetSleepOnBody(Comp->ConstraintParent,bEnableSleep);
 				SetSleepOnBody(Comp->WheelCollision,bEnableSleep);
 			
 			
-			}
-			if(Comp->SurfaceData)
-			{
-				Comp->SurfaceData->OnSleep();
-			}
 		}
-		TArray<UActorComponent*> Comps;
-		GetOwner()->GetComponents(Comps,true);
-		for(const auto Comp:Comps)
+		if(Comp->SurfaceData)
 		{
-			if(const auto Prim=Cast<UPrimitiveComponent>(Comp))
-				SetSleepOnBody(Prim,bEnableSleep);
+			Comp->SurfaceData->OnSleep();
 		}
-	
-	}else
+	}
+	TArray<UActorComponent*> Comps;
+	GetOwner()->GetComponents(Comps,true);
+	for(const auto Comp:Comps)
 	{
-
-		for(auto Comp :GetWheels())
-		{
-			
-			Comp->WheelCollision->SetPhysMaterialOverride(bEnableSleep?Comp->FullFrictionDefaultPhysMaterial:Comp->NoFrictionDefaultPhysMaterial);
-			
-				Comp->WheelState.AngularVelocity=0.f;
-			
-	
-			if(Comp->SurfaceData)
-			{
-				Comp->SurfaceData->OnSleep();
-			}
-		}
+		if(const auto Prim=Cast<UPrimitiveComponent>(Comp))
+		SetSleepOnBody(Prim,bEnableSleep);
 	}
 	OnSleepChange.Broadcast(bEnableSleep);
 }

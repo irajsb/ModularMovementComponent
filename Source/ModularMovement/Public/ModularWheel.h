@@ -36,7 +36,7 @@ public:
     UFUNCTION(BlueprintCallable,Category=Effects)
     void DisableSurfaceEffects();
     UPROPERTY(BlueprintReadWrite, Transient, Category=Setup)
-    UPrimitiveComponent* ParentBodyOverride;
+    TObjectPtr<UPrimitiveComponent> ParentBodyOverride;
 
     UPROPERTY(EditAnywhere, Category=Setup)
     uint8 DifferentialIndex = 0;
@@ -52,7 +52,7 @@ public:
     TSubclassOf<UVehicleParticleSurfaceData> SurfaceDataClass;
 
     UPROPERTY(Transient)
-    UVehicleParticleSurfaceData* SurfaceData;
+    TObjectPtr<UVehicleParticleSurfaceData> SurfaceData;
 
     // Wheel simulation methods
     virtual void SetupWheels(UModularMovementComponent* ModularMovementComponent);
@@ -158,33 +158,36 @@ public:
     UPhysicalMaterial* GetActivePhysicalMaterial();
 
     UPROPERTY(BlueprintReadOnly, Category=Constraint)
-    UPhysicsConstraintComponent* SuspensionConstraint = nullptr;
+    TObjectPtr<UPhysicsConstraintComponent> SuspensionConstraint = nullptr;
 
     UPROPERTY(BlueprintReadOnly,Category=Wheel)
-    UPrimitiveComponent* WheelCollision = nullptr;
+    TObjectPtr<UPrimitiveComponent> WheelCollision = nullptr;
 
     UPROPERTY(BlueprintReadOnly, Category=Constraint)
-    UPrimitiveComponent* ConstraintParent = nullptr;
+    TObjectPtr<UPrimitiveComponent> ConstraintParent = nullptr;
 
-
+private:
     // Private properties
     UPROPERTY()
-    UPhysicalMaterial* NoFrictionDefaultPhysMaterial;
+    TObjectPtr<UPhysicalMaterial> NoFrictionDefaultPhysMaterial;
 
-   
-    UPROPERTY()
-    UPhysicalMaterial* FullFrictionDefaultPhysMaterial;
-
+public:
     // Public properties
     UPROPERTY(BlueprintReadOnly, Category=Wheel)
-    TArray<USceneComponent*> ChildWheels;
+    TArray<TObjectPtr<USceneComponent>> ChildWheels;
 
     UPROPERTY(Transient)
-    UModularMovementComponent* MovementComponentRef;
+    TObjectPtr<UModularMovementComponent> MovementComponentRef;
 
     UPROPERTY(Transient, BlueprintReadWrite, Category=Wheel)
-    UPhysicalMaterial* PhysicalMaterialOverride;
+    TObjectPtr<UPhysicalMaterial> PhysicalMaterialOverride;
 
+
+    UPROPERTY(Transient)
+    float  WheelDeflation;
+    // 0-1
+    UFUNCTION(BlueprintCallable, Category="Game|Components|ModularVehicleMovement")
+    void SetIsWheelDeflated(float Input);
     UPROPERTY()
     FVector TotalForces;
 
@@ -197,4 +200,6 @@ public:
 
     UPROPERTY(BlueprintReadWrite,Category=MiscData)
     uint8 WheelStatus;
+
+	float GetGroundOmega(UModularMovementComponent* MovementComponent) const;
 };

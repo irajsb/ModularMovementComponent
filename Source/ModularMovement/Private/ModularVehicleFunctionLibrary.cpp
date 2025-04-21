@@ -263,16 +263,16 @@ void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,
 		
 		WheelState.PreviousLocation = ResultPosition;
 
-		const float Steer = WheelState.SteerAngle;
+		Wheel->WheelState.LastSteer= FMath::FInterpConstantTo(Wheel->WheelState.LastSteer, WheelState.SteerAngle,DeltaTime,35);
 
 
-		Rotation = FRotator(FMath::RadiansToDegrees(-1 * WheelState.AngularPosition), Steer, 0);
+		Rotation = FRotator(FMath::RadiansToDegrees(-1 * WheelState.AngularPosition), Wheel->WheelState.LastSteer, 0);
 
 
 		if (WheelState.SuspAngle != 0.0f)
 		{
 			const float CurrentAngle = UKismetMathLibrary::MapRangeClamped(
-				ResultPosition.Z, WheelState.WheelSetup->SuspensionLength, -WheelState.WheelSetup->SuspensionLength,
+				ResultPosition.Z+WheelState.WheelSetup->SuspensionPivotOffset, WheelState.WheelSetup->SuspensionLength, -WheelState.WheelSetup->SuspensionLength,
 				-WheelState.SuspAngle, WheelState.SuspAngle);
 			Rotation = UKismetMathLibrary::ComposeRotators(Rotation, FRotator(0.00f, 0.00f, -CurrentAngle));
 
@@ -282,7 +282,7 @@ void UModularVehicleFunctionLibrary::GetWheelAnimationData(UModularWheel* Wheel,
 }
 
 void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalMeshComponent* Mesh, TArray<UTrackableComponent* >Wheels,
-                                                                const FString& BoneNamePrefix,FVector Offset)
+                                                                const FString& BoneNamePrefix)
 {
 	if(!Mesh)
 	{
@@ -297,7 +297,7 @@ void UModularVehicleFunctionLibrary::SetupWheelLocationFromBone(const USkeletalM
 	{
 		if(Wheel){
 			const FName BoneName=FName(BoneNamePrefix+Wheel->GetName());
-			Wheel->SetWorldLocation(	Mesh->GetSocketLocation(BoneName)+Offset);
+			Wheel->SetWorldLocation(	Mesh->GetSocketLocation(BoneName));
 
 			if(const auto WheelCast=Cast<UModularWheel>(Wheel))
 			{
@@ -334,3 +334,36 @@ void UModularVehicleFunctionLibrary::ChangeCollisionOnPhysicsBody(USkeletalMeshC
 		}
 	}
 }
+
+FPoseSnapshot UModularVehicleFunctionLibrary::ModifyPoseSnapshot(UAnimInstance* AnimInstance, FTransform ModifyTransform,FName BoneToModify,bool InverseApply)
+{
+	FPoseSnapshot Snapshot;
+	if (AnimInstance->IsValidLowLevelFast())
+	{
+		
+		AnimInstance->SnapshotPose(Snapshot);
+		
+
+		const TArray<FTransform>& ComponentSpaceTMs =AnimInstance->GetSkelMeshComponent()->GetComponentSpaceTransforms();
+
+		const int32 NumSpaceBases = ComponentSpaceTMs.Num();
+		
+		for (int32 ComponentSpaceIdx = 1; ComponentSpaceIdx < NumSpaceBases; ++ComponentSpaceIdx)
+		{
+			if (Snapshot.BoneNames[ComponentSpaceIdx]==BoneToModify)
+			{
+				if (InverseApply)
+				{
+					Snapshot.LocalTransforms[ComponentSpaceIdx]=ModifyTransform*Snapshot.LocalTransforms[ComponentSpaceIdx];
+				}else
+				{
+					Snapshot.LocalTransforms[ComponentSpaceIdx]=Snapshot.LocalTransforms[ComponentSpaceIdx]*ModifyTransform;
+				}
+			}
+		}
+
+		
+	}
+	return  Snapshot;
+}
+	

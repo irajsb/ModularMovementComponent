@@ -49,6 +49,8 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential,AdvancedDisplay)
 	float FlatWheelRadius=25;
 
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential,AdvancedDisplay)
+	float FlatWheelDragForce=800.f;
 	// Trace channel
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	TEnumAsByte<ESuspensionType> SuspensionType;
@@ -117,6 +119,9 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	//Suspension pivot point (rotates suspension when dropping used for off-road vehicles 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Suspension)
 	 float SuspensionPivot;
+	//Adjusts the offset rest position vertically (where its 0)
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Suspension)
+	float SuspensionPivotOffset=30.f;
 	
 	//Smooth the wheel location and rotation 0 for disable 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
@@ -124,7 +129,7 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	
 	//Tire model implementation
 	UPROPERTY(EditAnywhere,BlueprintReadOnly,Instanced,Category = Friction)
-	UBaseTireModel* TireModel;
+	TObjectPtr<UBaseTireModel> TireModel;
 
 };
 
@@ -152,7 +157,7 @@ struct FModularWheelState{
 	
 	//Instanced setup which can be edited at runtime without conflicit
 	UPROPERTY(BlueprintReadOnly,Transient,Category=Setup)
-	UModularVehicleWheelData* WheelSetup=nullptr;
+	TObjectPtr<UModularVehicleWheelData> WheelSetup=nullptr;
 	//Automatically animate child component, Used for static mesh wheels
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Setup)
 	bool AnimateChildComponent=false;
@@ -208,7 +213,8 @@ struct FModularWheelState{
 
 	UPROPERTY(Transient)
 	FVector PreviousLocation=FVector(0,0,0);
-	UPROPERTY(Transient)
+	
+	UPROPERTY(Transient,BlueprintReadOnly,Category=Pivot)
 	float CurrentPivotAngle=0.f;
 
 	
@@ -220,6 +226,7 @@ struct FModularWheelState{
 	FTransform LastAnimTransform;
 	UPROPERTY(Transient,BlueprintReadOnly,Category="WheelState")
 	FTransform CurrentAnimTransform;
+	float LastSteer=0;
 	
 };
 

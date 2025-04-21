@@ -50,7 +50,10 @@ void UModularWheel::BeginPlay()
 {
 	Super::BeginPlay();
 
-	GetChildrenComponents(false, ChildWheels);
+	TArray<USceneComponent* > Children;
+	GetChildrenComponents(false, Children);
+	ChildWheels=Children;
+	
 	if(GetWheelSetup()->SuspensionType==Constraint)
 	{
 		
@@ -231,7 +234,20 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	const float SuspensionLenOver100 = WheelSetup->SuspensionLength / 100;
 
 	// Start Trace
-	UKismetSystemLibrary::SphereTraceMulti(GetWorld(), ComponentLocation, TraceResult.TraceEnd, WheelState.WheelSetup->WheelRadius,
+
+	float DeflationFactor=WheelDeflation;
+	if (WheelDeflation>0.6f)
+	{
+
+		const float VelocityAlpha=UKismetMathLibrary::MapRangeClamped(FMath::Abs(WheelState.AngularVelocity),0,30,0,1.f);
+		const float Noise=(FMath::FRandRange(0.f,1.2f));
+		DeflationFactor=FMath::Clamp(FMath::Lerp(WheelDeflation,WheelDeflation*Noise,VelocityAlpha),0.f,1.f);
+	}
+	const float Radius=FMath::Lerp(WheelState.WheelSetup->WheelRadius,WheelState.WheelSetup->FlatWheelRadius,DeflationFactor);
+
+	
+	
+	UKismetSystemLibrary::SphereTraceMulti(GetWorld(), ComponentLocation, TraceResult.TraceEnd,Radius,
 	                                       ModularMovementComponent->GetSetup()->GetSuspensionTraceTypeQuery(), false,
 	                                       ModularMovementComponent->ActorsToIgnore,
 	                                       Debug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
@@ -283,7 +299,10 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 			WheelState.DampingForce = -1 * (((SuspensionDiff) * WheelSetup->DampingRebound)) / DeltaTime;
 		}
 
-		if (TraceResult.bBlockingHit && ModularMovementComponent->ShouldProcessPhysics())
+		// Make wheel stiffer if deflated
+        WheelState.DampingForce=WheelState.DampingForce* (WheelDeflation+1);
+        	
+		if (TraceResult.bBlockingHit )
 		{
 			WheelState.WheelLoad = ((FVector::UpVector * (Stiffness + WheelState.DampingForce)));
 
@@ -520,7 +539,6 @@ void UModularWheel::UpdateAnimation(float DeltaTime, UModularMovementComponent* 
 			{
 				Rotation = (Rotation.Quaternion().Rotator());
 				Mesh->SetRelativeRotation(Rotation);
-
 				if(!SuspensionConstraint)
 				{
 					Mesh->SetWorldLocation(Location);
@@ -784,13 +802,6 @@ void UModularWheel::SetupConstraints(UModularMovementComponent* MovementComponen
 			NoFrictionDefaultPhysMaterial->Restitution = 1;
 			NoFrictionDefaultPhysMaterial->FrictionCombineMode = EFrictionCombineMode::Min;
 			NoFrictionDefaultPhysMaterial->RestitutionCombineMode=EFrictionCombineMode::Max;
-			
-			FullFrictionDefaultPhysMaterial = NewObject<UPhysicalMaterial>();
-			FullFrictionDefaultPhysMaterial->Friction = 1.f;
-			FullFrictionDefaultPhysMaterial->StaticFriction = 1.f;
-			FullFrictionDefaultPhysMaterial->Restitution = 1;
-			FullFrictionDefaultPhysMaterial->FrictionCombineMode = EFrictionCombineMode::Max;
-			FullFrictionDefaultPhysMaterial->RestitutionCombineMode=EFrictionCombineMode::Max;
 		
 			if (WheelCollision)
 			{
@@ -867,8 +878,22 @@ void UModularWheel::SetWheelRadius(float Input)
 
 UPhysicalMaterial* UModularWheel::GetActivePhysicalMaterial()
 {
-	const auto PhysMat=PhysicalMaterialOverride?PhysicalMaterialOverride:WheelState.HitResult.PhysMaterial.Get();
-	return PhysMat;
+	if (PhysicalMaterialOverride)
+	{
+		return PhysicalMaterialOverride;
+	}
+	return WheelState.HitResult.PhysMaterial.Get();
+}
+
+void UModularWheel::SetIsWheelDeflated(float Input)
+{
+
+	WheelDeflation=Input;
+	
+	if (MovementComponentRef->IsValidLowLevel())
+	{
+		MovementComponentRef->SetSleeping(false);
+	}
 }
 
 void UModularWheel::ApplyAccumulatedForces()
@@ -929,4 +954,20 @@ float UModularWheel::GetSpringCompressionRatio() const
 
 	// Return 0 if the constraint, wheel setup, or constraint parent is not valid
 	return 0.0f;
+}
+
+float UModularWheel::GetGroundOmega(UModularMovementComponent* MovementComponent) const
+{
+	UPrimitiveComponent* Mesh = MovementComponent->GetMesh();
+	const FTransform WorldTransform = Mesh->GetBodyInstance()->GetUnrealWorldTransform();
+	const float SteerAngleDegrees = WheelState.SteerAngle;
+	const FRotator SteeringRotator(0.f, SteerAngleDegrees, 0.f);
+	FVector WorldMeshVelocity = Mesh->GetBodyInstance()->
+										   GetUnrealWorldVelocityAtPoint(
+											 GetComponentLocation());
+	WorldMeshVelocity.Z = 0;
+	const FVector LocalWheelVelocity = WorldTransform.InverseTransformVector(WorldMeshVelocity);
+	const FVector GroundVelocityVector = SteeringRotator.UnrotateVector(LocalWheelVelocity);
+	
+	return GroundVelocityVector.X / WheelState.WheelSetup->WheelRadius;
 }

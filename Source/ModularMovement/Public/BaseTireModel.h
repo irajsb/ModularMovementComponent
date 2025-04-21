@@ -65,7 +65,7 @@ public:
 		return "";
 	};
 	UPROPERTY()
-	UModularWheel* WheelOwner;
+ 	TObjectPtr<UModularWheel> WheelOwner;
 
 	
 	UFUNCTION(BlueprintCallable,Category=Data)
