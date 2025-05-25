@@ -230,12 +230,25 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 	const auto WheelSetup = GetWheelSetup();
 	const float SuspensionLenOver100 = WheelSetup->SuspensionLength / 100;
 
+	float Effectiveness=1.f;
 	// Start Trace
-	UKismetSystemLibrary::SphereTraceMulti(GetWorld(), ComponentLocation, TraceResult.TraceEnd, WheelState.WheelSetup->WheelRadius,
-	                                       ModularMovementComponent->GetSetup()->GetSuspensionTraceTypeQuery(), false,
-	                                       ModularMovementComponent->ActorsToIgnore,
-	                                       Debug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
-	                                       Hits, true);
+
+	if (WheelSetup->SuspensionType==Sphere)
+	{
+		UKismetSystemLibrary::SphereTraceMulti(GetWorld(), ComponentLocation, TraceResult.TraceEnd, WheelState.WheelSetup->WheelRadius,
+											   ModularMovementComponent->GetSetup()->GetSuspensionTraceTypeQuery(), false,
+											   ModularMovementComponent->ActorsToIgnore,
+											   Debug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
+											   Hits, true);
+	}else
+	{
+	Effectiveness=	UModularVehicleFunctionLibrary::CylinderTraceMulti(GetWorld(), ComponentLocation, TraceResult.TraceEnd, WheelState.WheelSetup->WheelRadius,WheelSetup->WheelWidth,this,
+											   ModularMovementComponent->GetSetup()->GetSuspensionTraceTypeQuery(), false,
+											   ModularMovementComponent->ActorsToIgnore,
+											   Debug ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
+											   Hits, true);
+		
+	}
 	// Look for valid hits 
 	for (auto Hit : Hits)
 	{
@@ -243,7 +256,7 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 		{
 			
 			const FVector Position = MeshTransform.InverseTransformPosition(Hit.ImpactPoint) - WheelState.InitialLocalLocation;
-			if ((FMath::Abs(Position.Y) < WheelSetup->WheelWidth&&Position.Z<0 )||WheelCollision )
+			if ((FMath::Abs(Position.Y) < WheelSetup->WheelWidth&&Position.Z<0 )||WheelCollision ||WheelSetup->SuspensionType==CylinderWIP)
 			{
 				
 				ValidHitFound = true;
@@ -285,7 +298,9 @@ void UModularWheel::UpdateSuspension(float DeltaTime, UModularMovementComponent*
 
 		if (TraceResult.bBlockingHit && ModularMovementComponent->ShouldProcessPhysics())
 		{
-			WheelState.WheelLoad = ((FVector::UpVector * (Stiffness + WheelState.DampingForce)));
+			
+			
+			WheelState.WheelLoad = ((FVector::UpVector * (Stiffness*Effectiveness + WheelState.DampingForce)));
 
 			//Draw Debugs
 

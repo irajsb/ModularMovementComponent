@@ -20,7 +20,8 @@ enum ESuspensionType
 {
 	Sphere,
 	Line,
-	Constraint
+	Constraint,
+	CylinderWIP
 };
 
 
@@ -49,6 +50,9 @@ class MODULARMOVEMENT_API UModularVehicleWheelData : public UDataAsset
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential,AdvancedDisplay)
 	float FlatWheelRadius=25;
 
+	
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Suspension,AdvancedDisplay)
+	float MinEffectiveness=0.f;
 	// Trace channel
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category=Essential)
 	TEnumAsByte<ESuspensionType> SuspensionType;

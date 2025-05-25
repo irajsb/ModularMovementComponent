@@ -96,4 +96,8 @@ public:
 	static void NotifyError(FString Error);
 	UFUNCTION(BlueprintCallable, Category = "Game|Components|ModularVehicleMovement")
 	void ChangeCollisionOnPhysicsBody(USkeletalMeshComponent* skeletalMesh, FName boneName, ECollisionEnabled::Type CollisionType);
+
+	UFUNCTION(BlueprintCallable, Category="Collision", meta=(bIgnoreSelf="true", WorldContext="WorldContextObject", AutoCreateRefTerm="ActorsToIgnore", DisplayName = "Multi Sphere Trace By Channel", AdvancedDisplay="TraceColor,TraceHitColor,DrawTime", Keywords="sweep"))
+	static  float CylinderTraceMulti(const UObject* WorldContextObject, const FVector Start, const FVector End, float Radius,float Width, const UModularWheel* Wheel,ETraceTypeQuery TraceChannel, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, EDrawDebugTrace::Type DrawDebugType, TArray<FHitResult>& OutHits, bool bIgnoreSelf, FLinearColor TraceColor = FLinearColor::Red, FLinearColor TraceHitColor = FLinearColor::Green, float DrawTime = 5.0f);
+
 };

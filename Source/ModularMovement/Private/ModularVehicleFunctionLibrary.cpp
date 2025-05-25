@@ -334,3 +334,40 @@ void UModularVehicleFunctionLibrary::ChangeCollisionOnPhysicsBody(USkeletalMeshC
 		}
 	}
 }
+
+float UModularVehicleFunctionLibrary::CylinderTraceMulti(const UObject* WorldContextObject, const FVector Start, const FVector End, float Radius, float Width,const UModularWheel* Wheel, ETraceTypeQuery TraceChannel, bool bTraceComplex, const TArray<AActor*>& ActorsToIgnore, EDrawDebugTrace::Type DrawDebugType, TArray<FHitResult>& OutHits, bool bIgnoreSelf, FLinearColor TraceColor, FLinearColor TraceHitColor, float DrawTime)
+{
+	TArray<FHitResult> SphereHits;
+	TArray<FHitResult> BoxHits;
+
+	float Effectiveness=0.f;
+	
+	bool Res = UKismetSystemLibrary::SphereTraceMulti(WorldContextObject, Start, End, Radius, TraceChannel, bTraceComplex, ActorsToIgnore, DrawDebugType, SphereHits, bIgnoreSelf, TraceColor, TraceHitColor, DrawTime);
+	if (Res)
+	{
+		FVector HalfSize=FVector(Radius,Width,Radius);
+		Res=UKismetSystemLibrary::BoxTraceMulti(WorldContextObject,Start,End,HalfSize,Wheel->GetComponentRotation(),TraceChannel,bTraceComplex,ActorsToIgnore,DrawDebugType,BoxHits,bIgnoreSelf,TraceColor,TraceHitColor,DrawTime);
+		if (Res)
+		{
+			Res=false;
+			for (auto Hit :BoxHits)
+			{
+				
+				if ((Hit.ImpactNormal-Wheel->GetUpVector()).Size()<0.8)
+				{
+					Effectiveness=1-FMath::Abs((Hit.ImpactNormal-Wheel->GetUpVector()).Size());
+					Effectiveness=FMath::Clamp(Effectiveness,Wheel->GetWheelSetup()->MinEffectiveness,1.f);
+					Res=true;
+				} 
+			}
+		}
+	}
+
+	if (Res)
+	{
+		OutHits=SphereHits;
+	}
+
+	return Effectiveness;
+	
+}
