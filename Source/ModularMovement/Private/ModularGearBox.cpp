@@ -250,6 +250,11 @@ bool UModularGearBox::IsInReverse()
 	return CurrentGear < IdleGear;
 }
 
+bool UModularGearBox::IsIdle()
+{
+	return CurrentGear==IdleGear;
+}
+
 void UModularGearBox::SetMaxGear(int32 InGear)
 {
 	MaxGear = InGear;

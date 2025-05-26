@@ -116,7 +116,7 @@ bool UModularVehicleData::ShouldScaleDriveTorqueToNumberOfWheels() const
 
 bool UModularVehicleData::ShouldReverseAsBrake() const
 {
-	return bReverseAsBrake&&!GetGearBox()->IsManual;
+	return bReverseAsBrake;
 }
 
 float UModularVehicleData::GetStopThreshold() const

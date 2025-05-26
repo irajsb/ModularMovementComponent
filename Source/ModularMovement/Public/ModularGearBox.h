@@ -121,6 +121,10 @@ public:
 	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Transmission)
 	virtual bool IsInReverse();
 
+	
+	UFUNCTION(BlueprintCallable,BlueprintPure,Category=Transmission)
+	virtual bool IsIdle();
+	
 	UPROPERTY(Transient)
 	UModularMovementComponent* MC;
 

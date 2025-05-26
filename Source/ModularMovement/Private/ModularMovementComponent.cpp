@@ -648,7 +648,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 
 
-	const float MaxRads = RPMToOmega(VehicleState.VehicleData->GetMaxRPM());
+	 float MaxRads = RPMToOmega(VehicleState.VehicleData->GetMaxRPM());
 	const bool EngineFree=GetSetup()->GetGearBox()->GetDriveRatio()==0.f||VehicleState.DriveWheelsOnGround==0;
 	const float Clutch=EngineFree?0.f:ClutchInput;
 	const float MinRads = VehicleState.IsEngineOn ? RPMToOmega(GetSetup()->IdleRpm) : 0.f;
@@ -684,7 +684,8 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 		//Use curve 
 		const float EngineTorque = VehicleState.IsEngineOn? TransientTorqueMultiplier*ThrottleInput * GetSetup()->GetTorqueForRPM(VehicleState.CurrentRpm): 0;
-		//Engine braking 
+		//Engine braking
+		MaxRads=MaxRads*GetSetup()->GetGearBox()->GetDriveRatio();
 		if(DriveRPM>MaxRads)
 		{
 			
@@ -722,7 +723,7 @@ void UModularMovementComponent::UpdateEngine(float DeltaTime, float& WheelTorque
 
 		WheelTorque = EngineTorque * TransmissionTorque*FMath::GetMappedRangeValueClamped(FVector2D(0.f,1),FVector2D(GetSetup()->EngineBrokenMinTorqueFactor,1),VehicleHealth);
 		VehicleState.EngineBrake=VehicleState.EngineBrake*TransmissionTorque;
-	
+
 		if (ModularVehicleDebugger)
 		{
 			//Set Torques and throttle
