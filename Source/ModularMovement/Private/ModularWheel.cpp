@@ -360,7 +360,7 @@ void UModularWheel::UpdateForces(float DeltaTime, UModularMovementComponent* Mod
 	{
 		FVector ImpactToLocation =   WheelState.HitResult.ImpactPoint-WheelState.HitResult.Location;
 		ImpactToLocation.Normalize();
-		FVector::CrossProduct(ImpactToLocation, GetRightVector());
+		
 
 		const FVector GroundZVector = WheelState.HitResult.Normal;
 		const FVector GroundXVector = FVector::CrossProduct(GetRightVector(), GroundZVector);
